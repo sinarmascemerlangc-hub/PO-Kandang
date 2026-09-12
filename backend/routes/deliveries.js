@@ -299,6 +299,30 @@ router.post('/:id/proof', auth, async (req, res) => {
   }
 });
 
+// GET /api/deliveries/proxy-image?url=... - Proxy Google Drive images (bypass CORS)
+router.get('/proxy-image', auth, async (req, res) => {
+  try {
+    const { url } = req.query;
+    if (!url) return res.status(400).json({ error: 'url required' });
+
+    let directUrl = url;
+    const gdMatch = url.match(/drive\.google\.com\/file\/d\/([^/?]+)/);
+    if (gdMatch) directUrl = `https://drive.google.com/uc?export=view&id=${gdMatch[1]}`;
+
+    const response = await fetch(directUrl);
+    if (!response.ok) throw new Error('Failed to fetch image');
+
+    const contentType = response.headers.get('content-type') || 'image/jpeg';
+    const buffer = await response.arrayBuffer();
+
+    res.set('Content-Type', contentType);
+    res.set('Cache-Control', 'public, max-age=86400');
+    res.send(Buffer.from(buffer));
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // DELETE /api/deliveries/:proofId/proof - Delete a proof
 router.delete('/:deliveryId/proof/:proofId', auth, async (req, res) => {
   try {
