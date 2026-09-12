@@ -4,28 +4,34 @@ const auth = require('../middleware/auth');
 
 const router = express.Router();
 
-// POST /api/deliveries - Create delivery (pengiriman)
+// POST /api/deliveries - Create delivery (multi-PO support)
 router.post('/', auth, async (req, res) => {
   try {
-    const { poId, deliveryDate, driverName, vehicleNumber, deliveryAddress, notes, items } = req.body;
-    if (!poId || !items || items.length === 0) return res.status(400).json({ error: 'PO dan item wajib diisi' });
+    const { deliveryDate, driverName, vehicleNumber, deliveryAddress, notes, items, poIds } = req.body;
+    if (!items || items.length === 0) return res.status(400).json({ error: 'Item wajib diisi' });
 
-    const po = await prisma.purchaseOrder.findUnique({ where: { id: poId }, include: { items: true } });
-    if (!po) return res.status(404).json({ error: 'PO tidak ditemukan' });
+    // Support both old format (single poId) and new format (poIds array)
+    const allPoIds = poIds && poIds.length > 0 ? poIds : (req.body.poId ? [req.body.poId] : []);
+    if (allPoIds.length === 0) return res.status(400).json({ error: 'Minimal 1 PO harus dipilih' });
 
-    // Validate quantities
+    // Validate all POs exist
+    const pos = await prisma.purchaseOrder.findMany({
+      where: { id: { in: allPoIds } },
+      include: { items: true },
+    });
+    if (pos.length !== allPoIds.length) return res.status(400).json({ error: 'Salah satu PO tidak ditemukan' });
+
+    // Validate all items belong to the selected POs
+    const allPoItemIds = pos.flatMap(p => p.items.map(i => i.id));
     for (const item of items) {
-      const poItem = po.items.find((i) => i.id === item.poItemId);
-      if (!poItem) return res.status(400).json({ error: `Item ${item.poItemId} tidak ditemukan di PO` });
-      if (item.quantity > poItem.quantity) {
-        return res.status(400).json({ error: `Jumlah kirim melebihi jumlah pesanan untuk ${poItem.productName}` });
+      if (!allPoItemIds.includes(item.poItemId)) {
+        return res.status(400).json({ error: `Item ${item.poItemId} bukan milik PO yang dipilih` });
       }
     }
 
     const delivery = await prisma.$transaction(async (tx) => {
       const newDelivery = await tx.delivery.create({
         data: {
-          poId,
           deliveryDate: deliveryDate ? new Date(deliveryDate) : new Date(),
           driverName: driverName || '',
           vehicleNumber: vehicleNumber || '',
@@ -34,8 +40,19 @@ router.post('/', auth, async (req, res) => {
         },
       });
 
+      // Link delivery to POs
+      if (allPoIds.length > 0) {
+        await tx.deliveryPO.createMany({
+          data: allPoIds.map(poId => ({ deliveryId: newDelivery.id, poId })),
+        });
+      }
+
+      // Create delivery items with kubikasi calculation
+      const poItemMap = {};
+      pos.forEach(p => p.items.forEach(i => { poItemMap[i.id] = i; }));
+
       const deliveryItems = items.map((i) => {
-        const poItem = po.items.find((pi) => pi.id === i.poItemId);
+        const poItem = poItemMap[i.poItemId];
         const kubPerPcs = poItem.kubikasi / poItem.quantity;
         return {
           deliveryId: newDelivery.id,
@@ -48,10 +65,20 @@ router.post('/', auth, async (req, res) => {
 
       await tx.deliveryItem.createMany({ data: deliveryItems });
 
-      // Update PO status to dikirim
-      await tx.purchaseOrder.update({ where: { id: poId }, data: { status: 'dikirim' } });
+      // Update all linked PO statuses
+      await tx.purchaseOrder.updateMany({
+        where: { id: { in: allPoIds } },
+        data: { status: 'dikirim' },
+      });
 
-      return tx.delivery.findUnique({ where: { id: newDelivery.id }, include: { items: { include: { poItem: true } } } });
+      return tx.delivery.findUnique({
+        where: { id: newDelivery.id },
+        include: {
+          items: { include: { poItem: true } },
+          proofs: true,
+          deliveryPOs: { include: { po: true } },
+        },
+      });
     });
 
     res.status(201).json(delivery);
@@ -60,45 +87,16 @@ router.post('/', auth, async (req, res) => {
   }
 });
 
-// GET /api/deliveries/po/:poId - Get deliveries for a PO
-router.get('/po/:poId', auth, async (req, res) => {
-  try {
-    const deliveries = await prisma.delivery.findMany({
-      where: { poId: req.params.poId },
-      include: { items: { include: { poItem: true } } },
-      orderBy: { deliveryDate: 'desc' },
-    });
-    res.json(deliveries);
-  } catch (error) {
-    res.status(500).json({ error: 'Gagal mengambil data' });
-  }
-});
-
-// GET /api/deliveries/:id - Get single delivery
-router.get('/:id', auth, async (req, res) => {
-  try {
-    const delivery = await prisma.delivery.findUnique({
-      where: { id: req.params.id },
-      include: { items: { include: { poItem: true } } },
-    });
-    if (!delivery) return res.status(404).json({ error: 'Pengiriman tidak ditemukan' });
-    res.json(delivery);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// PUT /api/deliveries/:id - Update delivery
+// PUT /api/deliveries/:id - Update delivery (multi-PO support)
 router.put('/:id', auth, async (req, res) => {
   try {
-    const { deliveryDate, driverName, vehicleNumber, deliveryAddress, notes, items } = req.body;
+    const { deliveryDate, driverName, vehicleNumber, deliveryAddress, notes, items, poIds } = req.body;
     const existing = await prisma.delivery.findUnique({ where: { id: req.params.id }, include: { items: true } });
     if (!existing) return res.status(404).json({ error: 'Pengiriman tidak ditemukan' });
 
-    const delivery = await prisma.$transaction(async (tx) => {
-      // Delete old items
-      await tx.deliveryItem.deleteMany({ where: { deliveryId: req.params.id } });
+    const allPoIds = poIds && poIds.length > 0 ? poIds : (req.body.poId ? [req.body.poId] : []);
 
+    const delivery = await prisma.$transaction(async (tx) => {
       // Update delivery info
       await tx.delivery.update({
         where: { id: req.params.id },
@@ -111,11 +109,27 @@ router.put('/:id', auth, async (req, res) => {
         },
       });
 
-      // Create new items if provided
+      // Update PO links
+      if (allPoIds.length > 0) {
+        await tx.deliveryPO.deleteMany({ where: { deliveryId: req.params.id } });
+        await tx.deliveryPO.createMany({
+          data: allPoIds.map(poId => ({ deliveryId: req.params.id, poId })),
+        });
+      }
+
+      // Update items if provided
       if (items && items.length > 0) {
-        const po = await tx.purchaseOrder.findUnique({ where: { id: existing.poId }, include: { items: true } });
+        await tx.deliveryItem.deleteMany({ where: { deliveryId: req.params.id } });
+        const poIdsForItems = allPoIds.length > 0 ? allPoIds : [existing.poId].filter(Boolean);
+        const pos = await tx.purchaseOrder.findMany({
+          where: { id: { in: poIdsForItems } },
+          include: { items: true },
+        });
+        const poItemMap = {};
+        pos.forEach(p => p.items.forEach(i => { poItemMap[i.id] = i; }));
+
         const deliveryItems = items.map((i) => {
-          const poItem = po.items.find((pi) => pi.id === i.poItemId);
+          const poItem = poItemMap[i.poItemId];
           const kubPerPcs = poItem.kubikasi / poItem.quantity;
           return {
             deliveryId: req.params.id,
@@ -128,9 +142,66 @@ router.put('/:id', auth, async (req, res) => {
         await tx.deliveryItem.createMany({ data: deliveryItems });
       }
 
-      return tx.delivery.findUnique({ where: { id: req.params.id }, include: { items: { include: { poItem: true } } } });
+      return tx.delivery.findUnique({
+        where: { id: req.params.id },
+        include: {
+          items: { include: { poItem: true } },
+          proofs: true,
+          deliveryPOs: { include: { po: true } },
+        },
+      });
     });
 
+    res.json(delivery);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// GET /api/deliveries/po/:poId - Get deliveries for a PO
+router.get('/po/:poId', auth, async (req, res) => {
+  try {
+    // Find deliveries linked via DeliveryPO junction table OR legacy poId
+    const deliveryPOs = await prisma.deliveryPO.findMany({
+      where: { poId: req.params.poId },
+      include: { delivery: true },
+    });
+    const legacyDeliveries = await prisma.delivery.findMany({
+      where: { poId: req.params.poId },
+    });
+
+    const deliveryIds = new Set([
+      ...deliveryPOs.map(dp => dp.deliveryId),
+      ...legacyDeliveries.map(d => d.id),
+    ]);
+
+    const deliveries = await prisma.delivery.findMany({
+      where: { id: { in: Array.from(deliveryIds) } },
+      include: {
+        items: { include: { poItem: true } },
+        proofs: true,
+        deliveryPOs: { include: { po: true } },
+      },
+      orderBy: { deliveryDate: 'desc' },
+    });
+    res.json(deliveries);
+  } catch (error) {
+    res.status(500).json({ error: 'Gagal mengambil data: ' + error.message });
+  }
+});
+
+// GET /api/deliveries/:id - Get single delivery
+router.get('/:id', auth, async (req, res) => {
+  try {
+    const delivery = await prisma.delivery.findUnique({
+      where: { id: req.params.id },
+      include: {
+        items: { include: { poItem: true } },
+        proofs: true,
+        deliveryPOs: { include: { po: true } },
+      },
+    });
+    if (!delivery) return res.status(404).json({ error: 'Pengiriman tidak ditemukan' });
     res.json(delivery);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -143,6 +214,8 @@ router.delete('/:id', auth, async (req, res) => {
     const delivery = await prisma.delivery.findUnique({ where: { id: req.params.id } });
     if (!delivery) return res.status(404).json({ error: 'Pengiriman tidak ditemukan' });
     await prisma.deliveryItem.deleteMany({ where: { deliveryId: req.params.id } });
+    await prisma.deliveryPO.deleteMany({ where: { deliveryId: req.params.id } });
+    await prisma.deliveryProof.deleteMany({ where: { deliveryId: req.params.id } });
     await prisma.delivery.delete({ where: { id: req.params.id } });
     res.json({ message: 'Pengiriman berhasil dihapus' });
   } catch (error) {
@@ -150,19 +223,23 @@ router.delete('/:id', auth, async (req, res) => {
   }
 });
 
-// POST /api/deliveries/:id/proof - Upload bukti surat jalan
+// POST /api/deliveries/:id/proof - Upload bukti surat jalan (supports multiple)
 router.post('/:id/proof', auth, async (req, res) => {
   try {
     const { image } = req.body;
     if (!image) return res.status(400).json({ error: 'Gambar wajib diupload' });
 
-    const delivery = await prisma.delivery.findUnique({ where: { id: req.params.id }, include: { po: true } });
+    const delivery = await prisma.delivery.findUnique({
+      where: { id: req.params.id },
+      include: { deliveryPOs: { include: { po: true } } },
+    });
     if (!delivery) return res.status(404).json({ error: 'Pengiriman tidak ditemukan' });
 
     const googleScriptUrl = process.env.GOOGLE_SCRIPT_URL;
     if (!googleScriptUrl) return res.status(500).json({ error: 'Google Script URL belum dikonfigurasi' });
 
-    // Kirim foto ke Google Apps Script → Google Drive
+    const poNumbers = delivery.deliveryPOs.map(dp => dp.po.poNumber).join(', ') || 'N/A';
+
     const response = await fetch(googleScriptUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -170,32 +247,42 @@ router.post('/:id/proof', auth, async (req, res) => {
         image: image.replace(/^data:image\/\w+;base64,/, ''),
         mimeType: 'image/jpeg',
         deliveryId: delivery.id,
-        poNumber: delivery.po.poNumber,
-        customerName: delivery.po.customerName,
+        poNumber: poNumbers,
+        customerName: '',
       }),
     });
 
     const result = await response.json();
     if (result.error) throw new Error(result.error);
 
-    // Simpan URL foto ke database
-    await prisma.delivery.update({
-      where: { id: req.params.id },
-      data: { proofUrl: result.url },
+    // Save to DeliveryProof table
+    const proof = await prisma.deliveryProof.create({
+      data: {
+        deliveryId: req.params.id,
+        url: result.url,
+        fileName: result.fileName || null,
+      },
     });
 
-    res.json({ url: result.url });
+    // Also update legacy proofUrl if empty
+    if (!delivery.proofUrl) {
+      await prisma.delivery.update({
+        where: { id: req.params.id },
+        data: { proofUrl: result.url },
+      });
+    }
+
+    res.json({ url: result.url, proof });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
-// GET /api/deliveries/:id/proof - Ambil bukti surat jalan
-router.get('/:id/proof', auth, async (req, res) => {
+// DELETE /api/deliveries/:proofId/proof - Delete a proof
+router.delete('/:deliveryId/proof/:proofId', auth, async (req, res) => {
   try {
-    const delivery = await prisma.delivery.findUnique({ where: { id: req.params.id }, select: { proofUrl: true } });
-    if (!delivery) return res.status(404).json({ error: 'Pengiriman tidak ditemukan' });
-    res.json({ proofUrl: delivery.proofUrl });
+    await prisma.deliveryProof.delete({ where: { id: req.params.proofId } });
+    res.json({ message: 'Bukti berhasil dihapus' });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

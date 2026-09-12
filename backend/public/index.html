@@ -635,10 +635,11 @@
       <button class="modal-close" onclick="closeDeliveryModal()">&times;</button>
     </div>
     <div class="modal-body">
-      <div class="form-row">
-        <div class="form-group"><label>Nomor PO *</label><select id="deliveryPONumber" onchange="loadPOForDelivery()"></select></div>
-        <div class="form-group"><label>Tanggal Kirim</label><input type="date" id="deliveryDate"></div>
+      <div class="form-group">
+        <label>Pilih PO (bisa lebih dari 1) *</label>
+        <div id="deliveryPOCheckboxes" style="max-height:160px;overflow-y:auto;border:2px solid var(--slate-100);border-radius:var(--radius-sm);padding:8px;"></div>
       </div>
+      <div class="form-group"><label>Tanggal Kirim</label><input type="date" id="deliveryDate"></div>
       <div class="form-row">
         <div class="form-group"><label>Nama Sopir</label><input type="text" id="driverName" placeholder="Nama sopir"></div>
         <div class="form-group"><label>Nomor Kendaraan</label><input type="text" id="vehicleNumber" placeholder="B 1234 CD"></div>
@@ -955,21 +956,32 @@ async function viewPO(id) {
       </div>
       <div class="card slide-up" style="animation-delay:0.1s"><div class="card-header"><h3>🚚 Riwayat Pengiriman</h3></div>
         <div class="card-body" style="padding:0;overflow-x:auto;">
-          ${po.deliveries&&po.deliveries.length>0?po.deliveries.map(d=>`
+          ${po.deliveries&&po.deliveries.length>0?po.deliveries.map(d=>{
+            const proofs = d.proofs || (d.proofUrl ? [{ id: null, url: d.proofUrl }] : []);
+            const poNames = (d.deliveryPOs||[]).map(dp => dp.po?.poNumber).filter(Boolean);
+            return `
             <div style="padding:14px 18px;border-bottom:1px solid var(--slate-100);">
               <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
                 <div><strong>${d.driverName||'Tanpa Sopir'}</strong> <span style="color:var(--slate-500);">• ${d.vehicleNumber||'-'}</span></div>
                 <span style="font-size:11px;color:var(--slate-500);font-weight:500;">${new Date(d.deliveryDate).toLocaleDateString('id-ID')}</span>
               </div>
+              ${poNames.length > 1 ? `<div style="font-size:10px;font-weight:700;color:var(--teal-600);margin-bottom:6px;">📦 ${poNames.join(' • ')}</div>` : ''}
               <div style="font-size:12px;color:var(--slate-500);margin-bottom:8px;">📍 ${d.deliveryAddress||'-'}</div>
               <div style="margin-bottom:8px;">
                 ${d.items.map(di=>`<span class="del-tag"><strong>${di.poItem?.productName||'-'}</strong> ${di.quantity} pcs • ${di.kubikasi?.toFixed(4)} m³</span>`).join('')}
               </div>
-              <div class="proof-btn-wrap">
-                ${d.proofUrl ? `<a href="${d.proofUrl}" target="_blank" class="proof-btn-view">📷 Lihat Bukti</a>` : `<button class="btn btn-success btn-sm" onclick="openProofModal('${d.id}')" style="font-size:11px;">📷 Upload Bukti</button>`}
+              <div style="border-top:1px solid var(--slate-100);padding-top:8px;margin-top:6px;">
+                <div style="font-size:10px;font-weight:700;color:var(--slate-500);margin-bottom:4px;">📷 Bukti (${proofs.length})</div>
+                <div style="display:flex;gap:4px;flex-wrap:wrap;">
+                  ${proofs.map(p => `<a href="${p.url}" target="_blank" class="proof-btn-view" style="font-size:10px;">📷 Lihat</a>`).join('')}
+                  <button class="btn btn-success btn-sm" onclick="openProofModal('${d.id}')" style="font-size:10px;">+ Upload</button>
+                </div>
+              </div>
+              <div class="proof-btn-wrap" style="margin-top:8px;">
                 <button class="btn btn-primary btn-sm" onclick="editDeliveryFromDetail('${d.id}','${po.id}')" style="font-size:11px;">✏️ Edit</button>
               </div>
-            </div>`).join(''):'<div class="empty-state"><span class="empty-icon">📭</span><p>Belum ada pengiriman</p></div>'}
+            </div>`;
+          }).join(''):'<div class="empty-state"><span class="empty-icon">📭</span><p>Belum ada pengiriman</p></div>'}
         </div>
       </div>
     `;
@@ -1280,6 +1292,8 @@ async function loadPODeliveries() {
     } else {
       html += `<div class="section-title" style="margin-top:12px;">🚚 Riwayat Pengiriman</div>`;
       deliveries.forEach((d, idx) => {
+        const poNames = (d.deliveryPOs||[]).map(dp => dp.po?.poNumber).filter(Boolean);
+        const proofs = d.proofs || (d.proofUrl ? [{ id: null, url: d.proofUrl }] : []);
         html += `<div class="card fade-in" style="animation-delay:${idx*0.08}s"><div class="card-body" style="padding:16px;">
           <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">
             <div>
@@ -1291,6 +1305,7 @@ async function loadPODeliveries() {
               <div style="font-size:11px;color:var(--slate-500);">${d.items.reduce((s,di)=>s+di.quantity,0)} pcs • ${d.items.reduce((s,di)=>s+di.kubikasi,0).toFixed(4)} m³</div>
             </div>
           </div>
+          ${poNames.length > 0 ? `<div style="font-size:11px;font-weight:700;color:var(--teal-600);margin-bottom:6px;">📦 ${poNames.join(' • ')}</div>` : ''}
           <div style="font-size:12px;color:var(--slate-500);margin-bottom:10px;">📍 ${d.deliveryAddress||'-'}</div>
           <div style="border-top:1px solid var(--slate-100);padding-top:10px;">
             ${d.items.map(di=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;font-size:12px;">
@@ -1304,8 +1319,14 @@ async function loadPODeliveries() {
               </div>
             </div>`).join('')}
           </div>
+          <div style="border-top:1px solid var(--slate-100);padding-top:10px;margin-top:8px;">
+            <div style="font-size:11px;font-weight:700;color:var(--slate-500);margin-bottom:6px;">📷 Bukti Kirim (${proofs.length})</div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;">
+              ${proofs.map(p => `<a href="${p.url}" target="_blank" class="proof-btn-view" style="font-size:11px;">📷 Lihat</a>`).join('')}
+              <button class="btn btn-success btn-sm" onclick="openProofModal('${d.id}')" style="font-size:11px;">+ Upload</button>
+            </div>
+          </div>
           <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;">
-            ${d.proofUrl ? `<a href="${d.proofUrl}" target="_blank" class="proof-btn-view">📷 Lihat Bukti</a>` : `<button class="btn btn-success btn-sm" onclick="openProofModal('${d.id}')" style="font-size:12px;">📷 Upload Bukti</button>`}
             <button class="btn btn-primary btn-sm" onclick="editDelivery('${d.id}')" style="font-size:12px;">✏️ Edit</button>
             <button class="btn btn-danger btn-sm" onclick="deleteDelivery('${d.id}')" style="font-size:12px;">🗑️ Hapus</button>
           </div>
@@ -1317,97 +1338,17 @@ async function loadPODeliveries() {
   } catch(e) { console.error(e); }
 }
 
-async function openDeliveryModal() {
-  editingDeliveryId = null;
-  document.getElementById('deliveryModal').classList.remove('hidden');
-  document.querySelector('#deliveryModal .modal-header h3').textContent = 'Tambah Pengiriman';
-  document.getElementById('deliveryDate').value = new Date().toISOString().split('T')[0];
-  document.getElementById('driverName').value='';
-  document.getElementById('vehicleNumber').value='';
-  document.getElementById('deliveryAddress').value='';
-  document.getElementById('deliveryNotes').value='';
-  document.getElementById('deliveryPONumber').innerHTML='<option value="">-- Pilih PO --</option>';
-  document.getElementById('deliveryItemsContainer').innerHTML='';
-  try {
-    const res = await fetch(`${API}/api/po?limit=100`,{headers:authHeaders()});
-    const data = await res.json();
-    (data.data||[]).filter(p=>p.status!=='dibatalkan').forEach(p=>{
-      const o=document.createElement('option'); o.value=p.id;
-      o.textContent=`${p.poNumber} - ${p.customerName} (Sisa: ${(p.remainingKubikasi||0).toFixed(4)} m³)`;
-      document.getElementById('deliveryPONumber').appendChild(o);
-    });
-  } catch(e) { console.error(e); }
-}
-
-function openDeliveryModalForPO(poId) {
-  openDeliveryModal();
-  setTimeout(()=>{ document.getElementById('deliveryPONumber').value=poId; loadPOForDelivery(); },100);
-}
-
-async function loadPOForDelivery() {
-  const poId = document.getElementById('deliveryPONumber').value;
-  if(!poId) { document.getElementById('deliveryItemsContainer').innerHTML=''; return; }
-  try {
-    const res = await fetch(`${API}/api/po/${poId}`,{headers:authHeaders()});
-    const po = await res.json();
-    document.getElementById('deliveryAddress').value = po.notes||'';
-    let h='<table class="items-table"><thead><tr><th>Item</th><th>Sisa</th><th>Sisa KUB</th><th>Kirim</th></tr></thead><tbody>';
-    po.items.forEach(i=>{
-      const sq=(po.deliveries||[]).reduce((s,d)=>s+d.items.reduce((ss,di)=>di.poItemId===i.id?ss+di.quantity:ss,0),0);
-      const rem=i.quantity-sq;
-      if(rem>0) h+=`<tr><td><strong>${i.productName}</strong><br><span style="font-size:10px;color:var(--slate-500);">${i.thickness}×${i.width}×${i.length}cm</span></td><td>${rem}</td><td>${(i.kubikasi/i.quantity*rem).toFixed(6)}</td><td><input type="number" data-po-item-id="${i.id}" max="${rem}" min="1" value="1" class="del-qty" style="width:60px;"></td></tr>`;
-    });
-    h+='</tbody></table>';
-    document.getElementById('deliveryItemsContainer').innerHTML=h;
-  } catch(e) { console.error(e); }
-}
-
-function closeDeliveryModal() { document.getElementById('deliveryModal').classList.add('hidden'); }
-
-async function saveDelivery() {
-  const poId = document.getElementById('deliveryPONumber').value;
-  if(!poId) { showToast('Pilih PO dulu', 'error'); return; }
-  const items=[];
-  document.querySelectorAll('.del-qty').forEach(inp=>{ const q=parseInt(inp.value); if(q>0) items.push({poItemId:inp.dataset.poItemId,quantity:q}); });
-  if(!items.length) { showToast('Minimal 1 item harus dikirim', 'error'); return; }
-  try {
-    const isEdit = !!editingDeliveryId;
-    const url = isEdit ? `${API}/api/deliveries/${editingDeliveryId}` : `${API}/api/deliveries`;
-    const method = isEdit ? 'PUT' : 'POST';
-    const res = await fetch(url,{method,headers:authHeaders(),body:JSON.stringify({
-      poId, deliveryDate:document.getElementById('deliveryDate').value,
-      driverName:document.getElementById('driverName').value, vehicleNumber:document.getElementById('vehicleNumber').value,
-      deliveryAddress:document.getElementById('deliveryAddress').value, notes:document.getElementById('deliveryNotes').value, items
-    })});
-    const data = await res.json();
-    if(!res.ok) throw new Error(data.error);
-    editingDeliveryId = null;
-    closeDeliveryModal();
-    await loadPOs();
-    await loadDashboard();
-    const activePage = document.querySelector('.page.active');
-    if (activePage?.id === 'page-deliveries') await loadPODeliveries();
-    if (activePage?.id === 'page-detail' && window._refreshDetailPOId) {
-      await viewPO(window._refreshDetailPOId);
-      window._refreshDetailPOId = null;
-    }
-    showToast(isEdit ? 'Pengiriman berhasil diupdate!' : 'Pengiriman berhasil disimpan!', 'success');
-  } catch(e) { showToast('Error: '+e.message, 'error'); }
-}
-
 async function deleteDelivery(id) {
   if(!await showConfirm('Hapus pengiriman?', 'Data pengiriman akan dihapus permanen.', 'danger')) return;
   try { await fetch(`${API}/api/deliveries/${id}`,{method:'DELETE',headers:authHeaders()}); await loadPODeliveries(); showToast('Pengiriman dihapus', 'success'); } catch(e) { showToast('Error: '+e.message, 'error'); }
 }
 
 let editingDeliveryId = null;
+let selectedPOIds = [];
 
 function editDeliveryFromDetail(deliveryId, poId) {
   editingDeliveryId = deliveryId;
-  editDelivery(deliveryId).then(() => {
-    // Store poId to refresh detail after save
-    window._refreshDetailPOId = poId;
-  });
+  editDelivery(deliveryId).then(() => { window._refreshDetailPOId = poId; });
 }
 
 async function editDelivery(id) {
@@ -1415,7 +1356,6 @@ async function editDelivery(id) {
   try {
     const res = await fetch(`${API}/api/deliveries/${id}`, { headers: authHeaders() });
     const d = await res.json();
-
     await openDeliveryModal();
     document.querySelector('#deliveryModal .modal-header h3').textContent = 'Edit Pengiriman';
     document.getElementById('deliveryDate').value = d.deliveryDate?.split('T')[0] || '';
@@ -1423,16 +1363,88 @@ async function editDelivery(id) {
     document.getElementById('vehicleNumber').value = d.vehicleNumber || '';
     document.getElementById('deliveryAddress').value = d.deliveryAddress || '';
     document.getElementById('deliveryNotes').value = d.notes || '';
+    const linkedPoIds = d.deliveryPOs?.map(dp => dp.poId) || (d.poId ? [d.poId] : []);
+    document.querySelectorAll('.po-checkbox').forEach(cb => { cb.checked = linkedPoIds.includes(cb.value); });
+    selectedPOIds = [...linkedPoIds];
+    await loadPOForDelivery();
+    d.items.forEach(di => { const inp = document.querySelector(`.del-qty[data-po-item-id="${di.poItemId}"]`); if (inp) inp.value = di.quantity; });
+  } catch(e) { showToast('Error: '+e.message, 'error'); }
+}
 
-    // Set PO select
-    document.getElementById('deliveryPONumber').value = d.poId;
-    await loadPOForDelivery(d.poId);
-
-    // Pre-fill quantities
-    d.items.forEach(di => {
-      const inp = document.querySelector(`.del-qty[data-po-item-id="${di.poItemId}"]`);
-      if (inp) inp.value = di.quantity;
+async function openDeliveryModal() {
+  editingDeliveryId = null; selectedPOIds = [];
+  document.getElementById('deliveryModal').classList.remove('hidden');
+  document.querySelector('#deliveryModal .modal-header h3').textContent = 'Tambah Pengiriman';
+  document.getElementById('deliveryDate').value = new Date().toISOString().split('T')[0];
+  document.getElementById('driverName').value=''; document.getElementById('vehicleNumber').value='';
+  document.getElementById('deliveryAddress').value=''; document.getElementById('deliveryNotes').value='';
+  document.getElementById('deliveryItemsContainer').innerHTML='<div style="text-align:center;padding:20px;color:var(--slate-500);font-size:13px;">Pilih PO terlebih dahulu</div>';
+  try {
+    const res = await fetch(`${API}/api/po?limit=100`,{headers:authHeaders()});
+    const data = await res.json();
+    const container = document.getElementById('deliveryPOCheckboxes'); container.innerHTML = '';
+    (data.data||[]).filter(p=>p.status!=='dibatalkan').forEach(p=>{
+      const div = document.createElement('div'); div.style.cssText = 'padding:8px 10px;border-bottom:1px solid var(--slate-100);display:flex;align-items:center;gap:10px;';
+      div.innerHTML = `<input type="checkbox" class="po-checkbox" value="${p.id}" onchange="onPOCheckboxChange()" style="width:18px;height:18px;accent-color:var(--teal-600);cursor:pointer;"><label style="font-size:13px;cursor:pointer;flex:1;margin:0;"><strong>${p.poNumber}</strong> - ${p.customerName}<span style="font-size:11px;color:var(--slate-500);display:block;">Sisa: ${(p.remainingKubikasi||0).toFixed(4)} m³ • ${p.remainingQuantity||0} pcs</span></label>`;
+      container.appendChild(div);
     });
+  } catch(e) { console.error(e); }
+}
+
+function onPOCheckboxChange() {
+  selectedPOIds = Array.from(document.querySelectorAll('.po-checkbox:checked')).map(cb => cb.value);
+  loadPOForDelivery();
+}
+
+function openDeliveryModalForPO(poId) {
+  openDeliveryModal();
+  setTimeout(()=>{ const cb = document.querySelector(`.po-checkbox[value="${poId}"]`); if (cb) { cb.checked = true; onPOCheckboxChange(); } },150);
+}
+
+async function loadPOForDelivery() {
+  if (selectedPOIds.length === 0) { document.getElementById('deliveryItemsContainer').innerHTML='<div style="text-align:center;padding:20px;color:var(--slate-500);font-size:13px;">Pilih PO terlebih dahulu</div>'; return; }
+  try {
+    const allItems = [];
+    for (const poId of selectedPOIds) {
+      const res = await fetch(`${API}/api/po/${poId}`, { headers: authHeaders() });
+      const po = await res.json();
+      if (!document.getElementById('deliveryAddress').value) document.getElementById('deliveryAddress').value = po.notes || '';
+      po.items.forEach(item => {
+        const shipped = (po.deliveries || []).reduce((s, d) => s + d.items.reduce((ss, di) => di.poItemId === item.id ? ss + di.quantity : ss, 0), 0);
+        const rem = item.quantity - shipped;
+        if (rem > 0) allItems.push({ ...item, remaining: rem, remKub: (item.kubikasi / item.quantity) * rem, poNumber: po.poNumber });
+      });
+    }
+    if (allItems.length === 0) { document.getElementById('deliveryItemsContainer').innerHTML='<div style="text-align:center;padding:20px;color:var(--amber-500);font-size:13px;">Semua item sudah terkirim</div>'; return; }
+    let h = '<div style="font-size:13px;font-weight:800;margin-bottom:8px;">📦 Item yang Dikirim</div><table class="items-table"><thead><tr><th>PO</th><th>Item</th><th>Sisa</th><th>Kirim</th></tr></thead><tbody>';
+    allItems.forEach(i => { h += `<tr><td style="font-size:10px;color:var(--teal-600);font-weight:700;">${i.poNumber}</td><td><strong>${i.productName}</strong><br><span style="font-size:10px;color:var(--slate-500);">${i.thickness}×${i.width}×${i.length}cm</span></td><td>${i.remaining} pcs<br><span style="font-size:10px;color:var(--teal-600);">${i.remKub.toFixed(4)} m³</span></td><td><input type="number" data-po-item-id="${i.id}" max="${i.remaining}" min="1" value="1" class="del-qty" style="width:60px;"></td></tr>`; });
+    h += '</tbody></table>';
+    document.getElementById('deliveryItemsContainer').innerHTML = h;
+  } catch(e) { console.error(e); }
+}
+
+function closeDeliveryModal() { document.getElementById('deliveryModal').classList.add('hidden'); }
+
+async function saveDelivery() {
+  if (selectedPOIds.length === 0) { showToast('Pilih minimal 1 PO', 'error'); return; }
+  const items = []; document.querySelectorAll('.del-qty').forEach(inp => { const q = parseInt(inp.value); if (q > 0) items.push({ poItemId: inp.dataset.poItemId, quantity: q }); });
+  if (!items.length) { showToast('Minimal 1 item harus dikirim', 'error'); return; }
+  try {
+    const isEdit = !!editingDeliveryId;
+    const url = isEdit ? `${API}/api/deliveries/${editingDeliveryId}` : `${API}/api/deliveries`;
+    const res = await fetch(url, { method: isEdit ? 'PUT' : 'POST', headers: authHeaders(), body: JSON.stringify({
+      poIds: selectedPOIds, deliveryDate: document.getElementById('deliveryDate').value,
+      driverName: document.getElementById('driverName').value, vehicleNumber: document.getElementById('vehicleNumber').value,
+      deliveryAddress: document.getElementById('deliveryAddress').value, notes: document.getElementById('deliveryNotes').value, items
+    })});
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+    editingDeliveryId = null; closeDeliveryModal();
+    await loadPOs(); await loadDashboard();
+    const activePage = document.querySelector('.page.active');
+    if (activePage?.id === 'page-deliveries') await loadPODeliveries();
+    if (activePage?.id === 'page-detail' && window._refreshDetailPOId) { await viewPO(window._refreshDetailPOId); window._refreshDetailPOId = null; }
+    showToast(isEdit ? 'Pengiriman berhasil diupdate!' : 'Pengiriman berhasil disimpan!', 'success');
   } catch(e) { showToast('Error: '+e.message, 'error'); }
 }
 

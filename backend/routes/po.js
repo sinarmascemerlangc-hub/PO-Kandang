@@ -98,7 +98,7 @@ router.get('/:id', auth, async (req, res) => {
   try {
     const po = await prisma.purchaseOrder.findUnique({
       where: { id: req.params.id },
-      include: { items: true, deliveries: { include: { items: { include: { poItem: true } } } }, user: { select: { name: true } } },
+      include: { items: true, deliveries: { include: { items: { include: { poItem: true } }, proofs: true, deliveryPOs: { include: { po: true } } } }, user: { select: { name: true } } },
     });
     if (!po) return res.status(404).json({ error: 'PO tidak ditemukan' });
 

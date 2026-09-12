@@ -53,6 +53,7 @@ model PurchaseOrder {
   user           User           @relation(fields: [userId], references: [id])
   items          POItem[]
   deliveries     Delivery[]
+  deliveryPOs    DeliveryPO[]
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
 }
@@ -75,17 +76,19 @@ model POItem {
 }
 
 model Delivery {
-  id             String        @id @default(uuid())
-  poId           String
-  po             PurchaseOrder @relation(fields: [poId], references: [id], onDelete: Cascade)
-  deliveryDate   DateTime      @default(now())
+  id             String         @id @default(uuid())
+  poId           String?
+  po             PurchaseOrder? @relation(fields: [poId], references: [id], onDelete: Cascade)
+  deliveryDate   DateTime       @default(now())
   driverName     String?
   vehicleNumber  String?
   deliveryAddress String?
   proofUrl       String?
   notes          String?
   items          DeliveryItem[]
-  createdAt      DateTime      @default(now())
+  proofs         DeliveryProof[]
+  deliveryPOs    DeliveryPO[]
+  createdAt      DateTime       @default(now())
 }
 
 model DeliveryItem {
@@ -97,4 +100,22 @@ model DeliveryItem {
   quantity       Int
   kubikasi       Float
   notes          String?
+}
+
+model DeliveryProof {
+  id             String   @id @default(uuid())
+  deliveryId     String
+  delivery       Delivery @relation(fields: [deliveryId], references: [id], onDelete: Cascade)
+  url            String
+  fileName       String?
+  createdAt      DateTime @default(now())
+}
+
+model DeliveryPO {
+  id             String        @id @default(uuid())
+  deliveryId     String
+  delivery       Delivery      @relation(fields: [deliveryId], references: [id], onDelete: Cascade)
+  poId           String
+  po             PurchaseOrder @relation(fields: [poId], references: [id], onDelete: Cascade)
+  @@unique([deliveryId, poId])
 }
