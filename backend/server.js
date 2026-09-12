@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const compression = require('compression');
 const path = require('path');
+const prisma = require('./config/database');
 require('dotenv').config();
 
 const app = express();
@@ -25,7 +26,15 @@ app.use('/api/auth', require('./routes/auth'));
 app.use('/api/po', require('./routes/po'));
 app.use('/api/deliveries', require('./routes/deliveries'));
 
-app.get('/api/health', (req, res) => res.json({ status: 'OK', timestamp: new Date() }));
+app.get('/api/health', async (req, res) => {
+  const start = Date.now();
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    res.json({ status: 'OK', timestamp: new Date(), db: Date.now() - start + 'ms' });
+  } catch (e) {
+    res.json({ status: 'OK', timestamp: new Date(), db: 'error', dbTime: Date.now() - start + 'ms' });
+  }
+});
 
 app.get('*', (req, res) => {
   if (!req.path.startsWith('/api')) {
