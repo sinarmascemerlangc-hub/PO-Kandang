@@ -56,6 +56,10 @@ model PurchaseOrder {
   deliveryPOs    DeliveryPO[]
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
+
+  @@index([status])
+  @@index([customerName])
+  @@index([createdAt])
 }
 
 model POItem {
@@ -89,6 +93,8 @@ model Delivery {
   proofs         DeliveryProof[]
   deliveryPOs    DeliveryPO[]
   createdAt      DateTime       @default(now())
+
+  @@index([poId])
 }
 
 model DeliveryItem {
@@ -100,6 +106,9 @@ model DeliveryItem {
   quantity       Int
   kubikasi       Float
   notes          String?
+
+  @@index([poItemId])
+  @@index([deliveryId])
 }
 
 model DeliveryProof {
@@ -118,4 +127,5 @@ model DeliveryPO {
   poId           String
   po             PurchaseOrder @relation(fields: [poId], references: [id], onDelete: Cascade)
   @@unique([deliveryId, poId])
+  @@index([poId])
 }

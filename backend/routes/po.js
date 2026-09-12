@@ -24,7 +24,7 @@ router.get('/', auth, async (req, res) => {
     const [pos, total] = await Promise.all([
       prisma.purchaseOrder.findMany({
         where,
-        include: { items: true, deliveries: { include: { items: true } }, user: { select: { name: true } } },
+        include: { items: true, user: { select: { name: true } } },
         orderBy: { createdAt: 'desc' },
         skip,
         take: parseInt(limit),
@@ -32,21 +32,33 @@ router.get('/', auth, async (req, res) => {
       prisma.purchaseOrder.count({ where }),
     ]);
 
+    const poIds = pos.map(p => p.id);
+    const poItemIds = pos.flatMap(po => po.items.map(i => i.id));
+    const shippedAgg = poItemIds.length > 0 ? await prisma.deliveryItem.groupBy({
+      by: ['poItemId'],
+      where: { poItemId: { in: poItemIds } },
+      _sum: { kubikasi: true, quantity: true },
+    }) : [];
+    const poItemToPoId = {};
+    pos.forEach(po => po.items.forEach(i => { poItemToPoId[i.id] = po.id; }));
+    const shippedMap = {};
+    shippedAgg.forEach(a => {
+      const poId = poItemToPoId[a.poItemId];
+      if (!poId) return;
+      if (!shippedMap[poId]) shippedMap[poId] = { kubikasi: 0, quantity: 0 };
+      shippedMap[poId].kubikasi += Number(a._sum.kubikasi) || 0;
+      shippedMap[poId].quantity += Number(a._sum.quantity) || 0;
+    });
+
     const enriched = pos.map((po) => {
-      let shippedKubikasi = 0;
-      let shippedQuantity = 0;
-      po.deliveries.forEach((d) => {
-        d.items.forEach((di) => {
-          shippedKubikasi += di.kubikasi;
-          shippedQuantity += di.quantity;
-        });
-      });
+      const shipped = shippedMap[po.id] || { kubikasi: 0, quantity: 0 };
       return {
         ...po,
-        shippedKubikasi,
-        shippedQuantity,
-        remainingKubikasi: po.totalKubikasi - shippedKubikasi,
-        remainingQuantity: po.totalQuantity - shippedQuantity,
+        deliveries: undefined,
+        shippedKubikasi: shipped.kubikasi,
+        shippedQuantity: shipped.quantity,
+        remainingKubikasi: (Number(po.totalKubikasi) || 0) - shipped.kubikasi,
+        remainingQuantity: (po.totalQuantity || 0) - shipped.quantity,
       };
     });
 

@@ -161,26 +161,24 @@ router.put('/:id', auth, async (req, res) => {
 // GET /api/deliveries/po/:poId - Get deliveries for a PO
 router.get('/po/:poId', auth, async (req, res) => {
   try {
-    // Find deliveries linked via DeliveryPO junction table OR legacy poId
+    const poId = req.params.poId;
     const deliveryPOs = await prisma.deliveryPO.findMany({
-      where: { poId: req.params.poId },
-      include: { delivery: true },
+      where: { poId },
+      select: { deliveryId: true },
     });
-    const legacyDeliveries = await prisma.delivery.findMany({
-      where: { poId: req.params.poId },
-    });
-
-    const deliveryIds = new Set([
-      ...deliveryPOs.map(dp => dp.deliveryId),
-      ...legacyDeliveries.map(d => d.id),
-    ]);
+    const dpIds = deliveryPOs.map(d => d.deliveryId);
 
     const deliveries = await prisma.delivery.findMany({
-      where: { id: { in: Array.from(deliveryIds) } },
+      where: {
+        OR: [
+          { id: { in: dpIds } },
+          { poId: poId },
+        ],
+      },
       include: {
         items: { include: { poItem: true } },
         proofs: true,
-        deliveryPOs: { include: { po: true } },
+        deliveryPOs: { include: { po: { select: { poNumber: true } } } },
       },
       orderBy: { deliveryDate: 'desc' },
     });
