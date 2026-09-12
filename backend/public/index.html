@@ -585,19 +585,7 @@
       <div id="reportContent"></div>
     </div>
 
-    <!-- PO DETAIL MODAL -->
-    <div id="page-detail" class="modal-overlay hidden">
-      <div class="modal-sheet" style="max-width:600px;max-height:95vh;overflow-y:auto;">
-        <div class="modal-handle"></div>
-        <div class="modal-header" style="position:sticky;top:0;z-index:10;background:white;border-bottom:1px solid var(--slate-100);">
-          <h3 id="detailModalTitle">Detail PO</h3>
-          <button class="modal-close" onclick="closeDetail()">&times;</button>
-        </div>
-        <div class="modal-body" style="padding:0;">
-          <div id="detailContent"></div>
-        </div>
-      </div>
-    </div>
+    <!-- PO DETAIL MODAL - removed, moved outside #app -->
   </div>
 
   <!-- BOTTOM NAV -->
@@ -743,6 +731,20 @@
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeProofModal()">Batal</button>
       <button class="btn btn-primary" id="proofUploadBtn" onclick="uploadProof()" disabled>Upload</button>
+    </div>
+  </div>
+</div>
+
+<!-- PO DETAIL MODAL (outside #app so it's always accessible) -->
+<div id="page-detail" class="modal-overlay hidden">
+  <div class="modal-sheet" style="max-width:600px;max-height:95vh;overflow-y:auto;">
+    <div class="modal-handle"></div>
+    <div class="modal-header" style="position:sticky;top:0;z-index:10;background:white;border-bottom:1px solid var(--slate-100);">
+      <h3 id="detailModalTitle">Detail PO</h3>
+      <button class="modal-close" onclick="closeDetail()">&times;</button>
+    </div>
+    <div class="modal-body" style="padding:0;">
+      <div id="detailContent"></div>
     </div>
   </div>
 </div>
