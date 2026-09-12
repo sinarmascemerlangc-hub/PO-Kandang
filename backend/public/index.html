@@ -396,6 +396,63 @@
     .total-row { background: var(--teal-50); }
     .total-row td { font-weight: 800; color: var(--teal-700); border-top: 2px solid var(--teal-400); }
 
+    .item-field-label { display: none; }
+
+    @media (max-width: 520px) {
+      .items-table thead { display: none; }
+      .items-table tbody tr {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        padding: 12px;
+        margin-bottom: 10px;
+        background: var(--slate-50);
+        border-radius: 12px;
+        border: 1px solid var(--slate-100);
+      }
+      .items-table tbody td {
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+      }
+      .items-table tbody td:first-child {
+        grid-column: 1 / -1;
+      }
+      .items-table td.item-cell-name input { padding: 10px 12px; font-size: 14px; }
+      .items-table td.item-cell-num input { padding: 10px 12px; font-size: 16px; }
+      .items-table .kubikasi-cell {
+        grid-column: 1 / -1;
+        text-align: center;
+        font-size: 13px;
+        padding: 6px 0;
+        border-top: 1px dashed var(--slate-200);
+      }
+      .items-table td.item-cell-actions {
+        grid-column: 1 / -1;
+        display: flex;
+        justify-content: flex-end;
+      }
+      .items-table .item-field-label {
+        display: block;
+        font-size: 10px;
+        font-weight: 700;
+        color: var(--slate-500);
+        text-transform: uppercase;
+        margin-bottom: 4px;
+        letter-spacing: 0.3px;
+      }
+      .items-table .remove-btn {
+        padding: 8px 16px;
+        font-size: 12px;
+      }
+      .items-table tfoot tr {
+        display: flex;
+        justify-content: space-between;
+        padding: 12px;
+      }
+      .items-table tfoot td { border: none; padding: 0; }
+    }
+
     /* === REPORTS === */
     .report-card { background: white; border-radius: var(--radius); padding: 18px; margin-bottom: 12px; box-shadow: var(--shadow-sm); }
     .report-card h4 { font-size: 14px; font-weight: 800; color: var(--teal-700); margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
@@ -1050,13 +1107,13 @@ function addItemRow(data) {
   const tbody = document.getElementById('poItems');
   const row = document.createElement('tr');
   row.innerHTML = `
-    <td><input type="text" class="item-name" value="${data?.productName||''}" placeholder="Nama"></td>
-    <td><input type="number" class="item-thickness" value="${data?.thickness||''}" step="0.1" oninput="calcRow(this)" placeholder="0"></td>
-    <td><input type="number" class="item-width" value="${data?.width||''}" step="0.1" oninput="calcRow(this)" placeholder="0"></td>
-    <td><input type="number" class="item-length" value="${data?.length||''}" step="0.1" oninput="calcRow(this)" placeholder="0"></td>
-    <td><input type="number" class="item-qty" value="${data?.quantity||1}" min="1" oninput="calcRow(this)"></td>
-    <td class="kubikasi-cell">${calcKub(data?.thickness||0,data?.width||0,data?.length||0,data?.quantity||1)}</td>
-    <td><button class="remove-btn" onclick="this.closest('tr').remove();updateTotal()">✕</button></td>`;
+    <td class="item-cell-name"><span class="item-field-label">Nama Produk</span><input type="text" class="item-name" value="${data?.productName||''}" placeholder="Nama"></td>
+    <td class="item-cell-num"><span class="item-field-label">Tebal</span><input type="number" class="item-thickness" value="${data?.thickness||''}" step="0.1" oninput="calcRow(this)" placeholder="0"></td>
+    <td class="item-cell-num"><span class="item-field-label">Lebar</span><input type="number" class="item-width" value="${data?.width||''}" step="0.1" oninput="calcRow(this)" placeholder="0"></td>
+    <td class="item-cell-num"><span class="item-field-label">Pjg</span><input type="number" class="item-length" value="${data?.length||''}" step="0.1" oninput="calcRow(this)" placeholder="0"></td>
+    <td class="item-cell-num"><span class="item-field-label">Qty</span><input type="number" class="item-qty" value="${data?.quantity||1}" min="1" oninput="calcRow(this)"></td>
+    <td class="kubikasi-cell"><span class="item-field-label">Kubikasi</span>${calcKub(data?.thickness||0,data?.width||0,data?.length||0,data?.quantity||1)}</td>
+    <td class="item-cell-actions"><button class="remove-btn" onclick="this.closest('tr').remove();updateTotal()">✕</button></td>`;
   tbody.appendChild(row);
 }
 
