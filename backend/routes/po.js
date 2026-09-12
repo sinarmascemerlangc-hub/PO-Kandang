@@ -8,49 +8,52 @@ function calcKubikasi(thickness, width, length) {
   return (thickness / 100) * (width / 100) * (length / 100);
 }
 
-// GET /api/po - List all POs with summary (single raw query for speed)
+// GET /api/po - List all POs with summary
 router.get('/', auth, async (req, res) => {
   try {
     const { status, search, page = 1, limit = 20 } = req.query;
     const skip = (parseInt(page) - 1) * parseInt(limit);
     const take = parseInt(limit);
-    const params = [];
+    const searchParams = [];
     const conditions = ['1=1'];
 
-    if (status) { params.push(status); conditions.push(`p.status = $${params.length}`); }
-    if (search) { params.push(`%${search}%`); conditions.push(`(p."poNumber" ILIKE $${params.length} OR p."customerName" ILIKE $${params.length})`); }
+    if (status) { searchParams.push(status); conditions.push(`p.status = $${searchParams.length}`); }
+    if (search) { searchParams.push(`%${search}%`); conditions.push(`(p."poNumber" ILIKE $${searchParams.length} OR p."customerName" ILIKE $${searchParams.length})`); }
 
     const whereClause = conditions.join(' AND ');
 
     const countResult = await prisma.$queryRawUnsafe(
-      `SELECT COUNT(*)::int as total FROM "PurchaseOrder" p WHERE ${whereClause}`, ...params
+      `SELECT COUNT(*)::int as total FROM "PurchaseOrder" p WHERE ${whereClause}`, ...searchParams
     );
     const total = countResult[0]?.total || 0;
 
-    params.push(take); const lim = params.length;
-    params.push(skip); const off = params.length;
+    const listParams = [...searchParams, take, skip];
+    const lim = listParams.length - 1;
+    const off = listParams.length;
 
-    const pos = await prisma.$queryRawUnsafe(`
-      SELECT p.*, u.name as "userName",
-        COALESCE(s.ship_kub, 0) as "shippedKubikasi",
-        COALESCE(s.ship_qty, 0) as "shippedQuantity"
-      FROM "PurchaseOrder" p
-      LEFT JOIN "User" u ON u.id = p."userId"
-      LEFT JOIN (
-        SELECT poi."poId", SUM(di.kubikasi)::float as ship_kub, SUM(di.quantity)::int as ship_qty
-        FROM "DeliveryItem" di
-        JOIN "POItem" poi ON poi.id = di."poItemId"
-        GROUP BY poi."poId"
-      ) s ON s."poId" = p.id
-      WHERE ${whereClause}
-      ORDER BY p."createdAt" DESC
-      LIMIT $${lim} OFFSET $${off}
-    `, ...params);
-
-    const itemParams = pos.map(p => p.id);
-    const items = itemParams.length > 0 ? await prisma.$queryRawUnsafe(`
-      SELECT * FROM "POItem" WHERE "poId" = ANY($1)
-    `, itemParams) : [];
+    const [pos, items] = await Promise.all([
+      prisma.$queryRawUnsafe(`
+        SELECT p.*, u.name as "userName",
+          COALESCE(s.ship_kub, 0)::float as "shippedKubikasi",
+          COALESCE(s.ship_qty, 0)::int as "shippedQuantity"
+        FROM "PurchaseOrder" p
+        LEFT JOIN "User" u ON u.id = p."userId"
+        LEFT JOIN (
+          SELECT poi."poId", SUM(di.kubikasi)::float as ship_kub, SUM(di.quantity)::int as ship_qty
+          FROM "DeliveryItem" di
+          JOIN "POItem" poi ON poi.id = di."poItemId"
+          GROUP BY poi."poId"
+        ) s ON s."poId" = p.id
+        WHERE ${whereClause}
+        ORDER BY p."createdAt" DESC
+        LIMIT $${lim} OFFSET $${off}
+      `, ...listParams),
+      prisma.$queryRawUnsafe(`
+        SELECT poi.* FROM "POItem" poi
+        JOIN "PurchaseOrder" p ON p.id = poi."poId"
+        WHERE ${whereClause}
+      `, ...searchParams),
+    ]);
 
     const itemsByPo = {};
     items.forEach(i => {
