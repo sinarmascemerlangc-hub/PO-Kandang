@@ -1234,7 +1234,12 @@ function openProofModal(deliveryId) {
 function closeProofModal() { document.getElementById('proofModal').classList.add('hidden'); }
 
 function openProofPreview(url) {
-  document.getElementById('proofPreviewImg').src = url;
+  let imgSrc = url;
+  const gdMatch = url.match(/drive\.google\.com\/file\/d\/([^/]+)/);
+  if (gdMatch) imgSrc = 'https://drive.google.com/uc?export=view&id=' + gdMatch[1];
+  const lhMatch = url.match(/lh3\.googleusercontent\.com\/([^?]+)/);
+  if (lhMatch) imgSrc = 'https://lh3.googleusercontent.com/' + lhMatch[1];
+  document.getElementById('proofPreviewImg').src = imgSrc;
   document.getElementById('proofPreviewModal').classList.remove('hidden');
 }
 function closeProofPreview() { document.getElementById('proofPreviewModal').classList.add('hidden'); }
