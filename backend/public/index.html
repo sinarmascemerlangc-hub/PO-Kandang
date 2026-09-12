@@ -446,6 +446,20 @@
     }
     .back-btn:active { transform: scale(0.96); background: var(--slate-50); }
 
+    /* Detail modal - full screen on mobile */
+    #page-detail .modal-sheet {
+      max-height: 95vh;
+      border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    }
+    @media (min-width: 640px) {
+      #page-detail .modal-sheet {
+        max-width: 640px;
+        margin: 2vh auto;
+        border-radius: var(--radius-lg);
+        max-height: 96vh;
+      }
+    }
+
     .proof-btn-wrap { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
     .proof-btn-view {
       display: inline-flex; align-items: center; gap: 4px; padding: 7px 14px;
@@ -571,10 +585,18 @@
       <div id="reportContent"></div>
     </div>
 
-    <!-- PO DETAIL -->
-    <div id="page-detail" class="page">
-      <button class="back-btn" onclick="closeDetail()">← Kembali</button>
-      <div id="detailContent"></div>
+    <!-- PO DETAIL MODAL -->
+    <div id="page-detail" class="modal-overlay hidden">
+      <div class="modal-sheet" style="max-width:600px;max-height:95vh;overflow-y:auto;">
+        <div class="modal-handle"></div>
+        <div class="modal-header" style="position:sticky;top:0;z-index:10;background:white;border-bottom:1px solid var(--slate-100);">
+          <h3 id="detailModalTitle">Detail PO</h3>
+          <button class="modal-close" onclick="closeDetail()">&times;</button>
+        </div>
+        <div class="modal-body" style="padding:0;">
+          <div id="detailContent"></div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -923,8 +945,8 @@ async function viewPO(id) {
   try {
     const res = await fetch(`${API}/api/po/${id}`, { headers: authHeaders() });
     const po = await res.json();
-    openPage('detail');
-    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.getElementById('detailModalTitle').textContent = po.poNumber + ' - ' + po.customerName;
+    document.getElementById('page-detail').classList.remove('hidden');
     document.getElementById('detailContent').innerHTML = `
       <div class="detail-header fade-in">
         <h2>${po.poNumber}</h2>
@@ -998,9 +1020,7 @@ async function viewPO(id) {
 }
 
 function closeDetail() {
-  document.getElementById('page-detail').style.display='none';
-  document.getElementById('page-detail').classList.remove('active');
-  switchPage('pos');
+  document.getElementById('page-detail').classList.add('hidden');
 }
 
 /* === PO CRUD === */
@@ -1235,8 +1255,7 @@ async function uploadProof() {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error);
     closeProofModal();
-    const activePage = document.querySelector('.page.active');
-    if (activePage?.id === 'page-detail') {
+    if (!document.getElementById('page-detail').classList.contains('hidden')) {
       const poId = document.querySelector('#detailContent [onclick*="viewPO"]')?.getAttribute('onclick')?.match(/'([^']+)'/)?.[1];
       if (poId) viewPO(poId);
     }
@@ -1452,7 +1471,7 @@ async function saveDelivery() {
     await loadPOs(); await loadDashboard();
     const activePage = document.querySelector('.page.active');
     if (activePage?.id === 'page-deliveries') await loadPODeliveries();
-    if (activePage?.id === 'page-detail' && window._refreshDetailPOId) { await viewPO(window._refreshDetailPOId); window._refreshDetailPOId = null; }
+    if (!document.getElementById('page-detail').classList.contains('hidden') && window._refreshDetailPOId) { await viewPO(window._refreshDetailPOId); window._refreshDetailPOId = null; }
     showToast(isEdit ? 'Pengiriman berhasil diupdate!' : 'Pengiriman berhasil disimpan!', 'success');
   } catch(e) { showToast('Error: '+e.message, 'error'); }
 }
