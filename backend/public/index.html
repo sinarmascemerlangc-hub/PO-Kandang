@@ -965,6 +965,7 @@ async function viewPO(id) {
               </div>
               <div class="proof-btn-wrap">
                 ${d.proofUrl ? `<a href="${d.proofUrl}" target="_blank" class="proof-btn-view">📷 Lihat Bukti</a>` : `<button class="btn btn-success btn-sm" onclick="openProofModal('${d.id}')" style="font-size:11px;">📷 Upload Bukti</button>`}
+                <button class="btn btn-primary btn-sm" onclick="editDeliveryFromDetail('${d.id}','${po.id}')" style="font-size:11px;">✏️ Edit</button>
               </div>
             </div>`).join(''):'<div class="empty-state"><span class="empty-icon">📭</span><p>Belum ada pengiriman</p></div>'}
         </div>
@@ -1050,7 +1051,9 @@ async function savePO() {
     })});
     const data = await res.json();
     if (!res.ok) throw new Error(data.error);
-    closePOModal(); loadPOs(); loadDashboard();
+    closePOModal();
+    await loadPOs();
+    await loadDashboard();
     showToast(poId ? 'PO berhasil diupdate!' : 'PO berhasil dibuat!', 'success');
   } catch(e) { showToast('Error: '+e.message, 'error'); }
 }
@@ -1073,7 +1076,7 @@ async function editPO(id) {
 
 async function deletePO(id) {
   if(!await showConfirm('Hapus PO?', 'Semua data item dan pengiriman akan terhapus permanen.', 'danger')) return;
-  try { await fetch(`${API}/api/po/${id}`,{method:'DELETE',headers:authHeaders()}); loadPOs(); loadDashboard(); showToast('PO berhasil dihapus', 'success'); } catch(e) { showToast('Error: '+e.message, 'error'); }
+  try { await fetch(`${API}/api/po/${id}`,{method:'DELETE',headers:authHeaders()}); await loadPOs(); await loadDashboard(); showToast('PO berhasil dihapus', 'success'); } catch(e) { showToast('Error: '+e.message, 'error'); }
 }
 
 async function updatePOStatus(id, status) {
@@ -1145,9 +1148,9 @@ async function saveItem() {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error);
     closeItemModal();
-    viewPO(poId);
-    loadPOs();
-    loadDashboard();
+    await viewPO(poId);
+    await loadPOs();
+    await loadDashboard();
     showToast(itemId ? 'Item berhasil diupdate!' : 'Item berhasil ditambah!', 'success');
   } catch(e) { showToast('Error: '+e.message, 'error'); }
 }
@@ -1156,9 +1159,9 @@ async function deleteItem(poId, itemId) {
   if (!await showConfirm('Hapus item?', 'Item ini akan dihapus dari PO.', 'danger')) return;
   try {
     await fetch(`${API}/api/po/${poId}/items/${itemId}`, { method: 'DELETE', headers: authHeaders() });
-    viewPO(poId);
-    loadPOs();
-    loadDashboard();
+    await viewPO(poId);
+    await loadPOs();
+    await loadDashboard();
     showToast('Item berhasil dihapus', 'success');
   } catch(e) { showToast('Error: '+e.message, 'error'); }
 }
@@ -1301,6 +1304,7 @@ async function loadPODeliveries() {
           </div>
           <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;">
             ${d.proofUrl ? `<a href="${d.proofUrl}" target="_blank" class="proof-btn-view">📷 Lihat Bukti</a>` : `<button class="btn btn-success btn-sm" onclick="openProofModal('${d.id}')" style="font-size:12px;">📷 Upload Bukti</button>`}
+            <button class="btn btn-primary btn-sm" onclick="editDelivery('${d.id}')" style="font-size:12px;">✏️ Edit</button>
             <button class="btn btn-danger btn-sm" onclick="deleteDelivery('${d.id}')" style="font-size:12px;">🗑️ Hapus</button>
           </div>
         </div></div>`;
@@ -1312,7 +1316,9 @@ async function loadPODeliveries() {
 }
 
 async function openDeliveryModal() {
+  editingDeliveryId = null;
   document.getElementById('deliveryModal').classList.remove('hidden');
+  document.querySelector('#deliveryModal .modal-header h3').textContent = 'Tambah Pengiriman';
   document.getElementById('deliveryDate').value = new Date().toISOString().split('T')[0];
   document.getElementById('driverName').value='';
   document.getElementById('vehicleNumber').value='';
@@ -1363,21 +1369,69 @@ async function saveDelivery() {
   document.querySelectorAll('.del-qty').forEach(inp=>{ const q=parseInt(inp.value); if(q>0) items.push({poItemId:inp.dataset.poItemId,quantity:q}); });
   if(!items.length) { showToast('Minimal 1 item harus dikirim', 'error'); return; }
   try {
-    const res = await fetch(`${API}/api/deliveries`,{method:'POST',headers:authHeaders(),body:JSON.stringify({
+    const isEdit = !!editingDeliveryId;
+    const url = isEdit ? `${API}/api/deliveries/${editingDeliveryId}` : `${API}/api/deliveries`;
+    const method = isEdit ? 'PUT' : 'POST';
+    const res = await fetch(url,{method,headers:authHeaders(),body:JSON.stringify({
       poId, deliveryDate:document.getElementById('deliveryDate').value,
       driverName:document.getElementById('driverName').value, vehicleNumber:document.getElementById('vehicleNumber').value,
       deliveryAddress:document.getElementById('deliveryAddress').value, notes:document.getElementById('deliveryNotes').value, items
     })});
     const data = await res.json();
     if(!res.ok) throw new Error(data.error);
-    closeDeliveryModal(); loadPOs(); loadDashboard();
-    showToast('Pengiriman berhasil disimpan!', 'success');
+    editingDeliveryId = null;
+    closeDeliveryModal();
+    await loadPOs();
+    await loadDashboard();
+    const activePage = document.querySelector('.page.active');
+    if (activePage?.id === 'page-deliveries') await loadPODeliveries();
+    if (activePage?.id === 'page-detail' && window._refreshDetailPOId) {
+      await viewPO(window._refreshDetailPOId);
+      window._refreshDetailPOId = null;
+    }
+    showToast(isEdit ? 'Pengiriman berhasil diupdate!' : 'Pengiriman berhasil disimpan!', 'success');
   } catch(e) { showToast('Error: '+e.message, 'error'); }
 }
 
 async function deleteDelivery(id) {
   if(!await showConfirm('Hapus pengiriman?', 'Data pengiriman akan dihapus permanen.', 'danger')) return;
-  try { await fetch(`${API}/api/deliveries/${id}`,{method:'DELETE',headers:authHeaders()}); loadPODeliveries(); showToast('Pengiriman dihapus', 'success'); } catch(e) { showToast('Error: '+e.message, 'error'); }
+  try { await fetch(`${API}/api/deliveries/${id}`,{method:'DELETE',headers:authHeaders()}); await loadPODeliveries(); showToast('Pengiriman dihapus', 'success'); } catch(e) { showToast('Error: '+e.message, 'error'); }
+}
+
+let editingDeliveryId = null;
+
+function editDeliveryFromDetail(deliveryId, poId) {
+  editingDeliveryId = deliveryId;
+  editDelivery(deliveryId).then(() => {
+    // Store poId to refresh detail after save
+    window._refreshDetailPOId = poId;
+  });
+}
+
+async function editDelivery(id) {
+  editingDeliveryId = id;
+  try {
+    const res = await fetch(`${API}/api/deliveries/${id}`, { headers: authHeaders() });
+    const d = await res.json();
+
+    await openDeliveryModal();
+    document.querySelector('#deliveryModal .modal-header h3').textContent = 'Edit Pengiriman';
+    document.getElementById('deliveryDate').value = d.deliveryDate?.split('T')[0] || '';
+    document.getElementById('driverName').value = d.driverName || '';
+    document.getElementById('vehicleNumber').value = d.vehicleNumber || '';
+    document.getElementById('deliveryAddress').value = d.deliveryAddress || '';
+    document.getElementById('deliveryNotes').value = d.notes || '';
+
+    // Set PO select
+    document.getElementById('deliveryPONumber').value = d.poId;
+    await loadPOForDelivery(d.poId);
+
+    // Pre-fill quantities
+    d.items.forEach(di => {
+      const inp = document.querySelector(`.del-qty[data-po-item-id="${di.poItemId}"]`);
+      if (inp) inp.value = di.quantity;
+    });
+  } catch(e) { showToast('Error: '+e.message, 'error'); }
 }
 
 /* === REPORTS === */
