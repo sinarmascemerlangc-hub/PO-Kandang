@@ -1,0 +1,1184 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>PO Kayu Kandang</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    body { font-family: 'Inter', sans-serif; background: #f0f2f5; color: #1a1a2e; min-height: 100vh; overflow-x: hidden; }
+
+    /* === ANIMATIONS === */
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes slideUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes slideIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+    @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+    @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+    @keyframes bounceIn { 0% { transform: scale(0.3); opacity: 0; } 50% { transform: scale(1.05); } 70% { transform: scale(0.9); } 100% { transform: scale(1); opacity: 1; } }
+    .fade-in { animation: fadeIn 0.4s ease-out forwards; }
+    .slide-up { animation: slideUp 0.5s ease-out forwards; }
+    .bounce-in { animation: bounceIn 0.5s ease-out forwards; }
+
+    .hidden { display: none !important; }
+
+    /* === LOGIN === */
+    .login-wrapper { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #0f766e 0%, #134e4a 50%, #042f2e 100%); padding: 20px; }
+    .login-box { background: white; border-radius: 24px; padding: 40px 32px; width: 100%; max-width: 380px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); animation: slideUp 0.6s ease-out; }
+    .login-logo { text-align: center; margin-bottom: 8px; }
+    .login-logo .icon { font-size: 48px; margin-bottom: 8px; display: block; }
+    .login-box h1 { text-align: center; color: #0f766e; font-size: 22px; font-weight: 800; margin-bottom: 4px; }
+    .login-box .subtitle { text-align: center; color: #94a3b8; font-size: 13px; margin-bottom: 28px; }
+    .input-group { position: relative; margin-bottom: 14px; }
+    .input-group input { width: 100%; padding: 14px 16px 14px 44px; border: 2px solid #e2e8f0; border-radius: 12px; font-size: 14px; outline: none; transition: all 0.3s; background: #f8fafc; }
+    .input-group input:focus { border-color: #0f766e; background: white; box-shadow: 0 0 0 4px rgba(15,118,110,0.1); }
+    .input-group .input-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); font-size: 18px; opacity: 0.4; }
+    .btn-login { width: 100%; padding: 14px; background: linear-gradient(135deg, #0f766e, #0d9488); color: white; border: none; border-radius: 12px; font-size: 15px; font-weight: 700; cursor: pointer; transition: all 0.3s; margin-top: 8px; }
+    .btn-login:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(15,118,110,0.4); }
+    .btn-login:active { transform: scale(0.98); }
+    .login-footer { text-align: center; margin-top: 16px; font-size: 13px; color: #94a3b8; }
+    .login-footer a { color: #0f766e; font-weight: 600; cursor: pointer; text-decoration: none; }
+    .error-msg { color: #dc2626; font-size: 13px; text-align: center; margin-top: 12px; background: #fef2f2; padding: 8px 12px; border-radius: 8px; }
+
+    /* === APP LAYOUT === */
+    .app-wrapper { display: flex; flex-direction: column; min-height: 100vh; }
+    .app-header { background: linear-gradient(135deg, #0f766e, #0d9488); color: white; padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; box-shadow: 0 4px 20px rgba(15,118,110,0.3); }
+    .app-header h1 { font-size: 18px; font-weight: 800; letter-spacing: -0.5px; }
+    .app-header .user-badge { display: flex; align-items: center; gap: 10px; }
+    .app-header .user-avatar { width: 32px; height: 32px; background: rgba(255,255,255,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; }
+    .app-header .btn-logout { background: rgba(255,255,255,0.15); color: white; border: 1px solid rgba(255,255,255,0.25); padding: 6px 14px; border-radius: 8px; cursor: pointer; font-size: 12px; font-weight: 600; transition: all 0.2s; }
+    .app-header .btn-logout:active { background: rgba(255,255,255,0.3); }
+
+    /* === BOTTOM NAV === */
+    .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: white; display: flex; justify-content: space-around; align-items: center; padding: 6px 0 max(6px, env(safe-area-inset-bottom)); box-shadow: 0 -4px 20px rgba(0,0,0,0.08); z-index: 200; border-top: 1px solid #f1f5f9; }
+    .bottom-nav .nav-item { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 12px; cursor: pointer; transition: all 0.3s; border-radius: 12px; min-width: 60px; }
+    .bottom-nav .nav-item .nav-icon { font-size: 22px; transition: transform 0.3s; }
+    .bottom-nav .nav-item .nav-label { font-size: 10px; font-weight: 600; color: #94a3b8; transition: color 0.3s; }
+    .bottom-nav .nav-item.active .nav-icon { transform: scale(1.15); }
+    .bottom-nav .nav-item.active .nav-label { color: #0f766e; font-weight: 700; }
+    .bottom-nav .nav-item.active { background: #f0fdfa; }
+    .bottom-nav .nav-item:active { transform: scale(0.92); }
+
+    /* === MAIN CONTENT === */
+    .main-content { flex: 1; padding: 16px 16px 80px; max-width: 800px; margin: 0 auto; width: 100%; }
+
+    /* === PAGE TRANSITIONS === */
+    .page { display: none; }
+    .page.active { display: block; animation: fadeIn 0.35s ease-out; }
+
+    /* === STAT CARDS === */
+    .stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 16px; }
+    .stat-card { background: white; padding: 16px; border-radius: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); transition: all 0.3s; position: relative; overflow: hidden; }
+    .stat-card::after { content: ''; position: absolute; top: 0; right: 0; width: 60px; height: 60px; border-radius: 0 16px 0 60px; opacity: 0.08; }
+    .stat-card:active { transform: scale(0.97); }
+    .stat-card .stat-icon { font-size: 24px; margin-bottom: 8px; }
+    .stat-card .stat-value { font-size: 24px; font-weight: 800; color: #0f766e; line-height: 1; }
+    .stat-card .stat-label { font-size: 11px; color: #94a3b8; margin-top: 4px; font-weight: 500; }
+    .stat-card .stat-sub { font-size: 10px; color: #cbd5e1; margin-top: 2px; }
+    .stat-card.teal { border-left: 4px solid #0f766e; }
+    .stat-card.teal .stat-value { color: #0f766e; }
+    .stat-card.amber { border-left: 4px solid #d97706; }
+    .stat-card.amber .stat-value { color: #d97706; }
+    .stat-card.green { border-left: 4px solid #16a34a; }
+    .stat-card.green .stat-value { color: #16a34a; }
+    .stat-card.blue { border-left: 4px solid #2563eb; }
+    .stat-card.blue .stat-value { color: #2563eb; }
+    .stat-card.red { border-left: 4px solid #dc2626; }
+    .stat-card.red .stat-value { color: #dc2626; }
+
+    /* === CARDS === */
+    .card { background: white; border-radius: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); overflow: hidden; margin-bottom: 12px; }
+    .card-header { padding: 14px 16px; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; }
+    .card-header h3 { font-size: 15px; font-weight: 700; }
+    .card-body { padding: 16px; }
+    .section-title { font-size: 16px; font-weight: 700; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+
+    /* === BUTTONS === */
+    .btn { padding: 10px 18px; border: none; border-radius: 10px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px; }
+    .btn:active { transform: scale(0.96); }
+    .btn-primary { background: linear-gradient(135deg, #0f766e, #0d9488); color: white; box-shadow: 0 2px 8px rgba(15,118,110,0.3); }
+    .btn-primary:hover { box-shadow: 0 4px 16px rgba(15,118,110,0.4); }
+    .btn-success { background: linear-gradient(135deg, #16a34a, #22c55e); color: white; }
+    .btn-danger { background: #fee2e2; color: #dc2626; }
+    .btn-danger:active { background: #fecaca; }
+    .btn-secondary { background: #f1f5f9; color: #475569; }
+    .btn-sm { padding: 6px 12px; font-size: 11px; border-radius: 8px; }
+
+    /* === SEARCH === */
+    .search-box { position: relative; margin-bottom: 12px; }
+    .search-box input { width: 100%; padding: 12px 16px 12px 40px; border: 2px solid #e2e8f0; border-radius: 12px; font-size: 14px; outline: none; background: white; transition: all 0.3s; }
+    .search-box input:focus { border-color: #0f766e; box-shadow: 0 0 0 4px rgba(15,118,110,0.08); }
+    .search-box .search-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); font-size: 16px; opacity: 0.3; }
+    .filter-chips { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 8px; -webkit-overflow-scrolling: touch; }
+    .filter-chips::-webkit-scrollbar { display: none; }
+    .filter-chip { padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 600; border: 2px solid #e2e8f0; background: white; cursor: pointer; white-space: nowrap; transition: all 0.2s; }
+    .filter-chip.active { background: #0f766e; color: white; border-color: #0f766e; }
+    .filter-chip:active { transform: scale(0.95); }
+
+    /* === PO LIST === */
+    .po-card { background: white; border-radius: 14px; padding: 14px; margin-bottom: 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.04); transition: all 0.2s; cursor: pointer; border-left: 4px solid transparent; }
+    .po-card:active { transform: scale(0.98); background: #f8fafc; }
+    .po-card.status-diterima { border-left-color: #3b82f6; }
+    .po-card.status-diproses { border-left-color: #f59e0b; }
+    .po-card.status-dikirim { border-left-color: #10b981; }
+    .po-card.status-selesai { border-left-color: #8b5cf6; }
+    .po-card.status-dibatalkan { border-left-color: #ef4444; }
+    .po-card-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+    .po-card-num { font-size: 15px; font-weight: 700; color: #1a1a2e; }
+    .po-card-customer { font-size: 12px; color: #64748b; margin-top: 2px; }
+    .po-card-meta { display: flex; gap: 12px; flex-wrap: wrap; }
+    .po-card-meta .meta { font-size: 11px; color: #94a3b8; display: flex; align-items: center; gap: 4px; }
+    .po-card-meta .meta strong { color: #475569; }
+    .po-card-bottom { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; padding-top: 10px; border-top: 1px solid #f1f5f9; }
+    .kubikasi-badge { padding: 3px 10px; border-radius: 8px; font-size: 11px; font-weight: 700; }
+    .kubikasi-badge.total { background: #f0fdfa; color: #0f766e; }
+    .kubikasi-badge.sisa { background: #fffbeb; color: #d97706; }
+
+    .po-remaining-items { margin-top: 8px; padding: 8px; background: #fffbeb; border-radius: 10px; border: 1px solid #fef3c7; }
+    .remain-row { display: flex; align-items: center; gap: 6px; padding: 5px 0; border-bottom: 1px solid rgba(254,243,199,0.6); font-size: 11px; }
+    .remain-row:last-child { border-bottom: none; }
+    .remain-name { font-weight: 700; color: #1a1a2e; flex: 1; }
+    .remain-size { color: #94a3b8; font-size: 10px; }
+    .remain-qty { font-weight: 700; color: #d97706; }
+    .remain-kub { font-weight: 700; color: #0f766e; }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 4px; }
+    .status-dot.diterima { background: #3b82f6; }
+    .status-dot.diproses { background: #f59e0b; }
+    .status-dot.dikirim { background: #10b981; }
+    .status-dot.selesai { background: #8b5cf6; }
+    .status-dot.dibatalkan { background: #ef4444; }
+    .status-text { font-size: 11px; font-weight: 600; text-transform: capitalize; }
+    .status-text.diterima { color: #3b82f6; }
+    .status-text.diproses { color: #f59e0b; }
+    .status-text.dikirim { color: #10b981; }
+    .status-text.selesai { color: #8b5cf6; }
+    .status-text.dibatalkan { color: #ef4444; }
+
+    /* === DETAIL === */
+    .detail-header { background: linear-gradient(135deg, #0f766e, #0d9488); color: white; border-radius: 16px; padding: 20px; margin-bottom: 16px; }
+    .detail-header h2 { font-size: 22px; font-weight: 800; margin-bottom: 4px; }
+    .detail-header p { font-size: 13px; opacity: 0.85; margin-bottom: 2px; }
+    .detail-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 14px; }
+    .detail-stat { background: rgba(255,255,255,0.15); padding: 10px; border-radius: 10px; text-align: center; }
+    .detail-stat .ds-label { font-size: 10px; opacity: 0.8; text-transform: uppercase; }
+    .detail-stat .ds-value { font-size: 16px; font-weight: 700; margin-top: 2px; }
+    .detail-actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+    .detail-actions .btn { background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.3); }
+    .detail-actions .btn:active { background: rgba(255,255,255,0.3); }
+
+    /* === TABLES (MOBILE) === */
+    .mobile-table { width: 100%; }
+    .mobile-table th { font-size: 11px; padding: 10px 12px; background: #f8fafc; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; }
+    .mobile-table td { padding: 10px 12px; font-size: 13px; border-bottom: 1px solid #f1f5f9; }
+    .mobile-table .kub-val { color: #0f766e; font-weight: 700; font-size: 12px; }
+
+    /* === MODAL === */
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 1000; animation: fadeIn 0.2s; }
+    .modal-sheet { background: white; border-radius: 20px; width: 90%; max-width: 600px; max-height: 85vh; overflow-y: auto; animation: slideIn 0.35s ease-out; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+    .modal-handle { width: 40px; height: 4px; background: #e2e8f0; border-radius: 4px; margin: 10px auto; }
+    .modal-header { padding: 8px 20px 12px; display: flex; justify-content: space-between; align-items: center; }
+    .modal-header h3 { font-size: 17px; font-weight: 700; }
+    .modal-close { background: #f1f5f9; border: none; width: 32px; height: 32px; border-radius: 50%; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #64748b; }
+    .modal-body { padding: 0 20px 20px; }
+    .modal-footer { padding: 12px 20px; border-top: 1px solid #f1f5f9; display: flex; gap: 8px; }
+    .modal-footer .btn { flex: 1; justify-content: center; }
+
+    /* === FORMS === */
+    .form-group { margin-bottom: 14px; }
+    .form-group label { display: block; font-size: 12px; font-weight: 600; color: #475569; margin-bottom: 5px; }
+    .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 11px 14px; border: 2px solid #e2e8f0; border-radius: 10px; font-size: 14px; outline: none; transition: all 0.3s; background: #f8fafc; }
+    .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: #0f766e; background: white; box-shadow: 0 0 0 3px rgba(15,118,110,0.08); }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+    .items-table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+    .items-table th { font-size: 10px; padding: 8px 6px; background: #f8fafc; text-transform: uppercase; }
+    .items-table td { padding: 6px; font-size: 12px; }
+    .items-table input { width: 100%; padding: 7px 6px; border: 1.5px solid #e2e8f0; border-radius: 6px; font-size: 12px; outline: none; }
+    .items-table input:focus { border-color: #0f766e; }
+    .items-table .kubikasi-cell { color: #0f766e; font-weight: 700; font-size: 11px; }
+    .items-table .remove-btn { background: #fee2e2; color: #dc2626; border: none; border-radius: 6px; padding: 5px 8px; cursor: pointer; font-size: 11px; }
+    .total-row { background: #f0fdfa; }
+    .total-row td { font-weight: 700; color: #0f766e; border-top: 2px solid #0f766e; }
+
+    /* === REPORTS === */
+    .report-card { background: white; border-radius: 14px; padding: 16px; margin-bottom: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
+    .report-card h4 { font-size: 13px; font-weight: 700; color: #0f766e; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+    .report-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f1f5f9; font-size: 13px; }
+    .report-row:last-child { border-bottom: none; }
+    .report-row .r-label { color: #64748b; }
+    .report-row .r-value { font-weight: 700; color: #1a1a2e; }
+    .report-row .r-value.green { color: #16a34a; }
+    .report-row .r-value.amber { color: #d97706; }
+    .report-row .r-value.teal { color: #0f766e; }
+
+    /* === EMPTY STATE === */
+    .empty-state { text-align: center; padding: 48px 20px; color: #94a3b8; }
+    .empty-state .empty-icon { font-size: 48px; margin-bottom: 12px; }
+    .empty-state p { font-size: 13px; }
+
+    /* === PAGINATION === */
+    .pagination { display: flex; justify-content: center; gap: 4px; margin-top: 12px; }
+    .pagination button { padding: 6px 12px; border: 1.5px solid #e2e8f0; background: white; border-radius: 8px; cursor: pointer; font-size: 12px; font-weight: 600; }
+    .pagination button.active { background: #0f766e; color: white; border-color: #0f766e; }
+    .pagination button:disabled { opacity: 0.4; }
+  </style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="loginPage" class="login-wrapper">
+  <div class="login-box">
+    <div class="login-logo"><span class="icon">🪵</span></div>
+    <h1>PO Kayu Kandang</h1>
+    <p class="subtitle">Sistem Manajemen Purchase Order</p>
+    <div class="input-group">
+      <span class="input-icon">📧</span>
+      <input type="email" id="loginEmail" placeholder="Email" value="admin@kandang.com">
+    </div>
+    <div class="input-group">
+      <span class="input-icon">🔒</span>
+      <input type="password" id="loginPassword" placeholder="Password" value="admin123">
+    </div>
+    <button class="btn-login" onclick="login()">Masuk</button>
+    <div class="login-footer">Belum punya akun? <a onclick="showRegister()">Daftar</a></div>
+    <div id="loginError" class="error-msg hidden"></div>
+  </div>
+</div>
+
+<!-- REGISTER -->
+<div id="registerPage" class="login-wrapper hidden">
+  <div class="login-box">
+    <div class="login-logo"><span class="icon">📝</span></div>
+    <h1>Daftar Akun</h1>
+    <p class="subtitle">Buat akun baru</p>
+    <div class="input-group"><span class="input-icon">👤</span><input type="text" id="regName" placeholder="Nama Lengkap"></div>
+    <div class="input-group"><span class="input-icon">📧</span><input type="email" id="regEmail" placeholder="Email"></div>
+    <div class="input-group"><span class="input-icon">🔒</span><input type="password" id="regPassword" placeholder="Password"></div>
+    <button class="btn-login" onclick="register()">Daftar</button>
+    <div class="login-footer">Sudah punya akun? <a onclick="showLogin()">Masuk</a></div>
+    <div id="regError" class="error-msg hidden"></div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app" class="app-wrapper hidden">
+  <header class="app-header">
+    <h1>PO Kayu Kandang</h1>
+    <div class="user-badge">
+      <div class="user-avatar" id="userAvatar"></div>
+      <button class="btn-logout" onclick="logout()">Keluar</button>
+    </div>
+  </header>
+
+  <div class="main-content">
+    <!-- DASHBOARD -->
+    <div id="page-dashboard" class="page active">
+      <div class="stats-grid" id="statsGrid"></div>
+      <div class="section-title">📋 PO Terbaru</div>
+      <div id="recentPOList"></div>
+    </div>
+
+    <!-- DAFTAR PO -->
+    <div id="page-pos" class="page">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+        <div class="section-title" style="margin:0;">📦 Daftar PO</div>
+        <button class="btn btn-primary btn-sm" onclick="openPOModal()">+ PO</button>
+      </div>
+      <div class="search-box">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="searchPO" placeholder="Cari nomor PO atau customer..." oninput="loadPOs()">
+      </div>
+      <div class="filter-chips" id="filterChips">
+        <div class="filter-chip active" data-status="" onclick="filterPO(this)">Semua</div>
+        <div class="filter-chip" data-status="diterima" onclick="filterPO(this)">Diterima</div>
+        <div class="filter-chip" data-status="diproses" onclick="filterPO(this)">Diproses</div>
+        <div class="filter-chip" data-status="dikirim" onclick="filterPO(this)">Dikirim</div>
+        <div class="filter-chip" data-status="selesai" onclick="filterPO(this)">Selesai</div>
+        <div class="filter-chip" data-status="dibatalkan" onclick="filterPO(this)">Dibatalkan</div>
+      </div>
+      <div id="poList"></div>
+      <div id="poPagination" class="pagination"></div>
+    </div>
+
+    <!-- PENGIRIMAN -->
+    <div id="page-deliveries" class="page">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+        <div class="section-title" style="margin:0;">🚚 Pengiriman</div>
+        <button class="btn btn-primary btn-sm" onclick="openDeliveryModal()">+ Kirim</button>
+      </div>
+      <div id="deliveryPOSelectWrapper"></div>
+      <div id="deliveryList"></div>
+    </div>
+
+    <!-- LAPORAN -->
+    <div id="page-reports" class="page">
+      <div class="section-title">📊 Laporan</div>
+      <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;">
+        <select id="reportPeriod" onchange="loadReports()" style="flex:1;padding:10px 12px;border:2px solid #e2e8f0;border-radius:10px;font-size:13px;background:white;outline:none;">
+          <option value="all">Semua Periode</option>
+          <option value="today">Hari Ini</option>
+          <option value="week">Minggu Ini</option>
+          <option value="month">Bulan Ini</option>
+          <option value="year">Tahun Ini</option>
+        </select>
+      </div>
+      <div id="reportContent"></div>
+    </div>
+
+    <!-- PO DETAIL -->
+    <div id="page-detail" class="page">
+      <button class="btn btn-secondary btn-sm" onclick="closeDetail()" style="margin-bottom:12px;">← Kembali</button>
+      <div id="detailContent"></div>
+    </div>
+  </div>
+
+  <!-- BOTTOM NAV -->
+  <nav class="bottom-nav">
+    <div class="nav-item active" data-page="dashboard" onclick="switchPage('dashboard')">
+      <span class="nav-icon">🏠</span>
+      <span class="nav-label">Beranda</span>
+    </div>
+    <div class="nav-item" data-page="pos" onclick="switchPage('pos')">
+      <span class="nav-icon">📦</span>
+      <span class="nav-label">PO</span>
+    </div>
+    <div class="nav-item" data-page="deliveries" onclick="switchPage('deliveries')">
+      <span class="nav-icon">🚚</span>
+      <span class="nav-label">Kirim</span>
+    </div>
+    <div class="nav-item" data-page="reports" onclick="switchPage('reports')">
+      <span class="nav-icon">📊</span>
+      <span class="nav-label">Laporan</span>
+    </div>
+  </nav>
+</div>
+
+<!-- MODAL: PO -->
+<div id="poModal" class="modal-overlay hidden">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <h3 id="poModalTitle">Tambah PO</h3>
+      <button class="modal-close" onclick="closePOModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="editPOId">
+      <div class="form-row">
+        <div class="form-group"><label>Nomor PO *</label><input type="text" id="poNumber" placeholder="PO-001"></div>
+        <div class="form-group"><label>Customer *</label><input type="text" id="customerName" placeholder="Nama customer"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Tanggal Order</label><input type="date" id="orderDate"></div>
+        <div class="form-group"><label>Deadline</label><input type="date" id="deadline"></div>
+      </div>
+      <div class="form-group"><label>Alamat Pengiriman</label><textarea id="poNotes" rows="2" placeholder="Alamat tujuan..."></textarea></div>
+      <div style="font-size:13px;font-weight:700;margin:12px 0 6px;">Item Kayu</div>
+      <div style="overflow-x:auto;">
+        <table class="items-table">
+          <thead><tr><th>Produk</th><th>Tebal</th><th>Lebar</th><th>Pjg</th><th>Qty</th><th>KUB</th><th></th></tr></thead>
+          <tbody id="poItems"></tbody>
+          <tfoot><tr class="total-row"><td colspan="5" style="text-align:right;font-size:12px;">Total:</td><td id="totalKubikasi" colspan="2" style="font-size:13px;">0.0000 m³</td></tr></tfoot>
+        </table>
+      </div>
+      <button class="btn btn-secondary btn-sm" onclick="addItemRow()" style="margin-top:8px;">+ Item</button>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closePOModal()">Batal</button>
+      <button class="btn btn-primary" onclick="savePO()">Simpan</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: DELIVERY -->
+<div id="deliveryModal" class="modal-overlay hidden">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <h3>Tambah Pengiriman</h3>
+      <button class="modal-close" onclick="closeDeliveryModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-group"><label>Nomor PO *</label><select id="deliveryPONumber" onchange="loadPOForDelivery()"></select></div>
+        <div class="form-group"><label>Tanggal Kirim</label><input type="date" id="deliveryDate"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Nama Sopir</label><input type="text" id="driverName" placeholder="Nama sopir"></div>
+        <div class="form-group"><label>Nomor Kendaraan</label><input type="text" id="vehicleNumber" placeholder="B 1234 CD"></div>
+      </div>
+      <div class="form-group"><label>Alamat Pengiriman</label><textarea id="deliveryAddress" rows="2" placeholder="Otomatis dari PO..."></textarea></div>
+      <div class="form-group"><label>Catatan</label><textarea id="deliveryNotes" rows="2" placeholder="Catatan..."></textarea></div>
+      <div id="deliveryItemsContainer"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeDeliveryModal()">Batal</button>
+      <button class="btn btn-primary" onclick="saveDelivery()">Simpan</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: ITEM -->
+<div id="itemModal" class="modal-overlay hidden">
+  <div class="modal-sheet" style="max-width:420px;">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <h3 id="itemModalTitle">Tambah Item</h3>
+      <button class="modal-close" onclick="closeItemModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="itemPOId">
+      <input type="hidden" id="itemEditId">
+      <div class="form-group"><label>Nama Produk *</label><input type="text" id="itemProductName" placeholder="Contoh: Kamper"></div>
+      <div class="form-row">
+        <div class="form-group"><label>Tebal (cm)</label><input type="number" id="itemThickness" step="0.1" placeholder="0" oninput="calcItemPreview()"></div>
+        <div class="form-group"><label>Lebar (cm)</label><input type="number" id="itemWidth" step="0.1" placeholder="0" oninput="calcItemPreview()"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Panjang (cm)</label><input type="number" id="itemLength" step="0.1" placeholder="0" oninput="calcItemPreview()"></div>
+        <div class="form-group"><label>Jumlah (pcs)</label><input type="number" id="itemQuantity" min="1" value="1" oninput="calcItemPreview()"></div>
+      </div>
+      <div style="background:#f0fdfa;border-radius:10px;padding:12px;margin-bottom:14px;text-align:center;">
+        <div style="font-size:11px;color:#64748b;">Kubikasi</div>
+        <div id="itemPreviewKub" style="font-size:22px;font-weight:800;color:#0f766e;">0.000000 m³</div>
+      </div>
+      <div class="form-group"><label>Catatan</label><input type="text" id="itemNotes" placeholder="Opsional"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeItemModal()">Batal</button>
+      <button class="btn btn-primary" onclick="saveItem()">Simpan</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: PROOF -->
+<div id="proofModal" class="modal-overlay hidden">
+  <div class="modal-sheet" style="max-width:400px;">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <h3>📷 Upload Bukti Surat Jalan</h3>
+      <button class="modal-close" onclick="closeProofModal()">&times;</button>
+    </div>
+    <div class="modal-body" style="text-align:center;">
+      <input type="hidden" id="proofDeliveryId">
+      <input type="file" id="proofFile" accept="image/*" capture="environment" style="display:none;" onchange="previewProof(this)">
+      <div id="proofPreview" style="display:none;margin-bottom:14px;">
+        <img id="proofPreviewImg" style="width:100%;max-height:300px;object-fit:contain;border-radius:10px;border:2px solid #e2e8f0;">
+      </div>
+      <div id="proofPlaceholder" onclick="document.getElementById('proofFile').click()" style="border:2px dashed #e2e8f0;border-radius:12px;padding:40px 20px;cursor:pointer;margin-bottom:14px;">
+        <div style="font-size:40px;margin-bottom:8px;">📸</div>
+        <div style="font-size:13px;color:#64748b;">Klik untuk ambil foto atau pilih dari galeri</div>
+      </div>
+      <div style="font-size:11px;color:#94a3b8;" id="proofFileName"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeProofModal()">Batal</button>
+      <button class="btn btn-primary" id="proofUploadBtn" onclick="uploadProof()" disabled>Upload</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const API = '';
+let token = localStorage.getItem('token');
+let currentPage = 1;
+let currentFilter = '';
+
+function authHeaders() { return { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }; }
+
+// === AUTH ===
+function showLogin() { document.getElementById('loginPage').classList.remove('hidden'); document.getElementById('registerPage').classList.add('hidden'); }
+function showRegister() { document.getElementById('loginPage').classList.add('hidden'); document.getElementById('registerPage').classList.remove('hidden'); }
+
+async function login() {
+  const email = document.getElementById('loginEmail').value;
+  const password = document.getElementById('loginPassword').value;
+  try {
+    const res = await fetch(`${API}/api/auth/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+    token = data.token;
+    localStorage.setItem('token', token);
+    document.getElementById('app').classList.remove('hidden');
+    document.getElementById('loginPage').classList.add('hidden');
+    document.getElementById('userAvatar').textContent = data.user.name.charAt(0).toUpperCase();
+    loadDashboard();
+  } catch (e) {
+    const el = document.getElementById('loginError');
+    el.textContent = e.message; el.classList.remove('hidden');
+    setTimeout(() => el.classList.add('hidden'), 3000);
+  }
+}
+
+async function register() {
+  const name = document.getElementById('regName').value, email = document.getElementById('regEmail').value, password = document.getElementById('regPassword').value;
+  try {
+    const res = await fetch(`${API}/api/auth/register`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, email, password }) });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+    token = data.token; localStorage.setItem('token', token);
+    document.getElementById('app').classList.remove('hidden');
+    document.getElementById('registerPage').classList.add('hidden');
+    document.getElementById('userAvatar').textContent = data.user.name.charAt(0).toUpperCase();
+    loadDashboard();
+  } catch (e) {
+    const el = document.getElementById('regError');
+    el.textContent = e.message; el.classList.remove('hidden');
+    setTimeout(() => el.classList.add('hidden'), 3000);
+  }
+}
+
+function logout() { token = null; localStorage.removeItem('token'); document.getElementById('app').classList.add('hidden'); document.getElementById('loginPage').classList.remove('hidden'); }
+
+// === NAVIGATION ===
+function switchPage(page) {
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.querySelector(`[data-page="${page}"]`).classList.add('active');
+  document.querySelectorAll('.page').forEach(p => { p.classList.remove('active'); p.style.display = 'none'; });
+  const el = document.getElementById(`page-${page}`);
+  el.style.display = 'block';
+  requestAnimationFrame(() => el.classList.add('active'));
+  if (page === 'dashboard') loadDashboard();
+  if (page === 'pos') loadPOs();
+  if (page === 'deliveries') loadDeliveries();
+  if (page === 'reports') loadReports();
+}
+
+function openPage(page) {
+  document.querySelectorAll('.page').forEach(p => { p.classList.remove('active'); p.style.display = 'none'; });
+  const el = document.getElementById(`page-${page}`);
+  el.style.display = 'block';
+  requestAnimationFrame(() => el.classList.add('active'));
+}
+
+// === DASHBOARD ===
+async function loadDashboard() {
+  try {
+    const res = await fetch(`${API}/api/po/stats`, { headers: authHeaders() });
+    const s = await res.json();
+    document.getElementById('statsGrid').innerHTML = `
+      <div class="stat-card teal bounce-in"><div class="stat-icon">📦</div><div class="stat-value">${s.totalPO}</div><div class="stat-label">Total PO</div><div class="stat-sub">${s.totalKubikasi?.toFixed(2)||0} m³</div></div>
+      <div class="stat-card blue bounce-in" style="animation-delay:0.05s"><div class="stat-icon">📥</div><div class="stat-value">${s.statusBreakdown.diterima}</div><div class="stat-label">Diterima</div></div>
+      <div class="stat-card amber bounce-in" style="animation-delay:0.1s"><div class="stat-icon">⚙️</div><div class="stat-value">${s.statusBreakdown.diproses}</div><div class="stat-label">Diproses</div></div>
+      <div class="stat-card green bounce-in" style="animation-delay:0.15s"><div class="stat-icon">✅</div><div class="stat-value">${s.shippedKubikasi?.toFixed(2)||0}</div><div class="stat-label">Terkirim (m³)</div><div class="stat-sub">${s.shippedQuantity||0} pcs</div></div>
+      <div class="stat-card amber bounce-in" style="animation-delay:0.2s"><div class="stat-icon">⏳</div><div class="stat-value">${Math.max(0, s.remainingKubikasi||0).toFixed(2)}</div><div class="stat-label">Sisa (m³)</div><div class="stat-sub">${Math.max(0, s.remainingQuantity||0)} pcs</div></div>
+      <div class="stat-card red bounce-in" style="animation-delay:0.25s"><div class="stat-icon">❌</div><div class="stat-value">${s.statusBreakdown.dibatalkan}</div><div class="stat-label">Dibatalkan</div></div>
+    `;
+    const poRes = await fetch(`${API}/api/po?limit=5`, { headers: authHeaders() });
+    const poData = await poRes.json();
+    renderPOCards(poData.data || [], 'recentPOList', true);
+  } catch (e) { console.error(e); }
+}
+
+// === PO LIST ===
+function filterPO(el) {
+  document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  currentFilter = el.dataset.status;
+  currentPage = 1;
+  loadPOs();
+}
+
+async function loadPOs() {
+  const search = document.getElementById('searchPO')?.value || '';
+  try {
+    const res = await fetch(`${API}/api/po?search=${search}&status=${currentFilter}&page=${currentPage}&limit=10`, { headers: authHeaders() });
+    const data = await res.json();
+    renderPOCards(data.data || [], 'poList', false);
+    renderPagination(data.pagination);
+  } catch (e) { console.error(e); }
+}
+
+function renderPOCards(pos, containerId, compact) {
+  const container = document.getElementById(containerId);
+  if (!pos || pos.length === 0) {
+    container.innerHTML = '<div class="empty-state"><div class="empty-icon">📭</div><p>Belum ada data</p></div>';
+    return;
+  }
+  container.innerHTML = pos.map((p, i) => {
+    const remainingItems = (p.items || []).map(item => {
+      const shipped = (p.deliveries || []).reduce((s, d) => s + d.items.reduce((ss, di) => di.poItemId === item.id ? ss + di.quantity : ss, 0), 0);
+      const rem = item.quantity - shipped;
+      return rem > 0 ? { ...item, remaining: rem, remKub: (item.kubikasi / item.quantity) * rem } : null;
+    }).filter(Boolean);
+    const totalRemKub = remainingItems.reduce((s, ri) => s + ri.remKub, 0);
+    const totalRemQty = remainingItems.reduce((s, ri) => s + ri.remaining, 0);
+    return `
+    <div class="po-card status-${p.status} fade-in" style="animation-delay:${i*0.05}s" onclick="viewPO('${p.id}')">
+      <div class="po-card-top">
+        <div>
+          <div class="po-card-num">${p.poNumber}</div>
+          <div class="po-card-customer">${p.customerName}</div>
+        </div>
+        <div><span class="status-dot ${p.status}"></span><span class="status-text ${p.status}">${p.status}</span></div>
+      </div>
+      <div class="po-card-meta">
+        <div class="meta">📅 ${new Date(p.orderDate).toLocaleDateString('id-ID')}</div>
+        <div class="meta">📦 Total: ${p.totalQuantity} pcs • ${p.totalKubikasi?.toFixed(4)||0} m³</div>
+      </div>
+      ${remainingItems.length > 0 ? `<div class="po-remaining-items">
+        ${remainingItems.map(ri => `<div class="remain-row">
+          <span class="remain-name">${ri.productName}</span>
+          <span class="remain-size">${ri.thickness}×${ri.width}×${ri.length}cm</span>
+          <span class="remain-qty">${ri.remaining} pcs</span>
+          <span class="remain-kub">${ri.remKub.toFixed(4)} m³</span>
+        </div>`).join('')}
+      </div>` : ''}
+      <div class="po-card-bottom">
+        <span class="kubikasi-badge sisa">Sisa ${totalRemQty} pcs • ${totalRemKub.toFixed(4)} m³</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderPagination(p) {
+  if (!p || p.totalPages <= 1) { document.getElementById('poPagination').innerHTML = ''; return; }
+  let h = `<button ${p.page<=1?'disabled':''} onclick="currentPage=${p.page-1};loadPOs()">‹</button>`;
+  for (let i=1;i<=p.totalPages;i++) h += `<button class="${i===p.page?'active':''}" onclick="currentPage=${i};loadPOs()">${i}</button>`;
+  h += `<button ${p.page>=p.totalPages?'disabled':''} onclick="currentPage=${p.page+1};loadPOs()">›</button>`;
+  document.getElementById('poPagination').innerHTML = h;
+}
+
+// === PO DETAIL ===
+async function viewPO(id) {
+  try {
+    const res = await fetch(`${API}/api/po/${id}`, { headers: authHeaders() });
+    const po = await res.json();
+    openPage('detail');
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.getElementById('detailContent').innerHTML = `
+      <div class="detail-header fade-in">
+        <h2>${po.poNumber}</h2>
+        <p>👤 ${po.customerName}</p>
+        <p>📅 ${new Date(po.orderDate).toLocaleDateString('id-ID')}${po.deadline?' • Deadline: '+new Date(po.deadline).toLocaleDateString('id-ID'):''}</p>
+        <p>📍 ${po.notes || '-'}</p>
+        <div class="detail-stats">
+          <div class="detail-stat"><div class="ds-label">Total</div><div class="ds-value">${po.totalKubikasi?.toFixed(4)||0} m³</div></div>
+          <div class="detail-stat"><div class="ds-label">Terkirim</div><div class="ds-value">${(po.shippedKubikasi||0).toFixed(4)} m³</div></div>
+          <div class="detail-stat"><div class="ds-label">Sisa</div><div class="ds-value">${(po.remainingKubikasi||0).toFixed(4)} m³</div></div>
+        </div>
+        <div class="detail-actions">
+          <button class="btn btn-sm" onclick="editPO('${po.id}')">✏️ Edit</button>
+          <button class="btn btn-sm" onclick="openDeliveryModalForPO('${po.id}')">🚚 Kirim</button>
+          <select onchange="updatePOStatus('${po.id}',this.value)" style="padding:6px 10px;border-radius:8px;font-size:11px;border:1px solid rgba(255,255,255,0.3);background:rgba(255,255,255,0.2);color:white;">
+            <option value="diterima" ${po.status==='diterima'?'selected':''}>Diterima</option>
+            <option value="diproses" ${po.status==='diproses'?'selected':''}>Diproses</option>
+            <option value="dikirim" ${po.status==='dikirim'?'selected':''}>Dikirim</option>
+            <option value="selesai" ${po.status==='selesai'?'selected':''}>Selesai</option>
+            <option value="dibatalkan" ${po.status==='dibatalkan'?'selected':''}>Dibatalkan</option>
+          </select>
+        </div>
+      </div>
+      <div class="card slide-up"><div class="card-header"><h3>🪵 Item PO</h3><button class="btn btn-primary btn-sm" onclick="openItemModal('${po.id}')">+ Item</button></div>
+        <div class="card-body" style="padding:0;overflow-x:auto;">
+          <table class="mobile-table"><thead><tr><th>Produk</th><th>Ukuran</th><th>Qty</th><th>KUB</th><th></th></tr></thead>
+          <tbody>${po.items.map(i=>`<tr>
+            <td><strong>${i.productName}</strong></td>
+            <td style="font-size:11px;color:#64748b;">${i.thickness}×${i.width}×${i.length}cm</td>
+            <td><strong>${i.quantity}</strong> ${i.unit}</td>
+            <td class="kub-val">${i.kubikasi?.toFixed(4)} m³</td>
+            <td style="white-space:nowrap;">
+              <button class="btn btn-secondary btn-sm" onclick="openItemModal('${po.id}','${i.id}')" style="padding:4px 8px;font-size:11px;">Edit</button>
+              <button class="btn btn-danger btn-sm" onclick="deleteItem('${po.id}','${i.id}')" style="padding:4px 8px;font-size:11px;">Hapus</button>
+            </td>
+          </tr>`).join('')}</tbody></table>
+        </div>
+      </div>
+      <div class="card slide-up" style="animation-delay:0.1s"><div class="card-header"><h3>🚚 Riwayat Pengiriman</h3></div>
+        <div class="card-body" style="padding:0;overflow-x:auto;">
+          ${po.deliveries&&po.deliveries.length>0?po.deliveries.map(d=>`
+            <div style="padding:12px 16px;border-bottom:1px solid #f1f5f9;">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                <div><strong>${d.driverName||'Tanpa Sopir'}</strong> • ${d.vehicleNumber||'-'}</div>
+                <span style="font-size:11px;color:#94a3b8;">${new Date(d.deliveryDate).toLocaleDateString('id-ID')}</span>
+              </div>
+              <div style="font-size:11px;color:#64748b;margin-bottom:6px;">📍 ${d.deliveryAddress||'-'}</div>
+              <div style="font-size:12px;margin-bottom:6px;">
+                ${d.items.map(di=>`<span style="display:inline-block;background:#f0fdfa;padding:2px 8px;border-radius:6px;margin:2px 0;font-size:11px;"><strong>${di.poItem?.productName||'-'}</strong> ${di.quantity} pcs • ${di.kubikasi?.toFixed(4)} m³</span>`).join(' ')}
+              </div>
+              <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                ${d.proofUrl ? `<a href="${d.proofUrl}" target="_blank" style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;background:#d1fae5;color:#047857;border-radius:6px;font-size:11px;font-weight:600;text-decoration:none;">📷 Lihat Bukti</a>` : `<button class="btn btn-success btn-sm" onclick="openProofModal('${d.id}')" style="font-size:11px;padding:4px 10px;">📷 Upload Bukti</button>`}
+              </div>
+            </div>`).join(''):'<div class="empty-state"><p>Belum ada pengiriman</p></div>'}
+        </div>
+      </div>
+    `;
+  } catch (e) { console.error(e); }
+}
+
+function closeDetail() {
+  document.getElementById('page-detail').style.display='none';
+  document.getElementById('page-detail').classList.remove('active');
+  switchPage('pos');
+}
+
+// === PO CRUD ===
+function openPOModal(poId) {
+  document.getElementById('poModal').classList.remove('hidden');
+  document.getElementById('poModalTitle').textContent = poId ? 'Edit PO' : 'Tambah PO';
+  document.getElementById('editPOId').value = poId||'';
+  document.getElementById('poNumber').value = '';
+  document.getElementById('customerName').value = '';
+  document.getElementById('orderDate').value = new Date().toISOString().split('T')[0];
+  document.getElementById('deadline').value = '';
+  document.getElementById('poNotes').value = '';
+  document.getElementById('poItems').innerHTML = '';
+  if (!poId) addItemRow();
+}
+function closePOModal() { document.getElementById('poModal').classList.add('hidden'); }
+
+function addItemRow(data) {
+  const tbody = document.getElementById('poItems');
+  const row = document.createElement('tr');
+  row.innerHTML = `
+    <td><input type="text" class="item-name" value="${data?.productName||''}" placeholder="Nama"></td>
+    <td><input type="number" class="item-thickness" value="${data?.thickness||''}" step="0.1" oninput="calcRow(this)" placeholder="0"></td>
+    <td><input type="number" class="item-width" value="${data?.width||''}" step="0.1" oninput="calcRow(this)" placeholder="0"></td>
+    <td><input type="number" class="item-length" value="${data?.length||''}" step="0.1" oninput="calcRow(this)" placeholder="0"></td>
+    <td><input type="number" class="item-qty" value="${data?.quantity||1}" min="1" oninput="calcRow(this)"></td>
+    <td class="kubikasi-cell">${calcKub(data?.thickness||0,data?.width||0,data?.length||0,data?.quantity||1)}</td>
+    <td><button class="remove-btn" onclick="this.closest('tr').remove();updateTotal()">✕</button></td>`;
+  tbody.appendChild(row);
+}
+
+function calcKub(t,w,l,q) { return ((t/100)*(w/100)*(l/100)*q).toFixed(6); }
+function calcRow(el) {
+  const r = el.closest('tr');
+  const t=parseFloat(r.querySelector('.item-thickness').value)||0;
+  const w=parseFloat(r.querySelector('.item-width').value)||0;
+  const l=parseFloat(r.querySelector('.item-length').value)||0;
+  const q=parseInt(r.querySelector('.item-qty').value)||1;
+  r.querySelector('.kubikasi-cell').textContent = calcKub(t,w,l,q);
+  updateTotal();
+}
+function updateTotal() {
+  let total=0;
+  document.querySelectorAll('#poItems tr').forEach(r=>{
+    const t=parseFloat(r.querySelector('.item-thickness')?.value)||0;
+    const w=parseFloat(r.querySelector('.item-width')?.value)||0;
+    const l=parseFloat(r.querySelector('.item-length')?.value)||0;
+    const q=parseInt(r.querySelector('.item-qty')?.value)||1;
+    total+=(t/100)*(w/100)*(l/100)*q;
+  });
+  document.getElementById('totalKubikasi').textContent=total.toFixed(4)+' m³';
+}
+
+async function savePO() {
+  const poId = document.getElementById('editPOId').value;
+  const items = [];
+  document.querySelectorAll('#poItems tr').forEach(r=>{
+    items.push({
+      productName:r.querySelector('.item-name').value,
+      thickness:parseFloat(r.querySelector('.item-thickness').value)||0,
+      width:parseFloat(r.querySelector('.item-width').value)||0,
+      length:parseFloat(r.querySelector('.item-length').value)||0,
+      quantity:parseInt(r.querySelector('.item-qty').value)||1,
+    });
+  });
+  try {
+    const res = await fetch(`${API}/api/po${poId?'/'+poId:''}`, { method:poId?'PUT':'POST', headers:authHeaders(), body:JSON.stringify({
+      poNumber:document.getElementById('poNumber').value, customerName:document.getElementById('customerName').value,
+      orderDate:document.getElementById('orderDate').value, deadline:document.getElementById('deadline').value||null,
+      notes:document.getElementById('poNotes').value, items
+    })});
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+    closePOModal(); loadPOs(); loadDashboard();
+  } catch(e) { alert('Error: '+e.message); }
+}
+
+async function editPO(id) {
+  try {
+    const res = await fetch(`${API}/api/po/${id}`, { headers:authHeaders() });
+    const po = await res.json();
+    openPOModal(id);
+    document.getElementById('poNumber').value=po.poNumber;
+    document.getElementById('customerName').value=po.customerName;
+    document.getElementById('orderDate').value=po.orderDate?.split('T')[0]||'';
+    document.getElementById('deadline').value=po.deadline?.split('T')[0]||'';
+    document.getElementById('poNotes').value=po.notes||'';
+    document.getElementById('poItems').innerHTML='';
+    po.items.forEach(i=>addItemRow(i));
+    updateTotal();
+  } catch(e) { alert('Error: '+e.message); }
+}
+
+async function deletePO(id) {
+  if(!confirm('Hapus PO ini?')) return;
+  try { await fetch(`${API}/api/po/${id}`,{method:'DELETE',headers:authHeaders()}); loadPOs(); } catch(e) { alert('Error: '+e.message); }
+}
+
+async function updatePOStatus(id, status) {
+  try { await fetch(`${API}/api/po/${id}/status`,{method:'PUT',headers:authHeaders(),body:JSON.stringify({status})}); viewPO(id); } catch(e) { alert('Error: '+e.message); }
+}
+
+// === ITEM CRUD ===
+let currentDetailPOId = null;
+
+function openItemModal(poId, itemId) {
+  document.getElementById('itemModal').classList.remove('hidden');
+  document.getElementById('itemPOId').value = poId;
+  document.getElementById('itemEditId').value = itemId || '';
+  document.getElementById('itemModalTitle').textContent = itemId ? 'Edit Item' : 'Tambah Item';
+  document.getElementById('itemProductName').value = '';
+  document.getElementById('itemThickness').value = '';
+  document.getElementById('itemWidth').value = '';
+  document.getElementById('itemLength').value = '';
+  document.getElementById('itemQuantity').value = '1';
+  document.getElementById('itemNotes').value = '';
+  document.getElementById('itemPreviewKub').textContent = '0.000000 m³';
+  currentDetailPOId = poId;
+
+  if (itemId) {
+    fetch(`${API}/api/po/${poId}`, { headers: authHeaders() })
+      .then(r => r.json())
+      .then(po => {
+        const item = po.items.find(i => i.id === itemId);
+        if (item) {
+          document.getElementById('itemProductName').value = item.productName;
+          document.getElementById('itemThickness').value = item.thickness;
+          document.getElementById('itemWidth').value = item.width;
+          document.getElementById('itemLength').value = item.length;
+          document.getElementById('itemQuantity').value = item.quantity;
+          document.getElementById('itemNotes').value = item.notes || '';
+          calcItemPreview();
+        }
+      });
+  }
+}
+
+function closeItemModal() { document.getElementById('itemModal').classList.add('hidden'); }
+
+function calcItemPreview() {
+  const t = parseFloat(document.getElementById('itemThickness').value) || 0;
+  const w = parseFloat(document.getElementById('itemWidth').value) || 0;
+  const l = parseFloat(document.getElementById('itemLength').value) || 0;
+  const q = parseInt(document.getElementById('itemQuantity').value) || 1;
+  const kub = (t/100) * (w/100) * (l/100) * q;
+  document.getElementById('itemPreviewKub').textContent = kub.toFixed(6) + ' m³';
+}
+
+async function saveItem() {
+  const poId = document.getElementById('itemPOId').value;
+  const itemId = document.getElementById('itemEditId').value;
+  const body = {
+    productName: document.getElementById('itemProductName').value,
+    thickness: parseFloat(document.getElementById('itemThickness').value) || 0,
+    width: parseFloat(document.getElementById('itemWidth').value) || 0,
+    length: parseFloat(document.getElementById('itemLength').value) || 0,
+    quantity: parseInt(document.getElementById('itemQuantity').value) || 1,
+    notes: document.getElementById('itemNotes').value,
+  };
+  if (!body.productName) { alert('Nama produk wajib diisi'); return; }
+  try {
+    const url = itemId ? `${API}/api/po/${poId}/items/${itemId}` : `${API}/api/po/${poId}/items`;
+    const method = itemId ? 'PUT' : 'POST';
+    const res = await fetch(url, { method, headers: authHeaders(), body: JSON.stringify(body) });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+    closeItemModal();
+    viewPO(poId);
+    loadPOs();
+    loadDashboard();
+  } catch(e) { alert('Error: '+e.message); }
+}
+
+async function deleteItem(poId, itemId) {
+  if (!confirm('Hapus item ini?')) return;
+  try {
+    await fetch(`${API}/api/po/${poId}/items/${itemId}`, { method: 'DELETE', headers: authHeaders() });
+    viewPO(poId);
+    loadPOs();
+    loadDashboard();
+  } catch(e) { alert('Error: '+e.message); }
+}
+
+// === PROOF UPLOAD ===
+let proofImageData = null;
+
+function openProofModal(deliveryId) {
+  document.getElementById('proofModal').classList.remove('hidden');
+  document.getElementById('proofDeliveryId').value = deliveryId;
+  document.getElementById('proofFile').value = '';
+  document.getElementById('proofPreview').style.display = 'none';
+  document.getElementById('proofPlaceholder').style.display = 'block';
+  document.getElementById('proofFileName').textContent = '';
+  document.getElementById('proofUploadBtn').disabled = true;
+  proofImageData = null;
+}
+
+function closeProofModal() { document.getElementById('proofModal').classList.add('hidden'); }
+
+function previewProof(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    proofImageData = e.target.result;
+    document.getElementById('proofPreviewImg').src = proofImageData;
+    document.getElementById('proofPreview').style.display = 'block';
+    document.getElementById('proofPlaceholder').style.display = 'none';
+    document.getElementById('proofFileName').textContent = file.name + ' (' + (file.size/1024).toFixed(1) + ' KB)';
+    document.getElementById('proofUploadBtn').disabled = false;
+  };
+  reader.readAsDataURL(file);
+}
+
+async function uploadProof() {
+  if (!proofImageData) return;
+  const deliveryId = document.getElementById('proofDeliveryId').value;
+  const btn = document.getElementById('proofUploadBtn');
+  btn.disabled = true;
+  btn.textContent = 'Uploading...';
+  try {
+    const res = await fetch(`${API}/api/deliveries/${deliveryId}/proof`, {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({ image: proofImageData }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+    closeProofModal();
+    // Refresh whichever page we're on
+    const activePage = document.querySelector('.page.active');
+    if (activePage?.id === 'page-detail') {
+      const poId = document.querySelector('#detailContent [onclick*="viewPO"]')?.getAttribute('onclick')?.match(/'([^']+)'/)?.[1];
+      if (poId) viewPO(poId);
+    }
+    loadPODeliveries();
+    alert('Bukti surat jalan berhasil diupload!');
+  } catch(e) {
+    alert('Error: ' + e.message);
+    btn.disabled = false;
+    btn.textContent = 'Upload';
+  }
+}
+
+// === DELIVERIES ===
+async function loadDeliveries() {
+  document.getElementById('deliveryPOSelectWrapper').innerHTML = `<div style="margin-bottom:12px;"><select id="deliveryPOSelect" onchange="loadPODeliveries()" style="width:100%;padding:10px 12px;border:2px solid #e2e8f0;border-radius:10px;font-size:13px;background:white;outline:none;"><option value="">-- Pilih PO --</option></select></div>`;
+  document.getElementById('deliveryList').innerHTML = '<div style="text-align:center;padding:20px;color:#94a3b8;font-size:13px;">Pilih PO untuk melihat riwayat pengiriman</div>';
+  try {
+    const res = await fetch(`${API}/api/po?limit=100`,{headers:authHeaders()});
+    const data = await res.json();
+    const sel = document.getElementById('deliveryPOSelect');
+    (data.data||[]).forEach(p=>{
+      const o=document.createElement('option'); o.value=p.id;
+      o.textContent=`${p.poNumber} - ${p.customerName} (Sisa: ${(p.remainingKubikasi||0).toFixed(4)} m³)`;
+      sel.appendChild(o);
+    });
+  } catch(e) { console.error(e); }
+}
+
+async function loadPODeliveries() {
+  const poId = document.getElementById('deliveryPOSelect')?.value;
+  if(!poId) { document.getElementById('deliveryList').innerHTML=''; return; }
+  try {
+    const [delRes, poRes] = await Promise.all([
+      fetch(`${API}/api/deliveries/po/${poId}`,{headers:authHeaders()}),
+      fetch(`${API}/api/po/${poId}`,{headers:authHeaders()})
+    ]);
+    const deliveries = await delRes.json();
+    const po = await poRes.json();
+
+    let html = '';
+
+    // Sisa item yang belum terkirim
+    const remainingItems = (po.items || []).map(item => {
+      const shipped = (po.deliveries || []).reduce((s, d) => s + d.items.reduce((ss, di) => di.poItemId === item.id ? ss + di.quantity : ss, 0), 0);
+      const rem = item.quantity - shipped;
+      return rem > 0 ? { ...item, remaining: rem, remKub: (item.kubikasi / item.quantity) * rem } : null;
+    }).filter(Boolean);
+
+    if (remainingItems.length > 0) {
+      html += `<div class="card fade-in"><div class="card-header"><h3 style="font-size:14px;">⏳ Sisa Belum Terkirim</h3></div><div class="card-body" style="padding:0;">
+        <table class="mobile-table"><thead><tr><th>Produk</th><th>Ukuran</th><th>Sisa</th><th>KUB</th></tr></thead>
+        <tbody>${remainingItems.map(ri => `<tr>
+          <td><strong>${ri.productName}</strong></td>
+          <td style="font-size:11px;color:#64748b;">${ri.thickness}×${ri.width}×${ri.length}cm</td>
+          <td><strong>${ri.remaining}</strong> pcs</td>
+          <td class="kub-val">${ri.remKub.toFixed(4)} m³</td>
+        </tr>`).join('')}</tbody></table>
+      </div></div>`;
+    }
+
+    // Riwayat pengiriman
+    if (deliveries.length === 0) {
+      html += '<div class="empty-state" style="padding:30px;"><div class="empty-icon">📭</div><p>Belum ada pengiriman</p></div>';
+    } else {
+      html += `<div class="section-title" style="margin-top:12px;">🚚 Riwayat Pengiriman</div>`;
+      deliveries.forEach((d, idx) => {
+        html += `<div class="card fade-in" style="animation-delay:${idx*0.08}s"><div class="card-body" style="padding:14px;">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">
+            <div>
+              <strong style="font-size:14px;">${d.driverName||'Tanpa Sopir'}</strong>
+              <div style="font-size:12px;color:#64748b;margin-top:2px;">🚗 ${d.vehicleNumber||'-'}</div>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-size:12px;font-weight:600;color:#0f766e;">${new Date(d.deliveryDate).toLocaleDateString('id-ID')}</div>
+              <div style="font-size:11px;color:#94a3b8;">${d.items.reduce((s,di)=>s+di.quantity,0)} pcs • ${d.items.reduce((s,di)=>s+di.kubikasi,0).toFixed(4)} m³</div>
+            </div>
+          </div>
+          <div style="font-size:12px;color:#64748b;margin-bottom:8px;">📍 ${d.deliveryAddress||'-'}</div>
+          <div style="border-top:1px solid #f1f5f9;padding-top:8px;">
+            ${d.items.map(di=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;font-size:12px;">
+              <div>
+                <strong>${di.poItem?.productName||'-'}</strong>
+                <span style="color:#94a3b8;margin-left:4px;font-size:11px;">${di.poItem?.thickness}×${di.poItem?.width}×${di.poItem?.length}cm</span>
+              </div>
+              <div>
+                <span style="font-weight:700;">${di.quantity} pcs</span>
+                <span style="color:#0f766e;font-weight:700;margin-left:6px;">${di.kubikasi?.toFixed(6)} m³</span>
+              </div>
+            </div>`).join('')}
+          </div>
+          <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">
+            ${d.proofUrl ? `<a href="${d.proofUrl}" target="_blank" style="display:inline-flex;align-items:center;gap:4px;padding:6px 12px;background:#d1fae5;color:#047857;border-radius:8px;font-size:12px;font-weight:600;text-decoration:none;">📷 Lihat Bukti</a>` : `<button class="btn btn-success btn-sm" onclick="openProofModal('${d.id}')" style="font-size:12px;">📷 Upload Bukti</button>`}
+            <button class="btn btn-danger btn-sm" onclick="deleteDelivery('${d.id}')" style="font-size:12px;">Hapus</button>
+          </div>
+        </div></div>`;
+      });
+    }
+
+    document.getElementById('deliveryList').innerHTML = html;
+  } catch(e) { console.error(e); }
+}
+
+async function openDeliveryModal() {
+  document.getElementById('deliveryModal').classList.remove('hidden');
+  document.getElementById('deliveryDate').value = new Date().toISOString().split('T')[0];
+  document.getElementById('driverName').value='';
+  document.getElementById('vehicleNumber').value='';
+  document.getElementById('deliveryAddress').value='';
+  document.getElementById('deliveryNotes').value='';
+  document.getElementById('deliveryPONumber').innerHTML='<option value="">-- Pilih PO --</option>';
+  document.getElementById('deliveryItemsContainer').innerHTML='';
+  try {
+    const res = await fetch(`${API}/api/po?limit=100`,{headers:authHeaders()});
+    const data = await res.json();
+    (data.data||[]).filter(p=>p.status!=='dibatalkan').forEach(p=>{
+      const o=document.createElement('option'); o.value=p.id;
+      o.textContent=`${p.poNumber} - ${p.customerName} (Sisa: ${(p.remainingKubikasi||0).toFixed(4)} m³)`;
+      document.getElementById('deliveryPONumber').appendChild(o);
+    });
+  } catch(e) { console.error(e); }
+}
+
+function openDeliveryModalForPO(poId) {
+  openDeliveryModal();
+  setTimeout(()=>{ document.getElementById('deliveryPONumber').value=poId; loadPOForDelivery(); },100);
+}
+
+async function loadPOForDelivery() {
+  const poId = document.getElementById('deliveryPONumber').value;
+  if(!poId) { document.getElementById('deliveryItemsContainer').innerHTML=''; return; }
+  try {
+    const res = await fetch(`${API}/api/po/${poId}`,{headers:authHeaders()});
+    const po = await res.json();
+    document.getElementById('deliveryAddress').value = po.notes||'';
+    let h='<table class="items-table"><thead><tr><th>Item</th><th>Sisa</th><th>Sisa KUB</th><th>Kirim</th></tr></thead><tbody>';
+    po.items.forEach(i=>{
+      const sq=(po.deliveries||[]).reduce((s,d)=>s+d.items.reduce((ss,di)=>di.poItemId===i.id?ss+di.quantity:ss,0),0);
+      const rem=i.quantity-sq;
+      if(rem>0) h+=`<tr><td><strong>${i.productName}</strong><br><span style="font-size:10px;color:#94a3b8;">${i.thickness}×${i.width}×${i.length}cm</span></td><td>${rem}</td><td>${(i.kubikasi/i.quantity*rem).toFixed(6)}</td><td><input type="number" data-po-item-id="${i.id}" max="${rem}" min="1" value="1" class="del-qty" style="width:60px;"></td></tr>`;
+    });
+    h+='</tbody></table>';
+    document.getElementById('deliveryItemsContainer').innerHTML=h;
+  } catch(e) { console.error(e); }
+}
+
+function closeDeliveryModal() { document.getElementById('deliveryModal').classList.add('hidden'); }
+
+async function saveDelivery() {
+  const poId = document.getElementById('deliveryPONumber').value;
+  if(!poId) { alert('Pilih PO dulu'); return; }
+  const items=[];
+  document.querySelectorAll('.del-qty').forEach(inp=>{ const q=parseInt(inp.value); if(q>0) items.push({poItemId:inp.dataset.poItemId,quantity:q}); });
+  if(!items.length) { alert('Minimal 1 item'); return; }
+  try {
+    const res = await fetch(`${API}/api/deliveries`,{method:'POST',headers:authHeaders(),body:JSON.stringify({
+      poId, deliveryDate:document.getElementById('deliveryDate').value,
+      driverName:document.getElementById('driverName').value, vehicleNumber:document.getElementById('vehicleNumber').value,
+      deliveryAddress:document.getElementById('deliveryAddress').value, notes:document.getElementById('deliveryNotes').value, items
+    })});
+    const data = await res.json();
+    if(!res.ok) throw new Error(data.error);
+    closeDeliveryModal(); loadPOs(); loadDashboard(); alert('Pengiriman tersimpan!');
+  } catch(e) { alert('Error: '+e.message); }
+}
+
+async function deleteDelivery(id) {
+  if(!confirm('Hapus pengiriman?')) return;
+  try { await fetch(`${API}/api/deliveries/${id}`,{method:'DELETE',headers:authHeaders()}); loadPODeliveries(); } catch(e) { alert('Error: '+e.message); }
+}
+
+// === REPORTS ===
+async function loadReports() {
+  const period = document.getElementById('reportPeriod')?.value||'all';
+  try {
+    const res = await fetch(`${API}/api/po/stats`,{headers:authHeaders()});
+    const s = await res.json();
+    const allRes = await fetch(`${API}/api/po?limit=100`,{headers:authHeaders()});
+    const allData = await allRes.json();
+    const pos = allData.data||[];
+
+    let filtered = pos;
+    const now = new Date();
+    if (period==='today') filtered = pos.filter(p=>new Date(p.orderDate).toDateString()===now.toDateString());
+    else if (period==='week') { const w=new Date(now); w.setDate(w.getDate()-7); filtered=pos.filter(p=>new Date(p.orderDate)>=w); }
+    else if (period==='month') { const m=new Date(now); m.setMonth(m.getMonth()-1); filtered=pos.filter(p=>new Date(p.orderDate)>=m); }
+    else if (period==='year') { const y=new Date(now); y.setFullYear(y.getFullYear()-1); filtered=pos.filter(p=>new Date(p.orderDate)>=y); }
+
+    const totalKub = filtered.reduce((s,p)=>s+(p.totalKubikasi||0),0);
+    const shippedKub = filtered.reduce((s,p)=>s+(p.shippedKubikasi||0),0);
+    const totalQty = filtered.reduce((s,p)=>s+(p.totalQuantity||0),0);
+    const shippedQty = filtered.reduce((s,p)=>s+(p.shippedQuantity||0),0);
+
+    const byStatus = {diterima:0,diproses:0,dikirim:0,selesai:0,dibatalkan:0};
+    filtered.forEach(p=>{ if(byStatus[p.status]!==undefined) byStatus[p.status]++; });
+
+    const topCustomers = {};
+    filtered.forEach(p=>{ topCustomers[p.customerName]=(topCustomers[p.customerName]||0)+(p.totalKubikasi||0); });
+    const topCust = Object.entries(topCustomers).sort((a,b)=>b[1]-a[1]).slice(0,5);
+
+    document.getElementById('reportContent').innerHTML = `
+      <div class="report-card slide-up">
+        <h4>📦 Ringkasan PO</h4>
+        <div class="report-row"><span class="r-label">Total PO</span><span class="r-value">${filtered.length}</span></div>
+        <div class="report-row"><span class="r-label">Total Qty</span><span class="r-value">${totalQty} pcs</span></div>
+        <div class="report-row"><span class="r-label">Total Kubikasi</span><span class="r-value teal">${totalKub.toFixed(4)} m³</span></div>
+        <div class="report-row"><span class="r-label">Terkirim</span><span class="r-value green">${shippedKub.toFixed(4)} m³ (${shippedQty} pcs)</span></div>
+        <div class="report-row"><span class="r-label">Sisa</span><span class="r-value amber">${(totalKub-shippedKub).toFixed(4)} m³ (${totalQty-shippedQty} pcs)</span></div>
+      </div>
+      <div class="report-card slide-up" style="animation-delay:0.1s">
+        <h4>📊 Status PO</h4>
+        <div class="report-row"><span class="r-label">📥 Diterima</span><span class="r-value">${byStatus.diterima}</span></div>
+        <div class="report-row"><span class="r-label">⚙️ Diproses</span><span class="r-value">${byStatus.diproses}</span></div>
+        <div class="report-row"><span class="r-label">🚚 Dikirim</span><span class="r-value">${byStatus.dikirim}</span></div>
+        <div class="report-row"><span class="r-label">✅ Selesai</span><span class="r-value">${byStatus.selesai}</span></div>
+        <div class="report-row"><span class="r-label">❌ Dibatalkan</span><span class="r-value">${byStatus.dibatalkan}</span></div>
+      </div>
+      <div class="report-card slide-up" style="animation-delay:0.2s">
+        <h4>🏆 Top Customer (Kubikasi)</h4>
+        ${topCust.length?topCust.map(([name,kub],i)=>`<div class="report-row"><span class="r-label">${i+1}. ${name}</span><span class="r-value teal">${kub.toFixed(4)} m³</span></div>`).join(''):'<div style="padding:12px;text-align:center;color:#94a3b8;font-size:13px;">Belum ada data</div>'}
+      </div>
+    `;
+  } catch(e) { console.error(e); }
+}
+
+// === INIT ===
+if (token) {
+  fetch(`${API}/api/auth/me`,{headers:authHeaders()})
+    .then(r=>r.json())
+    .then(d=>{
+      if(d.user) {
+        document.getElementById('userAvatar').textContent=d.user.name.charAt(0).toUpperCase();
+        document.getElementById('app').classList.remove('hidden');
+        document.getElementById('loginPage').classList.add('hidden');
+        loadDashboard();
+      }
+    })
+    .catch(()=>{ localStorage.removeItem('token'); });
+}
+</script>
+</body>
+</html>

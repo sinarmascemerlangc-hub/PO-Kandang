@@ -1,0 +1,100 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  admin
+  staff
+}
+
+enum POStatus {
+  diterima
+  diproses
+  dikirim
+  selesai
+  dibatalkan
+}
+
+enum DeliveryStatus {
+  menunggu
+  dikirim
+  diterima
+}
+
+model User {
+  id        String    @id @default(uuid())
+  name      String
+  email     String    @unique
+  password  String
+  role      UserRole  @default(staff)
+  isActive  Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  pos       PurchaseOrder[]
+}
+
+model PurchaseOrder {
+  id             String         @id @default(uuid())
+  poNumber       String         @unique
+  customerName   String
+  orderDate      DateTime       @default(now())
+  deadline       DateTime?
+  notes          String?
+  status         POStatus       @default(diterima)
+  totalKubikasi  Float          @default(0)
+  totalQuantity  Int            @default(0)
+  shippedKubikasi Float         @default(0)
+  shippedQuantity  Int          @default(0)
+  userId         String
+  user           User           @relation(fields: [userId], references: [id])
+  items          POItem[]
+  deliveries     Delivery[]
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+}
+
+model POItem {
+  id             String        @id @default(uuid())
+  poId           String
+  po             PurchaseOrder @relation(fields: [poId], references: [id], onDelete: Cascade)
+  productName    String
+  thickness      Float         // tebal dalam cm
+  width          Float         // lebar dalam cm
+  length         Float         // panjang dalam cm
+  quantity       Int           @default(1)
+  unit           String        @default("pcs")
+  kubikasi       Float         @default(0) // otomatis dihitung
+  notes          String?
+  deliveryItems  DeliveryItem[]
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+}
+
+model Delivery {
+  id             String        @id @default(uuid())
+  poId           String
+  po             PurchaseOrder @relation(fields: [poId], references: [id], onDelete: Cascade)
+  deliveryDate   DateTime      @default(now())
+  driverName     String?
+  vehicleNumber  String?
+  deliveryAddress String?
+  proofUrl       String?
+  notes          String?
+  items          DeliveryItem[]
+  createdAt      DateTime      @default(now())
+}
+
+model DeliveryItem {
+  id             String        @id @default(uuid())
+  deliveryId     String
+  delivery       Delivery      @relation(fields: [deliveryId], references: [id], onDelete: Cascade)
+  poItemId       String
+  poItem         POItem        @relation(fields: [poItemId], references: [id])
+  quantity       Int
+  kubikasi       Float
+  notes          String?
+}
