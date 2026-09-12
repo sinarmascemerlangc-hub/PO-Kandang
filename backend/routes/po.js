@@ -62,44 +62,21 @@ router.get('/', auth, async (req, res) => {
 // GET /api/po/stats - Dashboard statistics
 router.get('/stats', auth, async (req, res) => {
   try {
-    const [totalPO, diterima, diproses, dikirim, selesai, dibatalkan] = await Promise.all([
+    const [totalPO, diterima, diproses, dikirim, selesai, dibatalkan, kubAgg, shipAgg] = await Promise.all([
       prisma.purchaseOrder.count(),
       prisma.purchaseOrder.count({ where: { status: 'diterima' } }),
       prisma.purchaseOrder.count({ where: { status: 'diproses' } }),
       prisma.purchaseOrder.count({ where: { status: 'dikirim' } }),
       prisma.purchaseOrder.count({ where: { status: 'selesai' } }),
       prisma.purchaseOrder.count({ where: { status: 'dibatalkan' } }),
+      prisma.purchaseOrder.aggregate({ _sum: { totalKubikasi: true, totalQuantity: true } }),
+      prisma.deliveryItem.aggregate({ _sum: { kubikasi: true, quantity: true } }),
     ]);
 
-    const allPO = await prisma.purchaseOrder.findMany({
-      include: { items: true, deliveries: { include: { items: true } } },
-    });
-
-    let totalKubikasi = 0;
-    let totalQuantity = 0;
-    let shippedKubikasi = 0;
-    let shippedQuantity = 0;
-    let remainingKubikasi = 0;
-    let remainingQuantity = 0;
-
-    allPO.forEach((po) => {
-      const poShipped = {};
-      po.deliveries.forEach((d) => {
-        d.items.forEach((di) => {
-          poShipped[di.poItemId] = (poShipped[di.poItemId] || 0) + di.quantity;
-        });
-      });
-      po.items.forEach((item) => {
-        totalKubikasi += item.kubikasi;
-        totalQuantity += item.quantity;
-        const shipped = poShipped[item.id] || 0;
-        const kubPerPcs = item.kubikasi / item.quantity;
-        shippedKubikasi += kubPerPcs * shipped;
-        shippedQuantity += shipped;
-        remainingKubikasi += kubPerPcs * (item.quantity - shipped);
-        remainingQuantity += item.quantity - shipped;
-      });
-    });
+    const totalKubikasi = Number(kubAgg._sum.totalKubikasi) || 0;
+    const totalQuantity = Number(kubAgg._sum.totalQuantity) || 0;
+    const shippedKubikasi = Number(shipAgg._sum.kubikasi) || 0;
+    const shippedQuantity = Number(shipAgg._sum.quantity) || 0;
 
     res.json({
       totalPO,
@@ -108,8 +85,8 @@ router.get('/stats', auth, async (req, res) => {
       totalQuantity,
       shippedKubikasi: Math.round(shippedKubikasi * 10000) / 10000,
       shippedQuantity,
-      remainingKubikasi: Math.round(remainingKubikasi * 10000) / 10000,
-      remainingQuantity,
+      remainingKubikasi: Math.round((totalKubikasi - shippedKubikasi) * 10000) / 10000,
+      remainingQuantity: totalQuantity - shippedQuantity,
     });
   } catch (error) {
     res.status(500).json({ error: 'Gagal mengambil statistik: ' + error.message });
