@@ -37,7 +37,7 @@ app.get('/api/health', async (req, res) => {
 });
 
 app.get('*', (req, res) => {
-  if (!req.path.startsWith('/api')) {
+  if (!req.path.startsWith('/api') && !req.path.includes('.')) {
     res.set('Cache-Control', 'no-cache');
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
   }
