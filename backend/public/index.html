@@ -719,7 +719,7 @@
       <input type="hidden" id="proofDeliveryId">
       <input type="file" id="proofFile" accept="image/*" capture="environment" style="display:none;" onchange="previewProof(this)">
       <div id="proofPreview" style="display:none;margin-bottom:14px;" class="proof-preview-wrap">
-        <img id="proofPreviewImg">
+        <img id="proofUploadPreviewImg">
       </div>
       <div id="proofPlaceholder" onclick="document.getElementById('proofFile').click()" class="proof-upload-zone">
         <span class="upload-icon">📸</span>
@@ -1246,7 +1246,7 @@ function previewProof(input) {
   const reader = new FileReader();
   reader.onload = (e) => {
     proofImageData = e.target.result;
-    document.getElementById('proofPreviewImg').src = proofImageData;
+    document.getElementById('proofUploadPreviewImg').src = proofImageData;
     document.getElementById('proofPreview').style.display = 'block';
     document.getElementById('proofPlaceholder').style.display = 'none';
     document.getElementById('proofFileName').textContent = file.name + ' (' + (file.size/1024).toFixed(1) + ' KB)';
