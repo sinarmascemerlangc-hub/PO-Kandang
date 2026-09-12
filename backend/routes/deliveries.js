@@ -158,31 +158,54 @@ router.put('/:id', auth, async (req, res) => {
   }
 });
 
-// GET /api/deliveries/po/:poId - Get deliveries for a PO
+// GET /api/deliveries/po/:poId - Get deliveries for a PO (single raw query)
 router.get('/po/:poId', auth, async (req, res) => {
   try {
     const poId = req.params.poId;
-    const deliveryPOs = await prisma.deliveryPO.findMany({
-      where: { poId },
-      select: { deliveryId: true },
-    });
-    const dpIds = deliveryPOs.map(d => d.deliveryId);
+    const deliveries = await prisma.$queryRawUnsafe(`
+      SELECT DISTINCT d.* FROM "Delivery" d
+      LEFT JOIN "DeliveryPO" dp ON dp."deliveryId" = d.id
+      WHERE d."poId" = $1 OR dp."poId" = $1
+      ORDER BY d."deliveryDate" DESC
+    `, poId);
 
-    const deliveries = await prisma.delivery.findMany({
-      where: {
-        OR: [
-          { id: { in: dpIds } },
-          { poId: poId },
-        ],
-      },
-      include: {
-        items: { include: { poItem: true } },
-        proofs: true,
-        deliveryPOs: { include: { po: { select: { poNumber: true } } } },
-      },
-      orderBy: { deliveryDate: 'desc' },
-    });
-    res.json(deliveries);
+    if (deliveries.length === 0) return res.json([]);
+
+    const dIds = deliveries.map(d => d.id);
+
+    const [items, proofs, deliveryPOs] = await Promise.all([
+      prisma.$queryRawUnsafe(`
+        SELECT di.*, poi."productName", poi.thickness, poi.width, poi.length
+        FROM "DeliveryItem" di
+        JOIN "POItem" poi ON poi.id = di."poItemId"
+        WHERE di."deliveryId" = ANY($1)
+      `, dIds),
+      prisma.$queryRawUnsafe(`SELECT * FROM "DeliveryProof" WHERE "deliveryId" = ANY($1)`, dIds),
+      prisma.$queryRawUnsafe(`
+        SELECT dlp.*, po."poNumber" FROM "DeliveryPO" dlp
+        JOIN "PurchaseOrder" po ON po.id = dlp."poId"
+        WHERE dlp."deliveryId" = ANY($1)
+      `, dIds),
+    ]);
+
+    const itemsByDel = {};
+    items.forEach(i => { if (!itemsByDel[i.deliveryId]) itemsByDel[i.deliveryId] = []; itemsByDel[i.deliveryId].push(i); });
+    const proofsByDel = {};
+    proofs.forEach(p => { if (!proofsByDel[p.deliveryId]) proofsByDel[p.deliveryId] = []; proofsByDel[p.deliveryId].push(p); });
+    const poByDel = {};
+    deliveryPOs.forEach(dp => { if (!poByDel[dp.deliveryId]) poByDel[dp.deliveryId] = []; poByDel[dp.deliveryId].push(dp); });
+
+    const result = deliveries.map(d => ({
+      ...d,
+      items: (itemsByDel[d.id] || []).map(i => ({
+        ...i,
+        poItem: { productName: i.productName, thickness: i.thickness, width: i.width, length: i.length },
+      })),
+      proofs: proofsByDel[d.id] || [],
+      deliveryPOs: (poByDel[d.id] || []).map(dp => ({ poId: dp.poId, po: { poNumber: dp.poNumber } })),
+    }));
+
+    res.json(result);
   } catch (error) {
     res.status(500).json({ error: 'Gagal mengambil data: ' + error.message });
   }

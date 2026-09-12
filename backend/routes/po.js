@@ -8,91 +8,101 @@ function calcKubikasi(thickness, width, length) {
   return (thickness / 100) * (width / 100) * (length / 100);
 }
 
-// GET /api/po - List all POs with summary
+// GET /api/po - List all POs with summary (single raw query for speed)
 router.get('/', auth, async (req, res) => {
   try {
     const { status, search, page = 1, limit = 20 } = req.query;
-    const where = {};
-    if (status) where.status = status;
-    if (search) {
-      where.OR = [
-        { poNumber: { contains: search, mode: 'insensitive' } },
-        { customerName: { contains: search, mode: 'insensitive' } },
-      ];
-    }
     const skip = (parseInt(page) - 1) * parseInt(limit);
-    const [pos, total] = await Promise.all([
-      prisma.purchaseOrder.findMany({
-        where,
-        include: { items: true, user: { select: { name: true } } },
-        orderBy: { createdAt: 'desc' },
-        skip,
-        take: parseInt(limit),
-      }),
-      prisma.purchaseOrder.count({ where }),
-    ]);
+    const take = parseInt(limit);
+    const params = [];
+    const conditions = ['1=1'];
 
-    const poIds = pos.map(p => p.id);
-    const poItemIds = pos.flatMap(po => po.items.map(i => i.id));
-    const shippedAgg = poItemIds.length > 0 ? await prisma.deliveryItem.groupBy({
-      by: ['poItemId'],
-      where: { poItemId: { in: poItemIds } },
-      _sum: { kubikasi: true, quantity: true },
-    }) : [];
-    const poItemToPoId = {};
-    pos.forEach(po => po.items.forEach(i => { poItemToPoId[i.id] = po.id; }));
-    const shippedMap = {};
-    shippedAgg.forEach(a => {
-      const poId = poItemToPoId[a.poItemId];
-      if (!poId) return;
-      if (!shippedMap[poId]) shippedMap[poId] = { kubikasi: 0, quantity: 0 };
-      shippedMap[poId].kubikasi += Number(a._sum.kubikasi) || 0;
-      shippedMap[poId].quantity += Number(a._sum.quantity) || 0;
+    if (status) { params.push(status); conditions.push(`p.status = $${params.length}`); }
+    if (search) { params.push(`%${search}%`); conditions.push(`(p."poNumber" ILIKE $${params.length} OR p."customerName" ILIKE $${params.length})`); }
+
+    const whereClause = conditions.join(' AND ');
+
+    const countResult = await prisma.$queryRawUnsafe(
+      `SELECT COUNT(*)::int as total FROM "PurchaseOrder" p WHERE ${whereClause}`, ...params
+    );
+    const total = countResult[0]?.total || 0;
+
+    params.push(take); const lim = params.length;
+    params.push(skip); const off = params.length;
+
+    const pos = await prisma.$queryRawUnsafe(`
+      SELECT p.*, u.name as "userName",
+        COALESCE(s.ship_kub, 0) as "shippedKubikasi",
+        COALESCE(s.ship_qty, 0) as "shippedQuantity"
+      FROM "PurchaseOrder" p
+      LEFT JOIN "User" u ON u.id = p."userId"
+      LEFT JOIN (
+        SELECT poi."poId", SUM(di.kubikasi) as ship_kub, SUM(di.quantity) as ship_qty
+        FROM "DeliveryItem" di
+        JOIN "POItem" poi ON poi.id = di."poItemId"
+        GROUP BY poi."poId"
+      ) s ON s."poId" = p.id
+      WHERE ${whereClause}
+      ORDER BY p."createdAt" DESC
+      LIMIT $${lim} OFFSET $${off}
+    `, ...params);
+
+    const itemParams = pos.map(p => p.id);
+    const items = itemParams.length > 0 ? await prisma.$queryRawUnsafe(`
+      SELECT * FROM "POItem" WHERE "poId" = ANY($1)
+    `, itemParams) : [];
+
+    const itemsByPo = {};
+    items.forEach(i => {
+      if (!itemsByPo[i.poId]) itemsByPo[i.poId] = [];
+      itemsByPo[i.poId].push(i);
     });
 
-    const enriched = pos.map((po) => {
-      const shipped = shippedMap[po.id] || { kubikasi: 0, quantity: 0 };
-      return {
-        ...po,
-        deliveries: undefined,
-        shippedKubikasi: shipped.kubikasi,
-        shippedQuantity: shipped.quantity,
-        remainingKubikasi: (Number(po.totalKubikasi) || 0) - shipped.kubikasi,
-        remainingQuantity: (po.totalQuantity || 0) - shipped.quantity,
-      };
-    });
+    const enriched = pos.map(po => ({
+      ...po,
+      items: itemsByPo[po.id] || [],
+      user: po.userName ? { name: po.userName } : null,
+      remainingKubikasi: (Number(po.totalKubikasi) || 0) - (Number(po.shippedKubikasi) || 0),
+      remainingQuantity: (po.totalQuantity || 0) - (po.shippedQuantity || 0),
+    }));
 
     res.json({
       data: enriched,
-      pagination: { total, page: parseInt(page), limit: parseInt(limit), totalPages: Math.ceil(total / parseInt(limit)) },
+      pagination: { total, page: parseInt(page), limit: take, totalPages: Math.ceil(total / take) },
     });
   } catch (error) {
     res.status(500).json({ error: 'Gagal mengambil data: ' + error.message });
   }
 });
 
-// GET /api/po/stats - Dashboard statistics
+// GET /api/po/stats - Dashboard statistics (single raw query)
 router.get('/stats', auth, async (req, res) => {
   try {
-    const [totalPO, diterima, diproses, dikirim, selesai, dibatalkan, kubAgg, shipAgg] = await Promise.all([
-      prisma.purchaseOrder.count(),
-      prisma.purchaseOrder.count({ where: { status: 'diterima' } }),
-      prisma.purchaseOrder.count({ where: { status: 'diproses' } }),
-      prisma.purchaseOrder.count({ where: { status: 'dikirim' } }),
-      prisma.purchaseOrder.count({ where: { status: 'selesai' } }),
-      prisma.purchaseOrder.count({ where: { status: 'dibatalkan' } }),
-      prisma.purchaseOrder.aggregate({ _sum: { totalKubikasi: true, totalQuantity: true } }),
-      prisma.deliveryItem.aggregate({ _sum: { kubikasi: true, quantity: true } }),
-    ]);
+    const [totals] = await prisma.$queryRawUnsafe(`
+      SELECT
+        COUNT(*)::int as "totalPO",
+        COUNT(*) FILTER (WHERE status = 'diterima')::int as diterima,
+        COUNT(*) FILTER (WHERE status = 'diproses')::int as diproses,
+        COUNT(*) FILTER (WHERE status = 'dikirim')::int as dikirim,
+        COUNT(*) FILTER (WHERE status = 'selesai')::int as selesai,
+        COUNT(*) FILTER (WHERE status = 'dibatalkan')::int as dibatalkan,
+        COALESCE(SUM("totalKubikasi"), 0) as "totalKubikasi",
+        COALESCE(SUM("totalQuantity"), 0) as "totalQuantity"
+      FROM "PurchaseOrder"
+    `);
+    const [shipped] = await prisma.$queryRawUnsafe(`
+      SELECT COALESCE(SUM(kubikasi), 0) as "shippedKubikasi", COALESCE(SUM(quantity), 0) as "shippedQuantity"
+      FROM "DeliveryItem"
+    `);
 
-    const totalKubikasi = Number(kubAgg._sum.totalKubikasi) || 0;
-    const totalQuantity = Number(kubAgg._sum.totalQuantity) || 0;
-    const shippedKubikasi = Number(shipAgg._sum.kubikasi) || 0;
-    const shippedQuantity = Number(shipAgg._sum.quantity) || 0;
+    const totalKubikasi = Number(totals.totalKubikasi) || 0;
+    const totalQuantity = totals.totalQuantity || 0;
+    const shippedKubikasi = Number(shipped.shippedKubikasi) || 0;
+    const shippedQuantity = shipped.shippedQuantity || 0;
 
     res.json({
-      totalPO,
-      statusBreakdown: { diterima, diproses, dikirim, selesai, dibatalkan },
+      totalPO: totals.totalPO,
+      statusBreakdown: { diterima: totals.diterima, diproses: totals.diproses, dikirim: totals.dikirim, selesai: totals.selesai, dibatalkan: totals.dibatalkan },
       totalKubikasi: Math.round(totalKubikasi * 10000) / 10000,
       totalQuantity,
       shippedKubikasi: Math.round(shippedKubikasi * 10000) / 10000,
