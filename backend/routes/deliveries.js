@@ -5,7 +5,7 @@ const auth = require('../middleware/auth');
 const router = express.Router();
 
 // GET /api/deliveries/proxy-image?url=... (MUST be before /:id routes)
-router.get('/proxy-image', auth, async (req, res) => {
+router.get('/proxy-image', async (req, res) => {
   try {
     const { url } = req.query;
     if (!url) return res.status(400).json({ error: 'url required' });
