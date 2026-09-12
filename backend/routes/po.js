@@ -37,7 +37,7 @@ router.get('/', auth, async (req, res) => {
       FROM "PurchaseOrder" p
       LEFT JOIN "User" u ON u.id = p."userId"
       LEFT JOIN (
-        SELECT poi."poId", SUM(di.kubikasi) as ship_kub, SUM(di.quantity) as ship_qty
+        SELECT poi."poId", SUM(di.kubikasi)::float as ship_kub, SUM(di.quantity)::int as ship_qty
         FROM "DeliveryItem" di
         JOIN "POItem" poi ON poi.id = di."poItemId"
         GROUP BY poi."poId"
@@ -86,19 +86,19 @@ router.get('/stats', auth, async (req, res) => {
         COUNT(*) FILTER (WHERE status = 'dikirim')::int as dikirim,
         COUNT(*) FILTER (WHERE status = 'selesai')::int as selesai,
         COUNT(*) FILTER (WHERE status = 'dibatalkan')::int as dibatalkan,
-        COALESCE(SUM("totalKubikasi"), 0) as "totalKubikasi",
-        COALESCE(SUM("totalQuantity"), 0) as "totalQuantity"
+        COALESCE(SUM("totalKubikasi")::float, 0) as "totalKubikasi",
+        COALESCE(SUM("totalQuantity")::int, 0) as "totalQuantity"
       FROM "PurchaseOrder"
     `);
     const [shipped] = await prisma.$queryRawUnsafe(`
-      SELECT COALESCE(SUM(kubikasi), 0) as "shippedKubikasi", COALESCE(SUM(quantity), 0) as "shippedQuantity"
+      SELECT COALESCE(SUM(kubikasi)::float, 0) as "shippedKubikasi", COALESCE(SUM(quantity)::int, 0) as "shippedQuantity"
       FROM "DeliveryItem"
     `);
 
     const totalKubikasi = Number(totals.totalKubikasi) || 0;
-    const totalQuantity = totals.totalQuantity || 0;
+    const totalQuantity = Number(totals.totalQuantity) || 0;
     const shippedKubikasi = Number(shipped.shippedKubikasi) || 0;
-    const shippedQuantity = shipped.shippedQuantity || 0;
+    const shippedQuantity = Number(shipped.shippedQuantity) || 0;
 
     res.json({
       totalPO: totals.totalPO,
