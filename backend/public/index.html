@@ -525,7 +525,58 @@
       transition: all 0.2s;
     }
     .proof-btn-view:active { transform: scale(0.96); }
+
+    .report-tabs { display: flex; gap: 6px; margin-bottom: 16px; overflow-x: auto; padding-bottom: 4px; -webkit-overflow-scrolling: touch; }
+    .report-tabs::-webkit-scrollbar { display: none; }
+    .report-tab {
+      flex-shrink: 0; padding: 10px 16px; border-radius: 12px; font-size: 12px; font-weight: 700;
+      background: white; border: 2px solid var(--slate-100); cursor: pointer; transition: all 0.2s;
+      font-family: inherit; white-space: nowrap; display: flex; align-items: center; gap: 6px;
+    }
+    .report-tab.active { background: var(--teal-600); color: white; border-color: var(--teal-600); box-shadow: 0 2px 10px rgba(16,185,129,0.3); }
+    .report-tab:active { transform: scale(0.96); }
+
+    .report-actions { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+    .report-btn {
+      padding: 10px 18px; border-radius: 10px; font-size: 12px; font-weight: 700;
+      border: 2px solid var(--slate-100); background: white; cursor: pointer; transition: all 0.2s;
+      font-family: inherit; display: flex; align-items: center; gap: 6px;
+    }
+    .report-btn:active { transform: scale(0.96); }
+    .report-btn.pdf { background: #fee2e2; color: #dc2626; border-color: #fecaca; }
+    .report-btn.excel { background: #d1fae5; color: #059669; border-color: #a7f3d0; }
+    .report-btn.preview { background: var(--teal-50); color: var(--teal-700); border-color: rgba(16,185,129,0.2); }
+
+    .preview-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px);
+      z-index: 2000; display: flex; align-items: center; justify-content: center; animation: fadeIn 0.2s;
+    }
+    .preview-sheet {
+      background: white; border-radius: 16px; width: 95%; max-width: 900px; max-height: 90vh;
+      display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+    .preview-header { padding: 16px 20px; border-bottom: 1px solid var(--slate-100); display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
+    .preview-header h3 { font-size: 16px; font-weight: 800; margin: 0; }
+    .preview-body { flex: 1; overflow-y: auto; padding: 20px; font-size: 12px; }
+    .preview-footer { padding: 12px 20px; border-top: 1px solid var(--slate-100); display: flex; gap: 8px; justify-content: flex-end; flex-shrink: 0; }
+
+    .preview-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+    .preview-table th { background: var(--slate-50); padding: 8px 10px; text-align: left; font-weight: 700; text-transform: uppercase; font-size: 9px; letter-spacing: 0.5px; color: var(--slate-600); border-bottom: 2px solid var(--slate-200); }
+    .preview-table td { padding: 8px 10px; border-bottom: 1px solid var(--slate-100); }
+    .preview-table tr:hover td { background: var(--slate-50); }
+
+    .preview-section-title { font-size: 14px; font-weight: 800; color: var(--teal-700); margin: 16px 0 8px; padding-bottom: 6px; border-bottom: 2px solid var(--teal-200); }
+    .preview-sub-title { font-size: 12px; font-weight: 700; color: var(--slate-700); margin: 12px 0 6px; }
+
+    .chart-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+    .chart-card { background: white; border-radius: 14px; padding: 16px; box-shadow: var(--shadow-sm); border: 1px solid var(--slate-100); }
+    .chart-card h5 { font-size: 12px; font-weight: 800; color: var(--slate-700); margin: 0 0 10px; }
+    @media (max-width: 520px) { .chart-grid { grid-template-columns: 1fr; } }
   </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.2/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.4/j.plugin.autotable.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 </head>
 <body>
 
@@ -630,16 +681,58 @@
     <!-- LAPORAN -->
     <div id="page-reports" class="page">
       <div class="section-title">📊 Laporan</div>
-      <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;">
-        <select id="reportPeriod" onchange="loadReports()" style="flex:1;padding:11px 14px;border:2px solid var(--slate-100);border-radius:var(--radius-sm);font-size:13px;background:white;outline:none;font-family:inherit;font-weight:600;">
-          <option value="all">Semua Periode</option>
-          <option value="today">Hari Ini</option>
-          <option value="week">Minggu Ini</option>
-          <option value="month">Bulan Ini</option>
-          <option value="year">Tahun Ini</option>
-        </select>
+      <div class="report-tabs">
+        <button class="report-tab active" onclick="switchReportTab(this,'all')">📋 Semua PO</button>
+        <button class="report-tab" onclick="switchReportTab(this,'unsent')">📦 Belum Kirim</button>
+        <button class="report-tab" onclick="switchReportTab(this,'delivery')">🚚 Pengiriman</button>
+        <button class="report-tab" onclick="switchReportTab(this,'chart')">📈 Diagram</button>
       </div>
-      <div id="reportContent"></div>
+      <div id="reportPanelAll" class="report-panel">
+        <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;">
+          <select id="reportPeriod" onchange="loadReportAll()" style="flex:1;padding:11px 14px;border:2px solid var(--slate-100);border-radius:var(--radius-sm);font-size:13px;background:white;outline:none;font-family:inherit;font-weight:600;">
+            <option value="all">Semua Periode</option>
+            <option value="today">Hari Ini</option>
+            <option value="week">Minggu Ini</option>
+            <option value="month">Bulan Ini</option>
+            <option value="year">Tahun Ini</option>
+          </select>
+        </div>
+        <div class="report-actions">
+          <button class="report-btn preview" onclick="previewAllPO()">👁️ Preview</button>
+          <button class="report-btn pdf" onclick="exportAllPO('pdf')">📄 PDF</button>
+          <button class="report-btn excel" onclick="exportAllPO('excel')">📊 Excel</button>
+        </div>
+        <div id="reportAllContent"></div>
+      </div>
+      <div id="reportPanelUnsent" class="report-panel" style="display:none;">
+        <div class="report-actions">
+          <button class="report-btn preview" onclick="previewUnsentPO()">👁️ Preview</button>
+          <button class="report-btn pdf" onclick="exportUnsentPO('pdf')">📄 PDF</button>
+          <button class="report-btn excel" onclick="exportUnsentPO('excel')">📊 Excel</button>
+        </div>
+        <div id="reportUnsentContent"></div>
+      </div>
+      <div id="reportPanelDelivery" class="report-panel" style="display:none;">
+        <div style="margin-bottom:14px;">
+          <select id="deliveryReportPo" onchange="loadDeliveryReport()" style="width:100%;padding:11px 14px;border:2px solid var(--slate-100);border-radius:var(--radius-sm);font-size:13px;background:white;outline:none;font-family:inherit;font-weight:600;">
+            <option value="">-- Pilih PO --</option>
+          </select>
+        </div>
+        <div class="report-actions">
+          <button class="report-btn preview" onclick="previewDeliveryReport()">👁️ Preview</button>
+          <button class="report-btn pdf" onclick="exportDeliveryReport('pdf')">📄 PDF</button>
+          <button class="report-btn excel" onclick="exportDeliveryReport('excel')">📊 Excel</button>
+        </div>
+        <div id="reportDeliveryContent"></div>
+      </div>
+      <div id="reportPanelChart" class="report-panel" style="display:none;">
+        <div class="chart-grid">
+          <div class="chart-card"><h5>📊 Status PO</h5><canvas id="chartStatus"></canvas></div>
+          <div class="chart-card"><h5>📦 Kubikasi per Customer</h5><canvas id="chartCustomer"></canvas></div>
+          <div class="chart-card"><h5>📈 PO per Bulan</h5><canvas id="chartMonthly"></canvas></div>
+          <div class="chart-card"><h5>🚚 Alur Pengiriman</h5><canvas id="chartFlow"></canvas></div>
+        </div>
+      </div>
     </div>
 
     <!-- PO DETAIL MODAL - removed, moved outside #app -->
@@ -812,6 +905,22 @@
   <img id="proofPreviewImg" src="" onclick="event.stopPropagation()" style="max-width:90vw;max-height:85vh;border-radius:8px;object-fit:contain;cursor:default;">
 </div>
 
+<!-- REPORT PREVIEW MODAL -->
+<div id="reportPreviewModal" class="preview-overlay hidden">
+  <div class="preview-sheet">
+    <div class="preview-header">
+      <h3 id="previewTitle">Preview Laporan</h3>
+      <button class="modal-close" onclick="closeReportPreview()">&times;</button>
+    </div>
+    <div class="preview-body" id="previewBody"></div>
+    <div class="preview-footer">
+      <button class="report-btn pdf" onclick="exportFromPreview('pdf')">📄 PDF</button>
+      <button class="report-btn excel" onclick="exportFromPreview('excel')">📊 Excel</button>
+      <button class="report-btn" onclick="closeReportPreview()" style="border-color:var(--slate-200);">Tutup</button>
+    </div>
+  </div>
+</div>
+
 <script>
 const API = '';
 let token = localStorage.getItem('token');
@@ -907,7 +1016,7 @@ function switchPage(page) {
   if (page === 'dashboard') loadDashboard();
   if (page === 'pos') loadPOs();
   if (page === 'deliveries') loadDeliveries();
-  if (page === 'reports') loadReports();
+  if (page === 'reports') { switchReportTab(document.querySelector('.report-tab.active'),'all'); }
 }
 
 function openPage(page) {
@@ -1549,58 +1658,415 @@ async function saveDelivery() {
 }
 
 /* === REPORTS === */
-async function loadReports() {
-  const period = document.getElementById('reportPeriod')?.value||'all';
-  try {
-    const res = await fetch(`${API}/api/po/stats`,{headers:authHeaders()});
-    const s = await res.json();
-    const allRes = await fetch(`${API}/api/po?limit=100`,{headers:authHeaders()});
-    const allData = await allRes.json();
-    const pos = allData.data||[];
+let _reportData = {};
+let _previewExportFn = null;
 
-    let filtered = pos;
-    const now = new Date();
-    if (period==='today') filtered = pos.filter(p=>new Date(p.orderDate).toDateString()===now.toDateString());
-    else if (period==='week') { const w=new Date(now); w.setDate(w.getDate()-7); filtered=pos.filter(p=>new Date(p.orderDate)>=w); }
-    else if (period==='month') { const m=new Date(now); m.setMonth(m.getMonth()-1); filtered=pos.filter(p=>new Date(p.orderDate)>=m); }
-    else if (period==='year') { const y=new Date(now); y.setFullYear(y.getFullYear()-1); filtered=pos.filter(p=>new Date(p.orderDate)>=y); }
-
-    const totalKub = filtered.reduce((s,p)=>s+(p.totalKubikasi||0),0);
-    const shippedKub = filtered.reduce((s,p)=>s+(p.shippedKubikasi||0),0);
-    const totalQty = filtered.reduce((s,p)=>s+(p.totalQuantity||0),0);
-    const shippedQty = filtered.reduce((s,p)=>s+(p.shippedQuantity||0),0);
-
-    const byStatus = {diterima:0,diproses:0,dikirim:0,selesai:0,dibatalkan:0};
-    filtered.forEach(p=>{ if(byStatus[p.status]!==undefined) byStatus[p.status]++; });
-
-    const topCustomers = {};
-    filtered.forEach(p=>{ topCustomers[p.customerName]=(topCustomers[p.customerName]||0)+(p.totalKubikasi||0); });
-    const topCust = Object.entries(topCustomers).sort((a,b)=>b[1]-a[1]).slice(0,5);
-
-    document.getElementById('reportContent').innerHTML = `
-      <div class="report-card slide-up">
-        <h4>📦 Ringkasan PO</h4>
-        <div class="report-row"><span class="r-label">Total PO</span><span class="r-value">${filtered.length}</span></div>
-        <div class="report-row"><span class="r-label">Total Qty</span><span class="r-value">${totalQty} pcs</span></div>
-        <div class="report-row"><span class="r-label">Total Kubikasi</span><span class="r-value teal">${totalKub.toFixed(4)} m³</span></div>
-        <div class="report-row"><span class="r-label">Terkirim</span><span class="r-value green">${shippedKub.toFixed(4)} m³ (${shippedQty} pcs)</span></div>
-        <div class="report-row"><span class="r-label">Sisa</span><span class="r-value amber">${(totalKub-shippedKub).toFixed(4)} m³ (${totalQty-shippedQty} pcs)</span></div>
-      </div>
-      <div class="report-card slide-up" style="animation-delay:0.1s">
-        <h4>📊 Status PO</h4>
-        <div class="report-row"><span class="r-label">📥 Diterima</span><span class="r-value">${byStatus.diterima}</span></div>
-        <div class="report-row"><span class="r-label">⚙️ Diproses</span><span class="r-value">${byStatus.diproses}</span></div>
-        <div class="report-row"><span class="r-label">🚚 Dikirim</span><span class="r-value">${byStatus.dikirim}</span></div>
-        <div class="report-row"><span class="r-label">✅ Selesai</span><span class="r-value">${byStatus.selesai}</span></div>
-        <div class="report-row"><span class="r-label">❌ Dibatalkan</span><span class="r-value">${byStatus.dibatalkan}</span></div>
-      </div>
-      <div class="report-card slide-up" style="animation-delay:0.2s">
-        <h4>🏆 Top Customer (Kubikasi)</h4>
-        ${topCust.length?topCust.map(([name,kub],i)=>`<div class="report-row"><span class="r-label">${i+1}. ${name}</span><span class="r-value teal">${kub.toFixed(4)} m³</span></div>`).join(''):'<div style="padding:16px;text-align:center;color:var(--slate-500);font-size:13px;">Belum ada data</div>'}
-      </div>
-    `;
-  } catch(e) { console.error(e); }
+function switchReportTab(btn, tab) {
+  document.querySelectorAll('.report-tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.report-panel').forEach(p => p.style.display = 'none');
+  const panels = { all: 'reportPanelAll', unsent: 'reportPanelUnsent', delivery: 'reportPanelDelivery', chart: 'reportPanelChart' };
+  document.getElementById(panels[tab]).style.display = 'block';
+  if (tab === 'all') loadReportAll();
+  if (tab === 'unsent') loadReportUnsent();
+  if (tab === 'delivery') loadDeliveryPOList();
+  if (tab === 'chart') loadCharts();
 }
+
+function filterByPeriod(pos) {
+  const period = document.getElementById('reportPeriod')?.value || 'all';
+  const now = new Date();
+  if (period === 'today') return pos.filter(p => new Date(p.orderDate).toDateString() === now.toDateString());
+  if (period === 'week') { const w = new Date(now); w.setDate(w.getDate() - 7); return pos.filter(p => new Date(p.orderDate) >= w); }
+  if (period === 'month') { const m = new Date(now); m.setMonth(m.getMonth() - 1); return pos.filter(p => new Date(p.orderDate) >= m); }
+  if (period === 'year') { const y = new Date(now); y.setFullYear(y.getFullYear() - 1); return pos.filter(p => new Date(p.orderDate) >= y); }
+  return pos;
+}
+
+function fmtDate(d) { if (!d) return '-'; return new Date(d).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }); }
+function fmtNum(n) { return (n || 0).toFixed(4); }
+
+async function fetchAllPO() {
+  const res = await fetch(`${API}/api/po?limit=500`, { headers: authHeaders() });
+  const data = await res.json();
+  return data.data || [];
+}
+
+async function fetchPOItems(poId) {
+  const res = await fetch(`${API}/api/po/${poId}`, { headers: authHeaders() });
+  const data = await res.json();
+  return data.items || [];
+}
+
+async function fetchDeliveriesByPO(poId) {
+  const res = await fetch(`${API}/api/deliveries/po/${poId}`, { headers: authHeaders() });
+  return await res.json();
+}
+
+function renderSummaryCards(filtered) {
+  const totalKub = filtered.reduce((s, p) => s + (p.totalKubikasi || 0), 0);
+  const shippedKub = filtered.reduce((s, p) => s + (p.shippedKubikasi || 0), 0);
+  const totalQty = filtered.reduce((s, p) => s + (p.totalQuantity || 0), 0);
+  const shippedQty = filtered.reduce((s, p) => s + (p.shippedQuantity || 0), 0);
+  const byStatus = { diterima: 0, diproses: 0, dikirim: 0, selesai: 0, dibatalkan: 0 };
+  filtered.forEach(p => { if (byStatus[p.status] !== undefined) byStatus[p.status]++; });
+  const topCustomers = {};
+  filtered.forEach(p => { topCustomers[p.customerName] = (topCustomers[p.customerName] || 0) + (p.totalKubikasi || 0); });
+  const topCust = Object.entries(topCustomers).sort((a, b) => b[1] - a[1]).slice(0, 5);
+  return `
+    <div class="report-card slide-up">
+      <h4>📦 Ringkasan PO</h4>
+      <div class="report-row"><span class="r-label">Total PO</span><span class="r-value">${filtered.length}</span></div>
+      <div class="report-row"><span class="r-label">Total Qty</span><span class="r-value">${totalQty} pcs</span></div>
+      <div class="report-row"><span class="r-label">Total Kubikasi</span><span class="r-value teal">${fmtNum(totalKub)} m³</span></div>
+      <div class="report-row"><span class="r-label">Terkirim</span><span class="r-value green">${fmtNum(shippedKub)} m³ (${shippedQty} pcs)</span></div>
+      <div class="report-row"><span class="r-label">Sisa</span><span class="r-value amber">${fmtNum(totalKub - shippedKub)} m³ (${totalQty - shippedQty} pcs)</span></div>
+    </div>
+    <div class="report-card slide-up" style="animation-delay:0.1s">
+      <h4>📊 Status PO</h4>
+      <div class="report-row"><span class="r-label">📥 Diterima</span><span class="r-value">${byStatus.diterima}</span></div>
+      <div class="report-row"><span class="r-label">⚙️ Diproses</span><span class="r-value">${byStatus.diproses}</span></div>
+      <div class="report-row"><span class="r-label">🚚 Dikirim</span><span class="r-value">${byStatus.dikirim}</span></div>
+      <div class="report-row"><span class="r-label">✅ Selesai</span><span class="r-value">${byStatus.selesai}</span></div>
+      <div class="report-row"><span class="r-label">❌ Dibatalkan</span><span class="r-value">${byStatus.dibatalkan}</span></div>
+    </div>
+    <div class="report-card slide-up" style="animation-delay:0.2s">
+      <h4>🏆 Top Customer (Kubikasi)</h4>
+      ${topCust.length ? topCust.map(([name, kub], i) => `<div class="report-row"><span class="r-label">${i + 1}. ${name}</span><span class="r-value teal">${fmtNum(kub)} m³</span></div>`).join('') : '<div style="padding:16px;text-align:center;color:var(--slate-500);font-size:13px;">Belum ada data</div>'}
+    </div>`;
+}
+
+/* --- Tab 1: Semua PO --- */
+async function loadReportAll() {
+  try {
+    const pos = await fetchAllPO();
+    const filtered = filterByPeriod(pos);
+    _reportData.allPO = filtered;
+    document.getElementById('reportAllContent').innerHTML = renderSummaryCards(filtered);
+  } catch (e) { console.error(e); }
+}
+
+function previewAllPO() {
+  const pos = _reportData.allPO || [];
+  if (!pos.length) return showToast('Tidak ada data', 'error');
+  _previewExportFn = exportAllPO;
+  let html = `<div class="preview-section-title">📋 Data PO Kandang - ${pos.length} PO</div>`;
+  html += `<table class="preview-table"><thead><tr><th>No</th><th>PO Number</th><th>Customer</th><th>Tanggal</th><th>Deadline</th><th>Status</th><th>Total Qty</th><th>Kubikasi (m³)</th><th>Terkirim (m³)</th></tr></thead><tbody>`;
+  pos.forEach((p, i) => {
+    const statusColor = { diterima: '#3b82f6', diproses: '#f59e0b', dikirim: '#8b5cf6', selesai: '#10b981', dibatalkan: '#ef4444' };
+    html += `<tr><td>${i + 1}</td><td><b>${p.poNumber}</b></td><td>${p.customerName}</td><td>${fmtDate(p.orderDate)}</td><td>${fmtDate(p.deadline)}</td><td><span style="background:${statusColor[p.status] || '#94a3b8'};color:white;padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700;">${p.status}</span></td><td>${p.totalQuantity} pcs</td><td>${fmtNum(p.totalKubikasi)}</td><td>${fmtNum(p.shippedKubikasi)}</td></tr>`;
+  });
+  html += `</tbody></table>`;
+  html += `<div class="preview-section-title" style="margin-top:20px;">📦 Detail Item per PO</div>`;
+  pos.forEach(p => {
+    if (p.items && p.items.length) {
+      html += `<div class="preview-sub-title">${p.poNumber} - ${p.customerName}</div>`;
+      html += `<table class="preview-table"><thead><tr><th>Produk</th><th>Tebal</th><th>Lebar</th><th>Pjg</th><th>Qty</th><th>Kubikasi</th></tr></thead><tbody>`;
+      p.items.forEach(it => {
+        html += `<tr><td>${it.productName}</td><td>${it.thickness}</td><td>${it.width}</td><td>${it.length}</td><td>${it.quantity} ${it.unit || 'pcs'}</td><td>${fmtNum(it.kubikasi)} m³</td></tr>`;
+      });
+      html += `</tbody></table>`;
+    }
+  });
+  showPreview('Preview Semua PO', html);
+}
+
+async function exportAllPO(format) {
+  const pos = _reportData.allPO || [];
+  if (!pos.length) return showToast('Tidak ada data', 'error');
+  if (format === 'pdf') {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF('l', 'mm', 'a4');
+    doc.setFontSize(16); doc.setFont('helvetica', 'bold');
+    doc.text('LAPORAN PO KANDANG', 14, 15);
+    doc.setFontSize(10); doc.setFont('helvetica', 'normal');
+    doc.text(`Periode: ${document.getElementById('reportPeriod')?.selectedOptions[0]?.text || 'Semua'} | Total: ${pos.length} PO | Dicetak: ${new Date().toLocaleDateString('id-ID')}`, 14, 22);
+    const rows = pos.map((p, i) => [i + 1, p.poNumber, p.customerName, fmtDate(p.orderDate), fmtDate(p.deadline), p.status, p.totalQuantity, fmtNum(p.totalKubikasi), fmtNum(p.shippedKubikasi), fmtNum((p.totalKubikasi || 0) - (p.shippedKubikasi || 0))]);
+    doc.autoTable({ startY: 26, head: [['#', 'PO Number', 'Customer', 'Tgl Order', 'Deadline', 'Status', 'Qty', 'Kubikasi', 'Terkirim', 'Sisa']], body: rows, styles: { fontSize: 8 }, headStyles: { fillColor: [16, 185, 129] } });
+    pos.forEach(p => {
+      if (p.items && p.items.length) {
+        doc.addPage();
+        doc.setFontSize(12); doc.setFont('helvetica', 'bold');
+        doc.text(`Detail: ${p.poNumber} - ${p.customerName}`, 14, 15);
+        const itemRows = p.items.map(it => [it.productName, it.thickness, it.width, it.length, it.quantity, fmtNum(it.kubikasi)]);
+        doc.autoTable({ startY: 20, head: [['Produk', 'Tebal', 'Lebar', 'Pjg', 'Qty', 'Kubikasi']], body: itemRows, styles: { fontSize: 8 }, headStyles: { fillColor: [16, 185, 129] } });
+      }
+    });
+    doc.save('Laporan_PO_Kandang.pdf');
+    showToast('PDF berhasil diunduh!', 'success');
+  } else {
+    const wb = XLSX.utils.book_new();
+    const wsData = [['#', 'PO Number', 'Customer', 'Tgl Order', 'Deadline', 'Status', 'Catatan', 'Total Qty', 'Total Kubikasi', 'Terkirim Kubikasi', 'Sisa Kubikasi']];
+    pos.forEach((p, i) => wsData.push([i + 1, p.poNumber, p.customerName, fmtDate(p.orderDate), fmtDate(p.deadline), p.status, p.notes || '', p.totalQuantity, fmtNum(p.totalKubikasi), fmtNum(p.shippedKubikasi), fmtNum((p.totalKubikasi || 0) - (p.shippedKubikasi || 0))]));
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+    ws['!cols'] = [{ wch: 5 }, { wch: 15 }, { wch: 20 }, { wch: 12 }, { wch: 12 }, { wch: 10 }, { wch: 25 }, { wch: 10 }, { wch: 12 }, { wch: 12 }, { wch: 12 }];
+    XLSX.utils.book_append_sheet(wb, ws, 'Semua PO');
+    const itemData = [['PO Number', 'Customer', 'Produk', 'Tebal', 'Lebar', 'Pjg', 'Qty', 'Satuan', 'Kubikasi']];
+    pos.forEach(p => {
+      if (p.items) p.items.forEach(it => itemData.push([p.poNumber, p.customerName, it.productName, it.thickness, it.width, it.length, it.quantity, it.unit || 'pcs', fmtNum(it.kubikasi)]));
+    });
+    const ws2 = XLSX.utils.aoa_to_sheet(itemData);
+    ws2['!cols'] = [{ wch: 15 }, { wch: 20 }, { wch: 20 }, { wch: 8 }, { wch: 8 }, { wch: 8 }, { wch: 8 }, { wch: 8 }, { wch: 10 }];
+    XLSX.utils.book_append_sheet(wb, ws2, 'Detail Item');
+    XLSX.writeFile(wb, 'Laporan_PO_Kandang.xlsx');
+    showToast('Excel berhasil diunduh!', 'success');
+  }
+}
+
+/* --- Tab 2: PO Belum Kirim --- */
+async function loadReportUnsent() {
+  try {
+    const pos = await fetchAllPO();
+    const unsent = pos.filter(p => p.status !== 'selesai' && p.status !== 'dibatalkan' && (p.shippedKubikasi || 0) < (p.totalKubikasi || 0));
+    _reportData.unsentPO = unsent;
+    let totalSisaKub = 0, totalSisaQty = 0;
+    unsent.forEach(p => { totalSisaKub += (p.totalKubikasi || 0) - (p.shippedKubikasi || 0); totalSisaQty += (p.totalQuantity || 0) - (p.shippedQuantity || 0); });
+    let html = `<div class="report-card slide-up">
+      <h4>📦 PO Belum Terkirim</h4>
+      <div class="report-row"><span class="r-label">Total PO</span><span class="r-value">${unsent.length}</span></div>
+      <div class="report-row"><span class="r-label">Sisa Qty</span><span class="r-value amber">${totalSisaQty} pcs</span></div>
+      <div class="report-row"><span class="r-label">Sisa Kubikasi</span><span class="r-value teal">${fmtNum(totalSisaKub)} m³</span></div>
+    </div>`;
+    html += `<div class="report-card slide-up" style="animation-delay:0.1s"><h4>📋 Detail PO Belum Kirim</h4>`;
+    if (unsent.length) {
+      html += `<table class="preview-table"><thead><tr><th>PO</th><th>Customer</th><th>Deadline</th><th>Total</th><th>Terkirim</th><th>Sisa</th></tr></thead><tbody>`;
+      unsent.forEach(p => {
+        const sisa = (p.totalKubikasi || 0) - (p.shippedKubikasi || 0);
+        html += `<tr><td><b>${p.poNumber}</b></td><td>${p.customerName}</td><td>${fmtDate(p.deadline)}</td><td>${fmtNum(p.totalKubikasi)} m³</td><td>${fmtNum(p.shippedKubikasi)} m³</td><td style="color:${sisa > 0 ? '#dc2626' : '#16a34a'};font-weight:700;">${fmtNum(sisa)} m³</td></tr>`;
+      });
+      html += `</tbody></table>`;
+    } else { html += '<div style="padding:20px;text-align:center;color:var(--slate-500);font-size:13px;">Semua PO sudah terkirim</div>'; }
+    html += `</div>`;
+    document.getElementById('reportUnsentContent').innerHTML = html;
+  } catch (e) { console.error(e); }
+}
+
+function previewUnsentPO() {
+  const unsent = _reportData.unsentPO || [];
+  if (!unsent.length) return showToast('Tidak ada PO belum terkirim', 'success');
+  _previewExportFn = exportUnsentPO;
+  let html = `<div class="preview-section-title">📦 PO Belum Terkirim - ${unsent.length} PO</div>`;
+  html += `<table class="preview-table"><thead><tr><th>#</th><th>PO Number</th><th>Customer</th><th>Deadline</th><th>Total Qty</th><th>Total Kubikasi</th><th>Terkirim</th><th>Sisa Kubikasi</th></tr></thead><tbody>`;
+  unsent.forEach((p, i) => {
+    const sisa = (p.totalKubikasi || 0) - (p.shippedKubikasi || 0);
+    html += `<tr><td>${i + 1}</td><td><b>${p.poNumber}</b></td><td>${p.customerName}</td><td>${fmtDate(p.deadline)}</td><td>${p.totalQuantity} pcs</td><td>${fmtNum(p.totalKubikasi)}</td><td>${fmtNum(p.shippedKubikasi)}</td><td style="color:#dc2626;font-weight:700;">${fmtNum(sisa)}</td></tr>`;
+  });
+  html += `</tbody></table>`;
+  html += `<div class="preview-section-title" style="margin-top:20px;">📦 Detail Item Belum Kirim</div>`;
+  unsent.forEach(p => {
+    if (p.items && p.items.length) {
+      html += `<div class="preview-sub-title">${p.poNumber} - ${p.customerName}</div>`;
+      html += `<table class="preview-table"><thead><tr><th>Produk</th><th>Tebal</th><th>Lebar</th><th>Pjg</th><th>Qty</th><th>Kubikasi</th></tr></thead><tbody>`;
+      p.items.forEach(it => { html += `<tr><td>${it.productName}</td><td>${it.thickness}</td><td>${it.width}</td><td>${it.length}</td><td>${it.quantity}</td><td>${fmtNum(it.kubikasi)} m³</td></tr>`; });
+      html += `</tbody></table>`;
+    }
+  });
+  showPreview('PO Belum Terkirim', html);
+}
+
+async function exportUnsentPO(format) {
+  const unsent = _reportData.unsentPO || [];
+  if (!unsent.length) return showToast('Tidak ada data', 'error');
+  if (format === 'pdf') {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF('l', 'mm', 'a4');
+    doc.setFontSize(16); doc.setFont('helvetica', 'bold');
+    doc.text('PO BELUM TERKIRIM - PO KANDANG', 14, 15);
+    doc.setFontSize(10); doc.setFont('helvetica', 'normal');
+    doc.text(`Total: ${unsent.length} PO | Dicetak: ${new Date().toLocaleDateString('id-ID')}`, 14, 22);
+    const rows = unsent.map((p, i) => [i + 1, p.poNumber, p.customerName, fmtDate(p.deadline), p.totalQuantity, fmtNum(p.totalKubikasi), fmtNum(p.shippedKubikasi), fmtNum((p.totalKubikasi || 0) - (p.shippedKubikasi || 0))]);
+    doc.autoTable({ startY: 26, head: [['#', 'PO Number', 'Customer', 'Deadline', 'Qty', 'Total Kub', 'Terkirim', 'Sisa Kub']], body: rows, styles: { fontSize: 8 }, headStyles: { fillColor: [245, 158, 11] } });
+    unsent.forEach(p => {
+      if (p.items && p.items.length) {
+        doc.addPage();
+        doc.setFontSize(12); doc.setFont('helvetica', 'bold');
+        doc.text(`Detail: ${p.poNumber} - ${p.customerName}`, 14, 15);
+        doc.autoTable({ startY: 20, head: [['Produk', 'Tebal', 'Lebar', 'Pjg', 'Qty', 'Kubikasi']], body: p.items.map(it => [it.productName, it.thickness, it.width, it.length, it.quantity, fmtNum(it.kubikasi)]), styles: { fontSize: 8 }, headStyles: { fillColor: [245, 158, 11] } });
+      }
+    });
+    doc.save('PO_Belum_Kirim.pdf');
+  } else {
+    const wb = XLSX.utils.book_new();
+    const wsData = [['#', 'PO Number', 'Customer', 'Deadline', 'Status', 'Qty', 'Total Kubikasi', 'Terkirim', 'Sisa Kubikasi']];
+    unsent.forEach((p, i) => wsData.push([i + 1, p.poNumber, p.customerName, fmtDate(p.deadline), p.status, p.totalQuantity, fmtNum(p.totalKubikasi), fmtNum(p.shippedKubikasi), fmtNum((p.totalKubikasi || 0) - (p.shippedKubikasi || 0))]));
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+    ws['!cols'] = [{ wch: 5 }, { wch: 15 }, { wch: 20 }, { wch: 12 }, { wch: 10 }, { wch: 8 }, { wch: 12 }, { wch: 12 }, { wch: 12 }];
+    XLSX.utils.book_append_sheet(wb, ws, 'PO Belum Kirim');
+    XLSX.writeFile(wb, 'PO_Belum_Kirim.xlsx');
+  }
+  showToast(`${format.toUpperCase()} berhasil diunduh!`, 'success');
+}
+
+/* --- Tab 3: Pengiriman --- */
+async function loadDeliveryPOList() {
+  try {
+    const pos = await fetchAllPO();
+    const sel = document.getElementById('deliveryReportPo');
+    sel.innerHTML = '<option value="">-- Pilih PO --</option>';
+    pos.forEach(p => { sel.innerHTML += `<option value="${p.id}">${p.poNumber} - ${p.customerName}</option>`; });
+  } catch (e) { console.error(e); }
+}
+
+async function loadDeliveryReport() {
+  const poId = document.getElementById('deliveryReportPo').value;
+  if (!poId) { document.getElementById('reportDeliveryContent').innerHTML = ''; _reportData.deliveries = null; return; }
+  try {
+    const deliveries = await fetchDeliveriesByPO(poId);
+    _reportData.deliveries = deliveries;
+    const po = (_reportData.allPO || []).find(p => p.id === poId);
+    let html = `<div class="report-card slide-up"><h4>🚚 Pengiriman: ${po ? po.poNumber + ' - ' + po.customerName : ''}</h4>`;
+    if (deliveries.length) {
+      deliveries.forEach(d => {
+        html += `<div style="padding:10px 0;border-bottom:1px solid var(--slate-100);">
+          <div style="font-size:13px;font-weight:700;">${fmtDate(d.deliveryDate)} ${d.driverName ? '- ' + d.driverName : ''} ${d.vehicleNumber ? '(' + d.vehicleNumber + ')' : ''}</div>`;
+        if (d.items && d.items.length) {
+          html += `<div style="font-size:11px;color:var(--slate-600);margin-top:4px;">`;
+          d.items.forEach(it => { html += `<span style="display:inline-block;background:var(--teal-50);color:var(--teal-700);padding:2px 8px;border-radius:6px;margin:2px 4px 2px 0;font-size:10px;">${it.poItem?.productName || 'Item'}: ${it.quantity} pcs (${fmtNum(it.kubikasi)} m³)</span>`; });
+          html += `</div>`;
+        }
+        if (d.proofs && d.proofs.length) { html += `<div style="font-size:10px;color:var(--slate-500);margin-top:4px;">📷 ${d.proofs.length} foto bukti</div>`; }
+        html += `</div>`;
+      });
+    } else { html += '<div style="padding:16px;text-align:center;color:var(--slate-500);font-size:13px;">Belum ada pengiriman</div>'; }
+    html += `</div>`;
+    document.getElementById('reportDeliveryContent').innerHTML = html;
+  } catch (e) { console.error(e); }
+}
+
+function previewDeliveryReport() {
+  const deliveries = _reportData.deliveries;
+  if (!deliveries || !deliveries.length) return showToast('Pilih PO terlebih dahulu', 'error');
+  const poId = document.getElementById('deliveryReportPo').value;
+  const po = (_reportData.allPO || []).find(p => p.id === poId);
+  _previewExportFn = exportDeliveryReport;
+  let html = `<div class="preview-section-title">🚚 Data Pengiriman: ${po ? po.poNumber + ' - ' + po.customerName : ''}</div>`;
+  if (deliveries.length) {
+    deliveries.forEach((d, i) => {
+      html += `<div class="preview-sub-title">Pengiriman #${i + 1} - ${fmtDate(d.deliveryDate)}</div>`;
+      html += `<table class="preview-table"><thead><tr><th>Sopir</th><th>Kendaraan</th><th>Alamat</th><th>Catatan</th></tr></thead><tbody>`;
+      html += `<tr><td>${d.driverName || '-'}</td><td>${d.vehicleNumber || '-'}</td><td>${d.deliveryAddress || '-'}</td><td>${d.notes || '-'}</td></tr>`;
+      html += `</tbody></table>`;
+      if (d.items && d.items.length) {
+        html += `<table class="preview-table" style="margin-top:6px;"><thead><tr><th>Item</th><th>Qty</th><th>Kubikasi</th></tr></thead><tbody>`;
+        d.items.forEach(it => { html += `<tr><td>${it.poItem?.productName || '-'}</td><td>${it.quantity} pcs</td><td>${fmtNum(it.kubikasi)} m³</td></tr>`; });
+        html += `</tbody></table>`;
+      }
+      if (d.proofs && d.proofs.length) { html += `<div style="font-size:11px;color:var(--slate-500);margin-top:4px;">📷 ${d.proofs.length} foto bukti tersedia</div>`; }
+    });
+  } else { html += '<div style="padding:16px;color:var(--slate-500);font-size:13px;">Belum ada pengiriman</div>'; }
+  showPreview('Data Pengiriman PO', html);
+}
+
+async function exportDeliveryReport(format) {
+  const deliveries = _reportData.deliveries || [];
+  const poId = document.getElementById('deliveryReportPo').value;
+  const po = (_reportData.allPO || []).find(p => p.id === poId);
+  const poLabel = po ? `${po.poNumber}_${po.customerName}` : 'PO';
+  if (format === 'pdf') {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF('l', 'mm', 'a4');
+    doc.setFontSize(14); doc.setFont('helvetica', 'bold');
+    doc.text(`PENGIRIMAN: ${poLabel}`, 14, 15);
+    doc.setFontSize(10); doc.setFont('helvetica', 'normal');
+    doc.text(`Dicetak: ${new Date().toLocaleDateString('id-ID')}`, 14, 22);
+    let y = 28;
+    deliveries.forEach((d, i) => {
+      doc.setFontSize(11); doc.setFont('helvetica', 'bold');
+      doc.text(`Pengiriman #${i + 1} - ${fmtDate(d.deliveryDate)}`, 14, y); y += 6;
+      doc.setFontSize(9); doc.setFont('helvetica', 'normal');
+      doc.text(`Sopir: ${d.driverName || '-'} | Kendaraan: ${d.vehicleNumber || '-'} | Alamat: ${d.deliveryAddress || '-'}`, 14, y); y += 5;
+      if (d.items && d.items.length) {
+        doc.autoTable({ startY: y, head: [['Item', 'Qty', 'Kubikasi']], body: d.items.map(it => [it.poItem?.productName || '-', it.quantity + ' pcs', fmtNum(it.kubikasi) + ' m³']), styles: { fontSize: 8 }, headStyles: { fillColor: [16, 185, 129] } });
+        y = doc.lastAutoTable.finalY + 8;
+      }
+    });
+    doc.save(`Pengiriman_${poLabel}.pdf`);
+  } else {
+    const wb = XLSX.utils.book_new();
+    const wsData = [['#', 'Tanggal', 'Sopir', 'Kendaraan', 'Alamat', 'Catatan', 'Item', 'Qty', 'Kubikasi']];
+    deliveries.forEach((d, i) => {
+      if (d.items && d.items.length) {
+        d.items.forEach(it => wsData.push([i + 1, fmtDate(d.deliveryDate), d.driverName || '', d.vehicleNumber || '', d.deliveryAddress || '', d.notes || '', it.poItem?.productName || '', it.quantity, fmtNum(it.kubikasi)]));
+      } else {
+        wsData.push([i + 1, fmtDate(d.deliveryDate), d.driverName || '', d.vehicleNumber || '', d.deliveryAddress || '', d.notes || '', '', '', '']);
+      }
+    });
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+    ws['!cols'] = [{ wch: 5 }, { wch: 12 }, { wch: 15 }, { wch: 12 }, { wch: 25 }, { wch: 20 }, { wch: 20 }, { wch: 8 }, { wch: 10 }];
+    XLSX.utils.book_append_sheet(wb, ws, 'Pengiriman');
+    XLSX.writeFile(wb, `Pengiriman_${poLabel}.xlsx`);
+  }
+  showToast(`${format.toUpperCase()} berhasil diunduh!`, 'success');
+}
+
+/* --- Tab 4: Diagram --- */
+let _charts = {};
+function destroyCharts() { Object.values(_charts).forEach(c => c.destroy()); _charts = {}; }
+
+async function loadCharts() {
+  try {
+    const pos = await fetchAllPO();
+    destroyCharts();
+    const statusCount = { diterima: 0, diproses: 0, dikirim: 0, selesai: 0, dibatalkan: 0 };
+    pos.forEach(p => { if (statusCount[p.status] !== undefined) statusCount[p.status]++; });
+    const custKub = {};
+    pos.forEach(p => { custKub[p.customerName] = (custKub[p.customerName] || 0) + (p.totalKubikasi || 0); });
+    const monthlyPO = {};
+    pos.forEach(p => {
+      const d = new Date(p.orderDate);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      monthlyPO[key] = (monthlyPO[key] || 0) + 1;
+    });
+    const monthlyKub = {};
+    pos.forEach(p => {
+      const d = new Date(p.orderDate);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      monthlyKub[key] = (monthlyKub[key] || 0) + (p.totalKubikasi || 0);
+    });
+    const shippedKub = pos.reduce((s, p) => s + (p.shippedKubikasi || 0), 0);
+    const totalKub = pos.reduce((s, p) => s + (p.totalKubikasi || 0), 0);
+    const pendingKub = totalKub - shippedKub;
+    const chartColors = ['#3b82f6', '#f59e0b', '#8b5cf6', '#10b981', '#ef4444'];
+    const statusLabels = ['Diterima', 'Diproses', 'Dikirim', 'Selesai', 'Dibatalkan'];
+    const statusValues = [statusCount.diterima, statusCount.diproses, statusCount.dikirim, statusCount.selesai, statusCount.dibatalkan];
+    _charts.status = new Chart(document.getElementById('chartStatus'), {
+      type: 'doughnut', data: { labels: statusLabels, datasets: [{ data: statusValues, backgroundColor: chartColors, borderWidth: 3, borderColor: '#fff' }] },
+      options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { font: { size: 11, weight: 'bold' }, padding: 12 } } } }
+    });
+    const custEntries = Object.entries(custKub).sort((a, b) => b[1] - a[1]).slice(0, 8);
+    _charts.customer = new Chart(document.getElementById('chartCustomer'), {
+      type: 'bar', data: { labels: custEntries.map(e => e[0]), datasets: [{ label: 'Kubikasi (m³)', data: custEntries.map(e => e[1]), backgroundColor: '#0d9488', borderRadius: 8 }] },
+      options: { responsive: true, indexAxis: 'y', plugins: { legend: { display: false } }, scales: { x: { grid: { display: false } }, y: { grid: { display: false } } } }
+    });
+    const monthKeys = Object.keys(monthlyPO).sort().slice(-6);
+    _charts.monthly = new Chart(document.getElementById('chartMonthly'), {
+      type: 'bar', data: {
+        labels: monthKeys.map(k => { const [y, m] = k.split('-'); return new Date(y, m - 1).toLocaleDateString('id-ID', { month: 'short', year: '2-digit' }); }),
+        datasets: [
+          { label: 'PO', data: monthKeys.map(k => monthlyPO[k] || 0), backgroundColor: '#3b82f6', borderRadius: 6 },
+          { label: 'Kubikasi (m³)', data: monthKeys.map(k => monthlyKub[k] || 0), backgroundColor: '#10b981', borderRadius: 6, yAxisID: 'y1' }
+        ]
+      },
+      options: { responsive: true, plugins: { legend: { position: 'top', labels: { font: { size: 11 } } } }, scales: { y: { beginAtZero: true, position: 'left' }, y1: { beginAtZero: true, position: 'right', grid: { drawOnChartArea: false } } } }
+    });
+    _charts.flow = new Chart(document.getElementById('chartFlow'), {
+      type: 'bar', data: {
+        labels: ['Total PO', 'Sudah Kirim', 'Belum Kirim'],
+        datasets: [{ data: [totalKub, shippedKub, pendingKub], backgroundColor: ['#0d9488', '#10b981', '#f59e0b'], borderRadius: 8 }]
+      },
+      options: { responsive: true, indexAxis: 'y', plugins: { legend: { display: false } }, scales: { x: { grid: { display: false } }, y: { grid: { display: false } } } }
+    });
+  } catch (e) { console.error(e); }
+}
+
+/* --- Preview Modal --- */
+function showPreview(title, html) {
+  document.getElementById('previewTitle').textContent = title;
+  document.getElementById('previewBody').innerHTML = html;
+  document.getElementById('reportPreviewModal').classList.remove('hidden');
+}
+function closeReportPreview() { document.getElementById('reportPreviewModal').classList.add('hidden'); }
+function exportFromPreview(format) { if (_previewExportFn) _previewExportFn(format); }
 
 /* === INIT === */
 if (token) {
