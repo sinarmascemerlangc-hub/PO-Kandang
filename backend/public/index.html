@@ -238,18 +238,6 @@
     .stat-card.red { background: linear-gradient(135deg, #ef4444, #f97316); }
     .stat-card.red .stat-value { color: white; }
 
-    /* === MENU GRID === */
-    .menu-section { margin-bottom: 16px; }
-    .menu-title { font-size: 15px; font-weight: 800; color: #1e293b; margin-bottom: 12px; }
-    .menu-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
-    .menu-item { display: flex; flex-direction: column; align-items: center; gap: 8px; cursor: pointer; }
-    .menu-icon {
-      width: 56px; height: 56px; border-radius: 16px; display: flex; align-items: center; justify-content: center;
-      font-size: 24px; transition: all 0.2s; box-shadow: var(--shadow-sm);
-    }
-    .menu-item:active .menu-icon { transform: scale(0.92); }
-    .menu-item span { font-size: 11px; font-weight: 600; color: #475569; text-align: center; }
-
     /* === DASHBOARD HEADER === */
     .dash-header {
       background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
@@ -742,27 +730,6 @@
       <div class="stats-grid" id="statsGrid">
         <div class="skeleton skeleton-stat"></div><div class="skeleton skeleton-stat"></div>
         <div class="skeleton skeleton-stat"></div><div class="skeleton skeleton-stat"></div>
-      </div>
-      <div class="menu-section">
-        <div class="menu-title">Menu Utama</div>
-        <div class="menu-grid">
-          <div class="menu-item" onclick="switchPage('pos')">
-            <div class="menu-icon" style="background:#dbeafe;color:#3b82f6;">📦</div>
-            <span>Semua PO</span>
-          </div>
-          <div class="menu-item" onclick="switchPage('deliveries')">
-            <div class="menu-icon" style="background:#d1fae5;color:#059669;">🚚</div>
-            <span>Pengiriman</span>
-          </div>
-          <div class="menu-item" onclick="switchPage('reports');document.querySelector('[data-page=reports]')&&document.querySelector('[data-page=reports]').click()">
-            <div class="menu-icon" style="background:#fef3c7;color:#d97706;">📊</div>
-            <span>Laporan</span>
-          </div>
-          <div class="menu-item" onclick="switchPage('reports');setTimeout(()=>{const tabs=document.querySelectorAll('.report-tab');if(tabs[3])tabs[3].click()},100)">
-            <div class="menu-icon" style="background:#ede9fe;color:#7c3aed;">📈</div>
-            <span>Diagram</span>
-          </div>
-        </div>
       </div>
       <div class="section-title" style="background:linear-gradient(135deg,#0f172a 0%,#1e293b 100%);">📋 PO Terbaru</div>
       <div id="recentPOList"><div class="skeleton skeleton-card"></div><div class="skeleton skeleton-card"></div></div>
