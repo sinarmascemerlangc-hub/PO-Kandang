@@ -67,8 +67,8 @@ app.get('/api/dashboard', authMiddleware, async (req, res) => {
 
     const todayStart = new Date(); todayStart.setHours(0,0,0,0);
     const todayDeliveries = await prisma.$queryRawUnsafe(`
-      SELECT d.id, d."deliveryDate", d.driver, d."poNumber",
-        di.kubikasi, di.quantity, di."poItemId"
+      SELECT d.id, d."deliveryDate", d."driverName",
+        di.kubikasi, di.quantity
       FROM "Delivery" d
       JOIN "DeliveryItem" di ON di."deliveryId" = d.id
       WHERE d."deliveryDate" >= $1
