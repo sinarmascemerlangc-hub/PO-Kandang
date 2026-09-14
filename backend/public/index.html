@@ -677,8 +677,10 @@
     .stat-card.clickable { cursor: pointer; }
     .stat-card.clickable:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
 
-    /* === DESKTOP NAV === */
-    .top-nav-desktop { display: none; }
+    /* === SIDEBAR (desktop) === */
+    .sidebar {
+      display: none;
+    }
 
     /* === SECTION HEADING === */
     .section-heading {
@@ -747,45 +749,82 @@
     /* === DASHBOARD MOBILE DEFAULTS (stacked) === */
     .dash-layout { display: flex; flex-direction: column; gap: 16px; }
 
-    /* === DESKTOP RESPONSIVE === */
+    /* === DESKTOP RESPONSIVE (≥768px) === */
     @media (min-width: 768px) {
       .bottom-nav { display: none !important; }
-      .top-nav-desktop {
-        display: flex;
-        background: white;
-        border-bottom: 1px solid #e2e8f0;
-        padding: 0 32px;
-        gap: 4px;
-        position: sticky;
-        top: 0;
-        z-index: 100;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.04);
-      }
-      .top-nav-desktop .nav-item {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        padding: 14px 18px;
-        cursor: pointer;
-        font-size: 13px;
-        font-weight: 600;
-        color: #64748b;
-        border-bottom: 2px solid transparent;
-        transition: all 0.2s;
-        white-space: nowrap;
-      }
-      .top-nav-desktop .nav-item:hover { color: #0d9488; background: #f0fdfa; border-radius: 8px 8px 0 0; }
-      .top-nav-desktop .nav-item.active {
-        color: #0d9488;
-        border-bottom-color: #0d9488;
-        font-weight: 700;
-        background: #f0fdfa;
-        border-radius: 8px 8px 0 0;
-      }
-      .top-nav-desktop .nav-item .nav-icon { font-size: 16px; }
+      .top-nav-desktop { display: none !important; }
 
-      .app-header .header-inner { max-width: 1280px; }
-      .main-content { max-width: 1280px; padding: 28px 32px 32px; margin: 0 auto; }
+      /* Sidebar */
+      .sidebar {
+        display: flex;
+        flex-direction: column;
+        width: 240px;
+        height: 100vh;
+        position: fixed;
+        top: 0; left: 0;
+        background: #0f172a;
+        z-index: 200;
+        padding: 0;
+        overflow-y: auto;
+      }
+      .sidebar-brand {
+        display: flex; align-items: center; gap: 12px;
+        padding: 24px 20px 20px;
+        border-bottom: 1px solid rgba(255,255,255,0.08);
+      }
+      .sidebar-logo {
+        width: 40px; height: 40px; border-radius: 12px;
+        background: linear-gradient(135deg, #0d9488, #2dd4bf);
+        display: flex; align-items: center; justify-content: center;
+        font-size: 20px; flex-shrink: 0;
+      }
+      .sidebar-title { font-size: 16px; font-weight: 800; color: white; letter-spacing: -0.3px; }
+      .sidebar-nav {
+        flex: 1; padding: 12px 10px; display: flex; flex-direction: column; gap: 2px;
+      }
+      .sidebar-item {
+        display: flex; align-items: center; gap: 12px;
+        padding: 11px 14px; border-radius: 10px; cursor: pointer;
+        color: #94a3b8; font-size: 13px; font-weight: 600;
+        transition: all 0.15s; text-decoration: none;
+      }
+      .sidebar-item:hover { color: #e2e8f0; background: rgba(255,255,255,0.06); }
+      .sidebar-item.active {
+        color: #2dd4bf; background: rgba(45,212,191,0.1); font-weight: 700;
+      }
+      .sidebar-item.active .sidebar-icon { transform: scale(1.1); }
+      .sidebar-icon { font-size: 18px; width: 24px; text-align: center; transition: transform 0.2s; flex-shrink: 0; }
+      .sidebar-label { white-space: nowrap; }
+      .sidebar-footer {
+        padding: 16px 14px; border-top: 1px solid rgba(255,255,255,0.08);
+      }
+      .sidebar-user {
+        display: flex; align-items: center; gap: 10px; padding: 8px 6px; margin-bottom: 8px;
+      }
+      .sidebar-avatar {
+        width: 36px; height: 36px; border-radius: 10px;
+        background: rgba(255,255,255,0.12); border: 1.5px solid rgba(255,255,255,0.15);
+        display: flex; align-items: center; justify-content: center;
+        font-size: 14px; font-weight: 700; color: white; flex-shrink: 0;
+      }
+      .sidebar-user-name { font-size: 13px; font-weight: 700; color: #e2e8f0; line-height: 1.2; }
+      .sidebar-user-role { font-size: 11px; color: #64748b; font-weight: 500; }
+      .sidebar-logout {
+        width: 100%; padding: 9px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1);
+        background: rgba(255,255,255,0.04); color: #94a3b8; font-size: 12px; font-weight: 600;
+        cursor: pointer; transition: all 0.2s; font-family: inherit;
+      }
+      .sidebar-logout:hover { background: rgba(239,68,68,0.15); color: #fca5a5; border-color: rgba(239,68,68,0.3); }
+
+      /* Hide mobile header on desktop */
+      .app-header { display: none !important; }
+
+      /* Main content offset */
+      .main-content {
+        margin-left: 240px;
+        max-width: 1100px;
+        padding: 28px 32px 32px;
+      }
 
       /* Dashboard 2-column layout */
       #page-dashboard .dash-layout {
@@ -895,23 +934,44 @@
     </div>
   </header>
 
-  <nav class="top-nav-desktop">
-    <div class="nav-item active" data-page="dashboard" onclick="switchPage('dashboard')">
-      <span class="nav-icon">🏠</span> Beranda
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="sidebar-logo">🪵</div>
+      <div class="sidebar-title">PO Kandang</div>
     </div>
-    <div class="nav-item" data-page="pos" onclick="switchPage('pos')">
-      <span class="nav-icon">📦</span> PO
+    <nav class="sidebar-nav">
+      <div class="sidebar-item active" data-page="dashboard" onclick="switchPage('dashboard')">
+        <span class="sidebar-icon">🏠</span>
+        <span class="sidebar-label">Beranda</span>
+      </div>
+      <div class="sidebar-item" data-page="pos" onclick="switchPage('pos')">
+        <span class="sidebar-icon">📦</span>
+        <span class="sidebar-label">Data PO</span>
+      </div>
+      <div class="sidebar-item" data-page="deliveries" onclick="switchPage('deliveries')">
+        <span class="sidebar-icon">🚚</span>
+        <span class="sidebar-label">Pengiriman</span>
+      </div>
+      <div class="sidebar-item" data-page="reports" onclick="switchPage('reports')">
+        <span class="sidebar-icon">📊</span>
+        <span class="sidebar-label">Laporan</span>
+      </div>
+      <div class="sidebar-item" data-page="profile" onclick="switchPage('profile')">
+        <span class="sidebar-icon">👤</span>
+        <span class="sidebar-label">Profil</span>
+      </div>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="sidebar-user">
+        <div class="sidebar-avatar" id="sidebarAvatar">A</div>
+        <div>
+          <div class="sidebar-user-name" id="sidebarUserName">Admin</div>
+          <div class="sidebar-user-role">Super Admin</div>
+        </div>
+      </div>
+      <button class="sidebar-logout" onclick="logout()">Keluar</button>
     </div>
-    <div class="nav-item" data-page="deliveries" onclick="switchPage('deliveries')">
-      <span class="nav-icon">🚚</span> Kirim
-    </div>
-    <div class="nav-item" data-page="reports" onclick="switchPage('reports')">
-      <span class="nav-icon">📊</span> Laporan
-    </div>
-    <div class="nav-item" data-page="profile" onclick="switchPage('profile')">
-      <span class="nav-icon">👤</span> Profil
-    </div>
-  </nav>
+  </aside>
 
   <div class="main-content">
     <!-- DASHBOARD -->
@@ -1341,6 +1401,18 @@ function showConfirm(title, message, type='danger') {
 function showLogin() { document.getElementById('loginPage').classList.remove('hidden'); document.getElementById('registerPage').classList.add('hidden'); }
 function showRegister() { document.getElementById('loginPage').classList.add('hidden'); document.getElementById('registerPage').classList.remove('hidden'); }
 
+function setUserDisplay(name) {
+  const initial = name.charAt(0).toUpperCase();
+  const els = [
+    ['userAvatar', initial],
+    ['dashUserName', name],
+    ['dashUserNameAvatar', initial],
+    ['sidebarUserName', name],
+    ['sidebarAvatar', initial],
+  ];
+  els.forEach(([id, val]) => { const el = document.getElementById(id); if (el) el.textContent = val; });
+}
+
 async function login() {
   const email = document.getElementById('loginEmail').value;
   const password = document.getElementById('loginPassword').value;
@@ -1353,9 +1425,7 @@ async function login() {
     localStorage.setItem('token', token);
     document.getElementById('app').classList.remove('hidden');
     document.getElementById('loginPage').classList.add('hidden');
-    document.getElementById('userAvatar').textContent = data.user.name.charAt(0).toUpperCase();
-    document.getElementById('dashUserName').textContent = data.user.name;
-    document.getElementById('dashUserNameAvatar').textContent = data.user.name.charAt(0).toUpperCase();
+    setUserDisplay(data.user.name);
     showToast('Selamat datang, ' + data.user.name + '!', 'success');
     loadDashboard();
   } catch (e) {
@@ -1374,9 +1444,7 @@ async function register() {
     token = data.token; localStorage.setItem('token', token);
     document.getElementById('app').classList.remove('hidden');
     document.getElementById('registerPage').classList.add('hidden');
-    document.getElementById('userAvatar').textContent = data.user.name.charAt(0).toUpperCase();
-    document.getElementById('dashUserName').textContent = data.user.name;
-    document.getElementById('dashUserNameAvatar').textContent = data.user.name.charAt(0).toUpperCase();
+    setUserDisplay(data.user.name);
     showToast('Akun berhasil dibuat!', 'success');
     loadDashboard();
   } catch (e) {
@@ -1413,7 +1481,7 @@ function showSkeleton(containerId, count) {
 
 /* === NAVIGATION === */
 function switchPage(page) {
-  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.querySelectorAll('.nav-item, .sidebar-item').forEach(n => n.classList.remove('active'));
   document.querySelectorAll(`[data-page="${page}"]`).forEach(n => n.classList.add('active'));
   document.querySelectorAll('.page').forEach(p => { p.classList.remove('active'); p.style.display = 'none'; });
   const el = document.getElementById(`page-${page}`);
@@ -2639,6 +2707,7 @@ function loadProfile() {
         document.getElementById('profileAvatar').textContent = d.user.name.charAt(0).toUpperCase();
         document.getElementById('profileName').textContent = d.user.name;
         document.getElementById('profileEmail').textContent = d.user.email;
+        setUserDisplay(d.user.name);
       }
     })
     .catch(() => {});
@@ -2652,9 +2721,7 @@ if (token) {
     .then(r=>r.json())
     .then(d=>{
       if(d.user) {
-        document.getElementById('userAvatar').textContent=d.user.name.charAt(0).toUpperCase();
-        document.getElementById('dashUserName').textContent=d.user.name;
-        document.getElementById('dashUserNameAvatar').textContent=d.user.name.charAt(0).toUpperCase();
+        setUserDisplay(d.user.name);
         document.getElementById('app').classList.remove('hidden');
         document.getElementById('loginPage').classList.add('hidden');
         loadDashboard();
