@@ -2449,20 +2449,78 @@ function renderAllPOGrouped(pos) {
   document.getElementById('reportAllContent').innerHTML = html;
 }
 
+/* --- Shared PDF helpers for professional report format --- */
+function pdfReportHeader(doc, title, subtitle) {
+  doc.setDrawColor(13, 148, 136);
+  doc.setLineWidth(0.8);
+  doc.line(14, 8, 283, 8);
+  doc.setFontSize(18);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(13, 148, 136);
+  doc.text('PO KANDANG', 14, 16);
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(100, 100, 100);
+  doc.text(title, 14, 23);
+  if (subtitle) {
+    doc.setFontSize(9);
+    doc.text(subtitle, 14, 28);
+  }
+  doc.setDrawColor(13, 148, 136);
+  doc.setLineWidth(0.3);
+  doc.line(14, 30, 283, 30);
+  doc.setTextColor(0, 0, 0);
+  return 34;
+}
+
+function pdfReportSignature(doc, printDate) {
+  const y = doc.lastAutoTable.finalY + 18;
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(0, 0, 0);
+  doc.text(`Dicetak: ${printDate}`, 14, y);
+  doc.text('Dibuat Oleh,', 190, y);
+  doc.text('Disetujui Oleh,', 245, y);
+  doc.setFont('helvetica', 'bold');
+  doc.text('_________________', 190, y + 16);
+  doc.text('_________________', 245, y + 16);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  doc.text('(Admin)', 190, y + 21);
+  doc.text('(Manajer)', 245, y + 21);
+}
+
+function excelReportHeader(wsData, title, period, printDate) {
+  wsData.push([title]);
+  wsData.push([`Periode: ${period} | Dicetak: ${printDate}`]);
+  wsData.push([]);
+}
+
+function excelSubtotalRow(wsData, label, qty, kub) {
+  wsData.push([label, '', '', '', '', '', qty, kub]);
+}
+
+function excelGrandTotalRow(wsData, qty, kub) {
+  wsData.push(['GRAND TOTAL', '', '', '', '', '', qty, kub]);
+}
+
+function excelNoteRow(wsData, note) {
+  wsData.push([]);
+  wsData.push([note]);
+}
+
 async function exportAllPO(format) {
   const pos = _reportData.allPO || [];
   if (!pos.length) return showToast('Tidak ada data', 'error');
   let grandQty = 0, grandKub = 0;
   pos.forEach(p => { grandQty += (p.totalQuantity || 0); grandKub += (p.totalKubikasi || 0); });
   const period = document.getElementById('reportPeriod')?.selectedOptions[0]?.text || 'Semua';
-  const printDate = new Date().toLocaleDateString('id-ID');
+  const printDate = new Date().toLocaleDateString('id-ID') + ' ' + new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+
   if (format === 'pdf') {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF('l', 'mm', 'a4');
-    doc.setFontSize(16); doc.setFont('helvetica', 'bold');
-    doc.text('LAPORAN PO SUDAH TERKIRIM - PO KANDANG', 14, 15);
-    doc.setFontSize(10); doc.setFont('helvetica', 'normal');
-    doc.text(`Periode: ${period} | Total: ${pos.length} PO | Dicetak: ${printDate}`, 14, 22);
+    const y = pdfReportHeader(doc, 'LAPORAN PO SUDAH TERKIRIM', `Periode: ${period} | Total: ${pos.length} PO | Dicetak: ${printDate}`);
     const body = [];
     pos.forEach(p => {
       const items = p.items || [];
@@ -2475,14 +2533,18 @@ async function exportAllPO(format) {
       }
       const subQty = items.length ? items.reduce((s, it) => s + (it.quantity || 0), 0) : (p.totalQuantity || 0);
       const subKub = items.length ? items.reduce((s, it) => s + (it.kubikasi || 0), 0) : (p.totalKubikasi || 0);
-      body.push([{ content: `Subtotal ${p.poNumber}`, colSpan: 5, styles: { halign: 'right', fontStyle: 'bold', fillColor: [240, 253, 250] } }, { content: String(subQty), styles: { fontStyle: 'bold', fillColor: [240, 253, 250] } }, { content: fmtNum(subKub), styles: { fontStyle: 'bold', fillColor: [240, 253, 250] } }]);
+      body.push([{ content: `Subtotal ${p.poNumber}`, colSpan: 5, styles: { halign: 'right', fontStyle: 'bold', fillColor: [240, 253, 250] } }, { content: String(subQty), styles: { fontStyle: 'bold', halign: 'right', fillColor: [240, 253, 250] } }, { content: fmtNum(subKub), styles: { fontStyle: 'bold', halign: 'right', fillColor: [240, 253, 250] } }]);
     });
-    body.push([{ content: 'GRAND TOTAL', colSpan: 5, styles: { halign: 'right', fontStyle: 'bold', fillColor: [13, 148, 136], textColor: [255, 255, 255] } }, { content: String(grandQty), styles: { fontStyle: 'bold', fillColor: [13, 148, 136], textColor: [255, 255, 255] } }, { content: fmtNum(grandKub), styles: { fontStyle: 'bold', fillColor: [13, 148, 136], textColor: [255, 255, 255] } }]);
-    doc.autoTable({ startY: 26, head: [['No PO', 'Nama Customer', 'Tanggal PO', 'Nama Kayu', 'Ukuran Kayu', 'Total Qty (Pcs)', 'Total Volume (m³)']], body, styles: { fontSize: 8, cellPadding: 2 }, headStyles: { fillColor: [13, 148, 136], fontStyle: 'bold' }, columnStyles: { 0: { cellWidth: 35 }, 1: { cellWidth: 40 }, 2: { cellWidth: 25 }, 3: { cellWidth: 40 }, 4: { cellWidth: 30 }, 5: { cellWidth: 25, halign: 'right' }, 6: { cellWidth: 25, halign: 'right' } }, margin: { left: 14 } });
+    body.push([{ content: 'GRAND TOTAL', colSpan: 5, styles: { halign: 'right', fontStyle: 'bold', fillColor: [13, 148, 136], textColor: [255, 255, 255], lineWidth: 0.5 } }, { content: String(grandQty), styles: { fontStyle: 'bold', halign: 'right', fillColor: [13, 148, 136], textColor: [255, 255, 255], lineWidth: 0.5 } }, { content: fmtNum(grandKub), styles: { fontStyle: 'bold', halign: 'right', fillColor: [13, 148, 136], textColor: [255, 255, 255], lineWidth: 0.5 } }]);
+    doc.autoTable({ startY: y, head: [['No PO', 'Nama Customer', 'Tanggal PO', 'Nama Kayu', 'Ukuran Kayu', 'Total Qty (Pcs)', 'Total Volume (m³)']], body, styles: { fontSize: 8, cellPadding: 2, overflow: 'ellipsize' }, headStyles: { fillColor: [13, 148, 136], fontStyle: 'bold', halign: 'center', fontSize: 8 }, columnStyles: { 0: { cellWidth: 32, fontStyle: 'bold' }, 1: { cellWidth: 38 }, 2: { cellWidth: 24 }, 3: { cellWidth: 38 }, 4: { cellWidth: 28 }, 5: { cellWidth: 24, halign: 'right' }, 6: { cellWidth: 24, halign: 'right' } }, margin: { left: 14 } });
+    pdfReportSignature(doc, printDate);
     doc.save('Laporan_PO_Terkirim.pdf');
     showToast('PDF berhasil diunduh!', 'success');
   } else {
-    const wsData = [['No PO', 'Nama Customer', 'Tanggal PO', 'Status', 'Nama Kayu', 'Ukuran Kayu', 'Total Qty (Pcs)', 'Total Volume (m³)']];
+    const wsData = [];
+    const printDateShort = new Date().toLocaleDateString('id-ID');
+    excelReportHeader(wsData, 'LAPORAN PO SUDAH TERKIRIM - PO KANDANG', period, printDateShort);
+    wsData.push(['No PO', 'Nama Customer', 'Tanggal PO', 'Status', 'Nama Kayu', 'Ukuran Kayu', 'Total Qty (Pcs)', 'Total Volume (m³)']);
     pos.forEach(p => {
       const items = p.items || [];
       if (items.length) {
@@ -2492,9 +2554,9 @@ async function exportAllPO(format) {
       }
       const subQty = items.length ? items.reduce((s, it) => s + (it.quantity || 0), 0) : (p.totalQuantity || 0);
       const subKub = items.length ? items.reduce((s, it) => s + (it.kubikasi || 0), 0) : (p.totalKubikasi || 0);
-      wsData.push([`Subtotal ${p.poNumber}`, '', '', '', '', '', subQty, fmtNum(subKub)]);
+      excelSubtotalRow(wsData, `Subtotal ${p.poNumber}`, subQty, fmtNum(subKub));
     });
-    wsData.push(['GRAND TOTAL', '', '', '', '', '', grandQty, fmtNum(grandKub)]);
+    excelGrandTotalRow(wsData, grandQty, fmtNum(grandKub));
     const ws = XLSX.utils.aoa_to_sheet(wsData);
     ws['!cols'] = [{ wch: 20 }, { wch: 20 }, { wch: 15 }, { wch: 12 }, { wch: 25 }, { wch: 20 }, { wch: 18 }, { wch: 18 }];
     const wb = XLSX.utils.book_new();
@@ -2515,37 +2577,42 @@ async function loadReportUnsent() {
 }
 
 function renderUnsentGrouped(unsent) {
-  let grandSisaQty = 0, grandSisaKub = 0;
+  let grandSisaQty = 0, grandSisaKub = 0, grandQtyPo = 0, grandQtyTer = 0;
   unsent.forEach(p => {
-    const sisaKub = (p.totalKubikasi || 0) - (p.shippedKubikasi || 0);
-    const sisaQty = (p.totalQuantity || 0) - (p.shippedQuantity || 0);
-    grandSisaQty += sisaQty;
-    grandSisaKub += sisaKub;
+    grandQtyPo += (p.totalQuantity || 0);
+    grandQtyTer += (p.shippedQuantity || 0);
+    grandSisaQty += (p.totalQuantity || 0) - (p.shippedQuantity || 0);
+    grandSisaKub += (p.totalKubikasi || 0) - (p.shippedKubikasi || 0);
   });
   let html = `<div class="report-card slide-up"><h4>📦 PO Belum Terkirim</h4>
     <div class="report-row"><span class="r-label">Total PO</span><span class="r-value">${unsent.length}</span></div>
-    <div class="report-row"><span class="r-label">Sisa Qty</span><span class="r-value amber">${grandSisaQty} pcs</span></div>
-    <div class="report-row"><span class="r-label">Sisa Volume</span><span class="r-value teal">${fmtNum(grandSisaKub)} m³</span></div></div>`;
+    <div class="report-row"><span class="r-label">Total Qty PO (Awal)</span><span class="r-value">${grandQtyPo} pcs</span></div>
+    <div class="report-row"><span class="r-label">Total Qty Terkirim</span><span class="r-value green">${grandQtyTer} pcs</span></div>
+    <div class="report-row"><span class="r-label">Sisa Qty (Belum Kirim)</span><span class="r-value amber">${grandSisaQty} pcs</span></div>
+    <div class="report-row"><span class="r-label">Sisa Volume (Belum Kirim)</span><span class="r-value teal">${fmtNum(grandSisaKub)} m³</span></div></div>`;
   html += `<div class="report-card slide-up" style="animation-delay:0.1s;margin-top:14px;"><h4>📋 Detail PO Belum Kirim</h4>`;
   if (!unsent.length) { html += '<div style="padding:20px;text-align:center;color:var(--slate-500);font-size:13px;">Semua PO sudah terkirim</div>'; }
   else {
-    html += `<div style="overflow-x:auto;"><table class="preview-table"><thead><tr><th>No PO</th><th>Nama Customer</th><th>Tanggal PO</th><th>Nama Kayu</th><th>Ukuran Kayu</th><th>Sisa Qty (Pcs)</th><th>Sisa Volume (m³)</th></tr></thead><tbody>`;
+    html += `<div style="overflow-x:auto;"><table class="preview-table"><thead><tr><th>No PO</th><th>Nama Customer</th><th>Tanggal PO</th><th>Nama Kayu</th><th>Ukuran Kayu</th><th>Qty PO (Awal)</th><th>Qty Terkirim</th><th>Sisa Qty (Pcs)</th><th>Sisa Volume (m³)</th></tr></thead><tbody>`;
     unsent.forEach(p => {
-      const sisaQtyPo = (p.totalQuantity || 0) - (p.shippedQuantity || 0);
+      const qtyPo = p.totalQuantity || 0;
+      const qtyTer = p.shippedQuantity || 0;
+      const sisaQtyPo = qtyPo - qtyTer;
       const sisaKubPo = (p.totalKubikasi || 0) - (p.shippedKubikasi || 0);
       const items = p.items || [];
       if (items.length) {
         items.forEach((it, ii) => {
           const ukuran = `${it.thickness || 0} × ${it.width || 0} × ${it.length || 0}`;
-          html += `<tr><td>${ii === 0 ? `<b>${p.poNumber}</b>` : ''}</td><td>${ii === 0 ? p.customerName : ''}</td><td>${ii === 0 ? fmtDate(p.orderDate) : ''}</td><td>${it.productName || '-'}</td><td>${ukuran}</td><td>${it.quantity || 0}</td><td>${fmtNum(it.kubikasi)}</td></tr>`;
+          html += `<tr><td>${ii === 0 ? `<b>${p.poNumber}</b>` : ''}</td><td>${ii === 0 ? p.customerName : ''}</td><td>${ii === 0 ? fmtDate(p.orderDate) : ''}</td><td>${it.productName || '-'}</td><td>${ukuran}</td><td>${ii === 0 ? qtyPo : ''}</td><td>${ii === 0 ? qtyTer : ''}</td><td>${ii === 0 ? sisaQtyPo : ''}</td><td>${ii === 0 ? fmtNum(sisaKubPo) : ''}</td></tr>`;
         });
       } else {
-        html += `<tr><td><b>${p.poNumber}</b></td><td>${p.customerName}</td><td>${fmtDate(p.orderDate)}</td><td colspan="2" style="color:var(--slate-400);font-style:italic;">Tidak ada item</td><td>${sisaQtyPo}</td><td>${fmtNum(sisaKubPo)}</td></tr>`;
+        html += `<tr><td><b>${p.poNumber}</b></td><td>${p.customerName}</td><td>${fmtDate(p.orderDate)}</td><td colspan="2" style="color:var(--slate-400);font-style:italic;">Tidak ada item</td><td>${qtyPo}</td><td>${qtyTer}</td><td>${sisaQtyPo}</td><td>${fmtNum(sisaKubPo)}</td></tr>`;
       }
-      html += `<tr style="background:#fffbeb;font-weight:700;"><td colspan="5" style="text-align:right;color:var(--amber-700,#b45309);font-size:11px;">Subtotal PO ${p.poNumber}</td><td style="color:var(--amber-700,#b45309);">${sisaQtyPo}</td><td style="color:var(--amber-700,#b45309);">${fmtNum(sisaKubPo)}</td></tr>`;
+      html += `<tr style="background:#fffbeb;font-weight:700;"><td colspan="6" style="text-align:right;color:var(--amber-700,#b45309);font-size:11px;">Subtotal PO ${p.poNumber}</td><td style="color:var(--amber-700,#b45309);"></td><td style="color:var(--amber-700,#b45309);">${sisaQtyPo}</td><td style="color:var(--amber-700,#b45309);">${fmtNum(sisaKubPo)}</td></tr>`;
     });
-    html += `<tr style="background:var(--teal-500);color:white;font-weight:800;"><td colspan="5" style="text-align:right;">GRAND TOTAL</td><td>${grandSisaQty}</td><td>${fmtNum(grandSisaKub)}</td></tr>`;
+    html += `<tr style="background:var(--teal-500);color:white;font-weight:800;"><td colspan="6" style="text-align:right;">GRAND TOTAL</td><td></td><td>${grandSisaQty}</td><td>${fmtNum(grandSisaKub)}</td></tr>`;
     html += '</tbody></table></div>';
+    html += `<div style="font-size:10px;color:var(--slate-400);margin-top:8px;font-style:italic;">* Keterangan: Angka Subtotal dan Grand Total adalah akumulasi sisa barang yang belum dikirim.</div>`;
   }
   html += '</div>';
   document.getElementById('reportUnsentContent').innerHTML = html;
@@ -2559,48 +2626,71 @@ async function exportUnsentPO(format) {
     grandSisaQty += (p.totalQuantity || 0) - (p.shippedQuantity || 0);
     grandSisaKub += (p.totalKubikasi || 0) - (p.shippedKubikasi || 0);
   });
-  const printDate = new Date().toLocaleDateString('id-ID');
+  const period = document.getElementById('reportPeriod')?.selectedOptions[0]?.text || 'Semua';
+  const printDate = new Date().toLocaleDateString('id-ID') + ' ' + new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+
   if (format === 'pdf') {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF('l', 'mm', 'a4');
-    doc.setFontSize(16); doc.setFont('helvetica', 'bold');
-    doc.text('PO BELUM TERKIRIM - PO KANDANG', 14, 15);
-    doc.setFontSize(10); doc.setFont('helvetica', 'normal');
-    doc.text(`Total: ${unsent.length} PO | Dicetak: ${printDate}`, 14, 22);
+    const y = pdfReportHeader(doc, 'LAPORAN PO BELUM TERKIRIM', `Periode: ${period} | Total: ${unsent.length} PO | Dicetak: ${printDate}`);
     const body = [];
     unsent.forEach(p => {
       const items = p.items || [];
-      const sisaQtyPo = (p.totalQuantity || 0) - (p.shippedQuantity || 0);
+      const qtyPo = p.totalQuantity || 0;
+      const qtyTer = p.shippedQuantity || 0;
+      const sisaQtyPo = qtyPo - qtyTer;
       const sisaKubPo = (p.totalKubikasi || 0) - (p.shippedKubikasi || 0);
       if (items.length) {
         items.forEach((it, ii) => {
-          body.push([ii === 0 ? p.poNumber : '', ii === 0 ? p.customerName : '', ii === 0 ? fmtDate(p.orderDate) : '', it.productName || '-', `${it.thickness || 0}×${it.width || 0}×${it.length || 0}`, it.quantity || 0, fmtNum(it.kubikasi)]);
+          body.push([
+            ii === 0 ? p.poNumber : '',
+            ii === 0 ? p.customerName : '',
+            ii === 0 ? fmtDate(p.orderDate) : '',
+            it.productName || '-',
+            `${it.thickness || 0}×${it.width || 0}×${it.length || 0}`,
+            ii === 0 ? qtyPo : '',
+            ii === 0 ? qtyTer : '',
+            ii === 0 ? sisaQtyPo : '',
+            ii === 0 ? fmtNum(sisaKubPo) : '',
+          ]);
         });
       } else {
-        body.push([p.poNumber, p.customerName, fmtDate(p.orderDate), '-', '-', sisaQtyPo, fmtNum(sisaKubPo)]);
+        body.push([p.poNumber, p.customerName, fmtDate(p.orderDate), '-', '-', qtyPo, qtyTer, sisaQtyPo, fmtNum(sisaKubPo)]);
       }
-      body.push([{ content: `Subtotal ${p.poNumber}`, colSpan: 5, styles: { halign: 'right', fontStyle: 'bold', fillColor: [255, 251, 235] } }, { content: String(sisaQtyPo), styles: { fontStyle: 'bold', fillColor: [255, 251, 235] } }, { content: fmtNum(sisaKubPo), styles: { fontStyle: 'bold', fillColor: [255, 251, 235] } }]);
+      body.push([{ content: `Subtotal ${p.poNumber}`, colSpan: 6, styles: { halign: 'right', fontStyle: 'bold', fillColor: [255, 251, 235] } }, { content: String(sisaQtyPo), styles: { fontStyle: 'bold', halign: 'right', fillColor: [255, 251, 235] } }, { content: fmtNum(sisaKubPo), styles: { fontStyle: 'bold', halign: 'right', fillColor: [255, 251, 235] } }]);
     });
-    body.push([{ content: 'GRAND TOTAL', colSpan: 5, styles: { halign: 'right', fontStyle: 'bold', fillColor: [13, 148, 136], textColor: [255, 255, 255] } }, { content: String(grandSisaQty), styles: { fontStyle: 'bold', fillColor: [13, 148, 136], textColor: [255, 255, 255] } }, { content: fmtNum(grandSisaKub), styles: { fontStyle: 'bold', fillColor: [13, 148, 136], textColor: [255, 255, 255] } }]);
-    doc.autoTable({ startY: 26, head: [['No PO', 'Nama Customer', 'Tanggal PO', 'Nama Kayu', 'Ukuran Kayu', 'Sisa Qty (Pcs)', 'Sisa Volume (m³)']], body, styles: { fontSize: 8, cellPadding: 2 }, headStyles: { fillColor: [245, 158, 11], fontStyle: 'bold' }, columnStyles: { 0: { cellWidth: 35 }, 1: { cellWidth: 40 }, 2: { cellWidth: 25 }, 3: { cellWidth: 40 }, 4: { cellWidth: 30 }, 5: { cellWidth: 25, halign: 'right' }, 6: { cellWidth: 25, halign: 'right' } }, margin: { left: 14 } });
+    body.push([{ content: 'GRAND TOTAL', colSpan: 6, styles: { halign: 'right', fontStyle: 'bold', fillColor: [13, 148, 136], textColor: [255, 255, 255], lineWidth: 0.5 } }, { content: String(grandSisaQty), styles: { fontStyle: 'bold', halign: 'right', fillColor: [13, 148, 136], textColor: [255, 255, 255], lineWidth: 0.5 } }, { content: fmtNum(grandSisaKub), styles: { fontStyle: 'bold', halign: 'right', fillColor: [13, 148, 136], textColor: [255, 255, 255], lineWidth: 0.5 } }]);
+    doc.autoTable({ startY: y, head: [['No PO', 'Nama Customer', 'Tanggal PO', 'Nama Kayu', 'Ukuran Kayu', 'Qty PO (Awal)', 'Qty Terkirim', 'Sisa Qty (Pcs)', 'Sisa Volume (m³)']], body, styles: { fontSize: 7.5, cellPadding: 1.8, overflow: 'ellipsize' }, headStyles: { fillColor: [245, 158, 11], fontStyle: 'bold', halign: 'center', fontSize: 7.5 }, columnStyles: { 0: { cellWidth: 28, fontStyle: 'bold' }, 1: { cellWidth: 34 }, 2: { cellWidth: 22 }, 3: { cellWidth: 34 }, 4: { cellWidth: 26 }, 5: { cellWidth: 20, halign: 'right' }, 6: { cellWidth: 20, halign: 'right' }, 7: { cellWidth: 22, halign: 'right' }, 8: { cellWidth: 22, halign: 'right' } }, margin: { left: 14 } });
+    const noteY = doc.lastAutoTable.finalY + 6;
+    doc.setFontSize(7.5);
+    doc.setFont('helvetica', 'italic');
+    doc.setTextColor(120, 120, 120);
+    doc.text('* Keterangan: Angka Subtotal dan Grand Total adalah akumulasi sisa barang yang belum dikirim.', 14, noteY);
+    pdfReportSignature(doc, printDate);
     doc.save('PO_Belum_Kirim.pdf');
     showToast('PDF berhasil diunduh!', 'success');
   } else {
-    const wsData = [['No PO', 'Nama Customer', 'Tanggal PO', 'Status', 'Nama Kayu', 'Ukuran Kayu', 'Sisa Qty (Pcs)', 'Sisa Volume (m³)']];
+    const wsData = [];
+    const printDateShort = new Date().toLocaleDateString('id-ID');
+    excelReportHeader(wsData, 'LAPORAN PO BELUM TERKIRIM - PO KANDANG', period, printDateShort);
+    wsData.push(['No PO', 'Nama Customer', 'Tanggal PO', 'Status', 'Nama Kayu', 'Ukuran Kayu', 'Qty PO (Awal)', 'Qty Terkirim', 'Sisa Qty (Pcs)', 'Sisa Volume (m³)']);
     unsent.forEach(p => {
       const items = p.items || [];
-      const sisaQtyPo = (p.totalQuantity || 0) - (p.shippedQuantity || 0);
+      const qtyPo = p.totalQuantity || 0;
+      const qtyTer = p.shippedQuantity || 0;
+      const sisaQtyPo = qtyPo - qtyTer;
       const sisaKubPo = (p.totalKubikasi || 0) - (p.shippedKubikasi || 0);
       if (items.length) {
-        items.forEach(it => wsData.push([p.poNumber, p.customerName, fmtDate(p.orderDate), p.status, it.productName || '-', `${it.thickness || 0}×${it.width || 0}×${it.length || 0}`, it.quantity || 0, fmtNum(it.kubikasi)]));
+        items.forEach(it => wsData.push([p.poNumber, p.customerName, fmtDate(p.orderDate), p.status, it.productName || '-', `${it.thickness || 0}×${it.width || 0}×${it.length || 0}`, qtyPo, qtyTer, sisaQtyPo, fmtNum(sisaKubPo)]));
       } else {
-        wsData.push([p.poNumber, p.customerName, fmtDate(p.orderDate), p.status, '-', '-', sisaQtyPo, fmtNum(sisaKubPo)]);
+        wsData.push([p.poNumber, p.customerName, fmtDate(p.orderDate), p.status, '-', '-', qtyPo, qtyTer, sisaQtyPo, fmtNum(sisaKubPo)]);
       }
-      wsData.push([`Subtotal ${p.poNumber}`, '', '', '', '', '', sisaQtyPo, fmtNum(sisaKubPo)]);
+      excelSubtotalRow(wsData, `Subtotal ${p.poNumber}`, sisaQtyPo, fmtNum(sisaKubPo));
     });
-    wsData.push(['GRAND TOTAL', '', '', '', '', '', grandSisaQty, fmtNum(grandSisaKub)]);
+    excelGrandTotalRow(wsData, grandSisaQty, fmtNum(grandSisaKub));
+    excelNoteRow(wsData, '* Keterangan: Angka Subtotal dan Grand Total adalah akumulasi sisa barang yang belum dikirim.');
     const ws = XLSX.utils.aoa_to_sheet(wsData);
-    ws['!cols'] = [{ wch: 20 }, { wch: 20 }, { wch: 15 }, { wch: 12 }, { wch: 25 }, { wch: 20 }, { wch: 18 }, { wch: 18 }];
+    ws['!cols'] = [{ wch: 18 }, { wch: 18 }, { wch: 14 }, { wch: 10 }, { wch: 22 }, { wch: 18 }, { wch: 14 }, { wch: 14 }, { wch: 16 }, { wch: 16 }];
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'PO Belum Kirim');
     XLSX.writeFile(wb, 'PO_Belum_Kirim.xlsx');
@@ -2656,14 +2746,13 @@ async function exportDeliveryReport(format) {
   if (!deliveries.length) return showToast('Tidak ada data pengiriman', 'error');
   let grandQty = 0, grandKub = 0;
   deliveries.forEach(d => { (d.items || []).forEach(it => { grandQty += (it.quantity || 0); grandKub += (it.kubikasi || 0); }); });
-  const printDate = new Date().toLocaleDateString('id-ID');
+  const printDate = new Date().toLocaleDateString('id-ID') + ' ' + new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+  const period = 'Semua';
+
   if (format === 'pdf') {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF('l', 'mm', 'a4');
-    doc.setFontSize(16); doc.setFont('helvetica', 'bold');
-    doc.text('LAPORAN PENGIRIMAN - PO KANDANG', 14, 15);
-    doc.setFontSize(10); doc.setFont('helvetica', 'normal');
-    doc.text(`Total: ${deliveries.length} Pengiriman | Dicetak: ${printDate}`, 14, 22);
+    const y = pdfReportHeader(doc, 'LAPORAN PENGIRIMAN', `Total: ${deliveries.length} Pengiriman | Dicetak: ${printDate}`);
     const body = [];
     let rowNo = 0;
     deliveries.forEach(d => {
@@ -2680,12 +2769,16 @@ async function exportDeliveryReport(format) {
         body.push([rowNo, fmtDate(d.deliveryDate), (d.id || '').slice(0, 8), poNums, custNames, sopirPlat, '-', '-', '-', '-']);
       }
     });
-    body.push([{ content: 'TOTAL', colSpan: 8, styles: { halign: 'right', fontStyle: 'bold', fillColor: [13, 148, 136], textColor: [255, 255, 255] } }, { content: String(grandQty), styles: { fontStyle: 'bold', fillColor: [13, 148, 136], textColor: [255, 255, 255] } }, { content: fmtNum(grandKub), styles: { fontStyle: 'bold', fillColor: [13, 148, 136], textColor: [255, 255, 255] } }]);
-    doc.autoTable({ startY: 26, head: [['No', 'Tanggal Kirim', 'No Surat Jalan', 'No PO', 'Nama Customer', 'Sopir & Plat', 'Nama Kayu', 'Ukuran Kayu', 'Qty Kirim (Pcs)', 'Volume Kirim (m³)']], body, styles: { fontSize: 7, cellPadding: 1.5 }, headStyles: { fillColor: [13, 148, 136], fontStyle: 'bold' }, columnStyles: { 0: { cellWidth: 10 }, 1: { cellWidth: 22 }, 2: { cellWidth: 22 }, 3: { cellWidth: 30 }, 4: { cellWidth: 35 }, 5: { cellWidth: 35 }, 6: { cellWidth: 35 }, 7: { cellWidth: 28 }, 8: { cellWidth: 22, halign: 'right' }, 9: { cellWidth: 22, halign: 'right' } }, margin: { left: 14 } });
+    body.push([{ content: 'TOTAL', colSpan: 8, styles: { halign: 'right', fontStyle: 'bold', fillColor: [13, 148, 136], textColor: [255, 255, 255], lineWidth: 0.5 } }, { content: String(grandQty), styles: { fontStyle: 'bold', halign: 'right', fillColor: [13, 148, 136], textColor: [255, 255, 255], lineWidth: 0.5 } }, { content: fmtNum(grandKub), styles: { fontStyle: 'bold', halign: 'right', fillColor: [13, 148, 136], textColor: [255, 255, 255], lineWidth: 0.5 } }]);
+    doc.autoTable({ startY: y, head: [['No', 'Tanggal Kirim', 'No Surat Jalan', 'No PO', 'Nama Customer', 'Sopir & Plat', 'Nama Kayu', 'Ukuran Kayu', 'Qty Kirim (Pcs)', 'Volume Kirim (m³)']], body, styles: { fontSize: 7, cellPadding: 1.5, overflow: 'ellipsize' }, headStyles: { fillColor: [13, 148, 136], fontStyle: 'bold', halign: 'center', fontSize: 7 }, columnStyles: { 0: { cellWidth: 10, halign: 'center' }, 1: { cellWidth: 22 }, 2: { cellWidth: 22 }, 3: { cellWidth: 28 }, 4: { cellWidth: 32 }, 5: { cellWidth: 32 }, 6: { cellWidth: 32 }, 7: { cellWidth: 26 }, 8: { cellWidth: 20, halign: 'right' }, 9: { cellWidth: 20, halign: 'right' } }, margin: { left: 14 } });
+    pdfReportSignature(doc, printDate);
     doc.save('Laporan_Pengiriman.pdf');
     showToast('PDF berhasil diunduh!', 'success');
   } else {
-    const wsData = [['No', 'Tanggal Kirim', 'No Surat Jalan', 'No PO', 'Nama Customer', 'Sopir & Plat', 'Nama Kayu', 'Ukuran Kayu', 'Qty Kirim (Pcs)', 'Volume Kirim (m³)']];
+    const wsData = [];
+    const printDateShort = new Date().toLocaleDateString('id-ID');
+    excelReportHeader(wsData, 'LAPORAN PENGIRIMAN - PO KANDANG', period, printDateShort);
+    wsData.push(['No', 'Tanggal Kirim', 'No Surat Jalan', 'No PO', 'Nama Customer', 'Sopir & Plat', 'Nama Kayu', 'Ukuran Kayu', 'Qty Kirim (Pcs)', 'Volume Kirim (m³)']);
     let rowNo = 0;
     deliveries.forEach(d => {
       const poNums = (d.poNumbers || []).join(', ') || '-';
@@ -2701,7 +2794,7 @@ async function exportDeliveryReport(format) {
         wsData.push([rowNo, fmtDate(d.deliveryDate), (d.id || '').slice(0, 8), poNums, custNames, sopirPlat, '-', '-', '-', '-']);
       }
     });
-    wsData.push(['TOTAL', '', '', '', '', '', '', '', grandQty, fmtNum(grandKub)]);
+    excelGrandTotalRow(wsData, grandQty, fmtNum(grandKub));
     const ws = XLSX.utils.aoa_to_sheet(wsData);
     ws['!cols'] = [{ wch: 5 }, { wch: 14 }, { wch: 14 }, { wch: 18 }, { wch: 18 }, { wch: 20 }, { wch: 20 }, { wch: 18 }, { wch: 14 }, { wch: 14 }];
     const wb = XLSX.utils.book_new();
