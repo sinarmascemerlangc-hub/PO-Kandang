@@ -407,9 +407,9 @@ router.put('/:id/status', auth, async (req, res) => {
 // DELETE /api/po/:id - Delete PO
 router.delete('/:id', auth, async (req, res) => {
   try {
-    const po = await prisma.purchaseOrder.findUnique({ where: { id: req.params.id } });
+    const po = await prisma.purchaseOrder.findUnique({ where: { id: req.params.id }, include: { _count: { select: { deliveries: true } } } });
     if (!po) return res.status(404).json({ error: 'PO tidak ditemukan' });
-    await prisma.poItem.deleteMany({ where: { poId: req.params.id } });
+    if (po._count.deliveries > 0) return res.status(400).json({ error: 'PO memiliki data pengiriman, tidak bisa dihapus. Batalkan statusnya saja.' });
     await prisma.purchaseOrder.delete({ where: { id: req.params.id } });
     res.json({ message: 'PO berhasil dihapus' });
   } catch (error) {
@@ -458,16 +458,16 @@ router.put('/:poId/items/:itemId', auth, async (req, res) => {
     const existing = await prisma.pOItem.findUnique({ where: { id: req.params.itemId } });
     if (!existing) return res.status(404).json({ error: 'Item tidak ditemukan' });
 
-    const kubikasi = calcKubikasi(thickness || existing.thickness, width || existing.width, length || existing.length) * (quantity || existing.quantity);
+    const kubikasi = calcKubikasi(thickness ?? existing.thickness, width ?? existing.width, length ?? existing.length) * (quantity ?? existing.quantity);
     const item = await prisma.pOItem.update({
       where: { id: req.params.itemId },
       data: {
-        productName: productName || existing.productName,
+        productName: productName ?? existing.productName,
         thickness: thickness ?? existing.thickness,
         width: width ?? existing.width,
         length: length ?? existing.length,
         quantity: quantity ?? existing.quantity,
-        unit: unit || existing.unit,
+        unit: unit ?? existing.unit,
         kubikasi,
         notes: notes ?? existing.notes,
       },

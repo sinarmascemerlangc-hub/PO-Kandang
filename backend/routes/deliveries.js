@@ -74,7 +74,7 @@ router.post('/', auth, async (req, res) => {
 
       const deliveryItems = items.map((i) => {
         const poItem = poItemMap[i.poItemId];
-        const kubPerPcs = poItem.kubikasi / poItem.quantity;
+        const kubPerPcs = poItem.quantity > 0 ? poItem.kubikasi / poItem.quantity : 0;
         return {
           deliveryId: newDelivery.id,
           poItemId: i.poItemId,
@@ -237,7 +237,7 @@ router.put('/:id', auth, async (req, res) => {
 
         const deliveryItems = items.map((i) => {
           const poItem = poItemMap[i.poItemId];
-          const kubPerPcs = poItem.kubikasi / poItem.quantity;
+          const kubPerPcs = poItem.quantity > 0 ? poItem.kubikasi / poItem.quantity : 0;
           return {
             deliveryId: req.params.id,
             poItemId: i.poItemId,

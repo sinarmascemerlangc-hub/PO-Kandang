@@ -82,7 +82,7 @@ model POItem {
 model Delivery {
   id             String         @id @default(uuid())
   poId           String?
-  po             PurchaseOrder? @relation(fields: [poId], references: [id], onDelete: Cascade)
+  po             PurchaseOrder? @relation(fields: [poId], references: [id], onDelete: SetNull)
   deliveryDate   DateTime       @default(now())
   driverName     String?
   vehicleNumber  String?
