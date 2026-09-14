@@ -1435,41 +1435,42 @@ function openPage(page) {
 
 /* === DASHBOARD === */
 async function loadDashboard() {
+  let s = {}, poData = { data: [] }, deliveries = [];
+
   try {
-    const [statsRes, poRes, delRes] = await Promise.all([
-      fetch(`${API}/api/po/stats`, { headers: authHeaders() }),
-      fetch(`${API}/api/po?limit=5`, { headers: authHeaders() }),
-      fetch(`${API}/api/deliveries?limit=100`, { headers: authHeaders() }).catch(() => ({ json: () => [] }))
-    ]);
-    const s = await statsRes.json();
-    const poData = await poRes.json();
-    const delData = await delRes.json();
-    const deliveries = Array.isArray(delData) ? delData : (delData.data || []);
+    const statsRes = await fetch(`${API}/api/po/stats`, { headers: authHeaders() });
+    if (statsRes.ok) s = await statsRes.json();
+    else console.error('Stats error:', statsRes.status);
+  } catch (e) { console.error('Stats fetch error:', e); }
 
-    // Profile card badges
-    document.getElementById('badgeTotalPO').textContent = s.totalPO || 0;
-    document.getElementById('badgeTerkirim').textContent = (s.shippedQuantity || 0) + ' pcs';
-    document.getElementById('badgeSisa').textContent = Math.max(0, s.remainingKubikasi || 0).toFixed(2);
+  try {
+    const poRes = await fetch(`${API}/api/po?limit=5`, { headers: authHeaders() });
+    if (poRes.ok) poData = await poRes.json();
+    else console.error('PO list error:', poRes.status);
+  } catch (e) { console.error('PO list fetch error:', e); }
 
-    // Widget: Sisa Volume
-    document.getElementById('widgetSisa').textContent = Math.max(0, s.remainingKubikasi || 0).toFixed(2) + ' m³';
-    document.getElementById('widgetSisaSub').textContent = Math.max(0, s.remainingQuantity || 0) + ' pcs remaining';
+  try {
+    const delRes = await fetch(`${API}/api/deliveries?limit=100`, { headers: authHeaders() });
+    if (delRes.ok) { const dd = await delRes.json(); deliveries = Array.isArray(dd) ? dd : (dd.data || []); }
+  } catch (e) { console.error('Deliveries fetch error:', e); }
 
-    // Widget: Pengiriman Hari Ini
-    const today = new Date().toDateString();
-    const todayDeliveries = deliveries.filter(d => new Date(d.deliveryDate).toDateString() === today);
-    let todayKub = 0, todayPcs = 0;
-    todayDeliveries.forEach(d => {
-      if (d.items) d.items.forEach(i => { todayKub += i.kubikasi || 0; todayPcs += i.quantity || 0; });
-    });
-    document.getElementById('widgetHariIni').textContent = todayPcs + ' pcs';
-    document.getElementById('widgetHariIniSub').textContent = todayKub.toFixed(2) + ' m³ • ' + todayDeliveries.length + ' pengiriman';
+  document.getElementById('badgeTotalPO').textContent = s.totalPO || 0;
+  document.getElementById('badgeTerkirim').textContent = (s.shippedQuantity || 0) + ' pcs';
+  document.getElementById('badgeSisa').textContent = Math.max(0, s.remainingKubikasi || 0).toFixed(2);
 
-    // Recent PO
-    renderRecentPO(poData.data || []);
-  } catch (e) {
-    console.error(e);
-  }
+  document.getElementById('widgetSisa').textContent = Math.max(0, s.remainingKubikasi || 0).toFixed(2) + ' m³';
+  document.getElementById('widgetSisaSub').textContent = Math.max(0, s.remainingQuantity || 0) + ' pcs remaining';
+
+  const today = new Date().toDateString();
+  const todayDeliveries = deliveries.filter(d => new Date(d.deliveryDate).toDateString() === today);
+  let todayKub = 0, todayPcs = 0;
+  todayDeliveries.forEach(d => {
+    if (d.items) d.items.forEach(i => { todayKub += i.kubikasi || 0; todayPcs += i.quantity || 0; });
+  });
+  document.getElementById('widgetHariIni').textContent = todayPcs + ' pcs';
+  document.getElementById('widgetHariIniSub').textContent = todayKub.toFixed(2) + ' m³ • ' + todayDeliveries.length + ' pengiriman';
+
+  renderRecentPO(poData.data || []);
 }
 
 function filterAndGo(status) {
