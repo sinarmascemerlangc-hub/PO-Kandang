@@ -35,6 +35,8 @@ model User {
   isActive  Boolean   @default(true)
   createdAt DateTime  @default(now())
   pos       PurchaseOrder[]
+  intakes   WoodIntake[]
+  sawingLogs SawingLog[]
 }
 
 model PurchaseOrder {
@@ -54,6 +56,7 @@ model PurchaseOrder {
   items          POItem[]
   deliveries     Delivery[]
   deliveryPOs    DeliveryPO[]
+  sawingLogs     SawingLog[]
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
 
@@ -75,6 +78,7 @@ model POItem {
   kubikasi       Float         @default(0) // otomatis dihitung
   notes          String?
   deliveryItems  DeliveryItem[]
+  sawingLogs     SawingLog[]
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
 }
@@ -128,4 +132,67 @@ model DeliveryPO {
   po             PurchaseOrder @relation(fields: [poId], references: [id], onDelete: Cascade)
   @@unique([deliveryId, poId])
   @@index([poId])
+}
+
+model WoodIntake {
+  id             String            @id @default(uuid())
+  intakeNumber   String            @unique
+  intakeDate     DateTime          @default(now())
+  supplier       String?
+  vehicleNumber  String?
+  notes          String?
+  totalKubikasi  Float             @default(0)
+  totalQuantity  Int               @default(0)
+  userId         String
+  user           User              @relation(fields: [userId], references: [id])
+  items          WoodIntakeItem[]
+  createdAt      DateTime          @default(now())
+
+  @@index([intakeDate])
+  @@index([createdAt])
+}
+
+model WoodIntakeItem {
+  id             String        @id @default(uuid())
+  intakeId       String
+  intake         WoodIntake    @relation(fields: [intakeId], references: [id], onDelete: Cascade)
+  productName    String
+  thickness      Float
+  width          Float
+  length         Float
+  quantity       Int           @default(1)
+  unit           String        @default("pcs")
+  kubikasi       Float         @default(0)
+  remaining      Int           @default(0)
+  sawingLogs     SawingLog[]
+  createdAt      DateTime      @default(now())
+
+  @@index([intakeId])
+}
+
+model SawingLog {
+  id              String          @id @default(uuid())
+  intakeItemId    String
+  intakeItem      WoodIntakeItem  @relation(fields: [intakeItemId], references: [id])
+  poItemId        String
+  poItem          POItem          @relation(fields: [poItemId], references: [id])
+  poId            String
+  po              PurchaseOrder   @relation(fields: [poId], references: [id])
+  quantity        Int             @default(0)
+  sourceThickness Float
+  sourceWidth     Float
+  sourceLength    Float
+  resultThickness Float
+  resultWidth     Float
+  resultLength    Float
+  kubikasiOut     Float           @default(0)
+  notes           String?
+  userId          String
+  user            User            @relation(fields: [userId], references: [id])
+  createdAt       DateTime        @default(now())
+
+  @@index([intakeItemId])
+  @@index([poItemId])
+  @@index([poId])
+  @@index([createdAt])
 }

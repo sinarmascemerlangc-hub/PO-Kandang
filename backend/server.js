@@ -39,6 +39,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/po', require('./routes/po'));
 app.use('/api/deliveries', require('./routes/deliveries'));
+app.use('/api/wood', require('./routes/wood'));
 
 app.get('/api/health', async (req, res) => {
   const start = Date.now();
