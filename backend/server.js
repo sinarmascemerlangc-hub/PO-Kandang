@@ -36,6 +36,73 @@ app.get('/api/health', async (req, res) => {
   }
 });
 
+const authMiddleware = require('./middleware/auth');
+
+app.get('/api/dashboard', authMiddleware, async (req, res) => {
+  try {
+    const [statsRow] = await prisma.$queryRawUnsafe(`
+      SELECT
+        COUNT(*)::int as "totalPO",
+        COUNT(*) FILTER (WHERE status = 'diterima')::int as diterima,
+        COUNT(*) FILTER (WHERE status = 'diproses')::int as diproses,
+        COUNT(*) FILTER (WHERE status = 'dikirim')::int as dikirim,
+        COUNT(*) FILTER (WHERE status = 'selesai')::int as selesai,
+        COUNT(*) FILTER (WHERE status = 'dibatalkan')::int as dibatalkan,
+        COALESCE(SUM("totalKubikasi")::float, 0) as "totalKubikasi",
+        COALESCE(SUM("totalQuantity")::int, 0) as "totalQuantity"
+      FROM "PurchaseOrder"
+    `);
+
+    const [shippedRow] = await prisma.$queryRawUnsafe(`
+      SELECT COALESCE(SUM(kubikasi)::float, 0) as "shippedKubikasi", COALESCE(SUM(quantity)::int, 0) as "shippedQuantity"
+      FROM "DeliveryItem"
+    `);
+
+    const recentPOs = await prisma.$queryRawUnsafe(`
+      SELECT p.id, p."poNumber", p."customerName", p."orderDate", p.status,
+        p."totalKubikasi", p."totalQuantity"
+      FROM "PurchaseOrder" p
+      ORDER BY p."createdAt" DESC LIMIT 5
+    `);
+
+    const todayStart = new Date(); todayStart.setHours(0,0,0,0);
+    const todayDeliveries = await prisma.$queryRawUnsafe(`
+      SELECT d.id, d."deliveryDate", d.driver, d."poNumber",
+        di.kubikasi, di.quantity, di."poItemId"
+      FROM "Delivery" d
+      JOIN "DeliveryItem" di ON di."deliveryId" = d.id
+      WHERE d."deliveryDate" >= $1
+    `, todayStart);
+
+    const totalKubikasi = Number(statsRow.totalKubikasi) || 0;
+    const shippedKubikasi = Number(shippedRow.shippedKubikasi) || 0;
+    const totalQuantity = Number(statsRow.totalQuantity) || 0;
+    const shippedQuantity = Number(shippedRow.shippedQuantity) || 0;
+
+    let todayKub = 0, todayPcs = 0;
+    todayDeliveries.forEach(d => { todayKub += Number(d.kubikasi) || 0; todayPcs += Number(d.quantity) || 0; });
+    const todayCount = new Set(todayDeliveries.map(d => d.id)).size;
+
+    res.json({
+      stats: {
+        totalPO: statsRow.totalPO,
+        statusBreakdown: { diterima: statsRow.diterima, diproses: statsRow.diproses, dikirim: statsRow.dikirim, selesai: statsRow.selesai, dibatalkan: statsRow.dibatalkan },
+        totalKubikasi: Math.round(totalKubikasi * 10000) / 10000,
+        totalQuantity,
+        shippedKubikasi: Math.round(shippedKubikasi * 10000) / 10000,
+        shippedQuantity,
+        remainingKubikasi: Math.round((totalKubikasi - shippedKubikasi) * 10000) / 10000,
+        remainingQuantity: totalQuantity - shippedQuantity,
+      },
+      recentPOs,
+      todayDelivery: { pcs: todayPcs, kubikasi: Math.round(todayKub * 10000) / 10000, count: todayCount },
+    });
+  } catch (error) {
+    console.error('Dashboard error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.get('*', (req, res) => {
   if (!req.path.startsWith('/api') && !req.path.includes('.')) {
     res.set('Cache-Control', 'no-cache');

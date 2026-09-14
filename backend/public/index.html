@@ -1435,34 +1435,20 @@ function openPage(page) {
 
 /* === DASHBOARD === */
 async function loadDashboard() {
-  let s = {}, poData = { data: [] }, deliveries = [];
+  let s = {}, recentPOs = [], todayDelivery = { pcs: 0, kubikasi: 0, count: 0 };
 
-  const fetchWithTimeout = (url, opts = {}, ms = 12000) => {
+  try {
     const ac = new AbortController();
-    const timer = setTimeout(() => ac.abort(), ms);
-    return fetch(url, { ...opts, signal: ac.signal }).finally(() => clearTimeout(timer));
-  };
-
-  const [statsResult, poResult, delResult] = await Promise.allSettled([
-    fetchWithTimeout(`${API}/api/po/stats`, { headers: authHeaders() }),
-    fetchWithTimeout(`${API}/api/po?limit=5`, { headers: authHeaders() }),
-    fetchWithTimeout(`${API}/api/deliveries?limit=100`, { headers: authHeaders() })
-  ]);
-
-  try {
-    if (statsResult.status === 'fulfilled' && statsResult.value.ok) s = await statsResult.value.json();
-  } catch (e) { console.error('Stats parse error:', e); }
-
-  try {
-    if (poResult.status === 'fulfilled' && poResult.value.ok) poData = await poResult.value.json();
-  } catch (e) { console.error('PO parse error:', e); }
-
-  try {
-    if (delResult.status === 'fulfilled' && delResult.value.ok) {
-      const dd = await delResult.value.json();
-      deliveries = Array.isArray(dd) ? dd : (dd.data || []);
+    const timer = setTimeout(() => ac.abort(), 10000);
+    const res = await fetch(`${API}/api/dashboard`, { headers: authHeaders(), signal: ac.signal });
+    clearTimeout(timer);
+    if (res.ok) {
+      const d = await res.json();
+      s = d.stats || {};
+      recentPOs = d.recentPOs || [];
+      todayDelivery = d.todayDelivery || todayDelivery;
     }
-  } catch (e) { console.error('Del parse error:', e); }
+  } catch (e) { console.error('Dashboard error:', e); }
 
   document.getElementById('badgeTotalPO').textContent = s.totalPO || 0;
   document.getElementById('badgeTerkirim').textContent = (s.shippedQuantity || 0) + ' pcs';
@@ -1471,16 +1457,10 @@ async function loadDashboard() {
   document.getElementById('widgetSisa').textContent = Math.max(0, s.remainingKubikasi || 0).toFixed(2) + ' m³';
   document.getElementById('widgetSisaSub').textContent = Math.max(0, s.remainingQuantity || 0) + ' pcs remaining';
 
-  const today = new Date().toDateString();
-  const todayDeliveries = deliveries.filter(d => new Date(d.deliveryDate).toDateString() === today);
-  let todayKub = 0, todayPcs = 0;
-  todayDeliveries.forEach(d => {
-    if (d.items) d.items.forEach(i => { todayKub += i.kubikasi || 0; todayPcs += i.quantity || 0; });
-  });
-  document.getElementById('widgetHariIni').textContent = todayPcs + ' pcs';
-  document.getElementById('widgetHariIniSub').textContent = todayKub.toFixed(2) + ' m³ • ' + todayDeliveries.length + ' pengiriman';
+  document.getElementById('widgetHariIni').textContent = todayDelivery.pcs + ' pcs';
+  document.getElementById('widgetHariIniSub').textContent = todayDelivery.kubikasi.toFixed(2) + ' m³ • ' + todayDelivery.count + ' pengiriman';
 
-  renderRecentPO(poData.data || []);
+  renderRecentPO(recentPOs);
 }
 
 function filterAndGo(status) {
