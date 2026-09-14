@@ -108,6 +108,54 @@ router.post('/', auth, async (req, res) => {
   }
 });
 
+// GET /api/deliveries/all-report - Flat list of ALL deliveries with items + PO info (for Laporan Pengiriman)
+router.get('/all-report', auth, async (req, res) => {
+  try {
+    const deliveries = await prisma.$queryRawUnsafe(`
+      SELECT d.*,
+        (SELECT array_agg(DISTINCT p."poNumber") FROM "DeliveryPO" dpo JOIN "PurchaseOrder" p ON p.id = dpo."poId" WHERE dpo."deliveryId" = d.id) as "poNumbers",
+        (SELECT array_agg(DISTINCT p."customerName") FROM "DeliveryPO" dpo JOIN "PurchaseOrder" p ON p.id = dpo."poId" WHERE dpo."deliveryId" = d.id) as "customerNames"
+      FROM "Delivery" d
+      ORDER BY d."deliveryDate" DESC
+    `);
+
+    if (deliveries.length === 0) return res.json([]);
+
+    const dIds = deliveries.map(d => d.id);
+
+    const items = await prisma.$queryRawUnsafe(`
+      SELECT di.*, poi."productName", poi.thickness, poi.width, poi.length
+      FROM "DeliveryItem" di
+      JOIN "POItem" poi ON poi.id = di."poItemId"
+      WHERE di."deliveryId" = ANY($1)
+    `, dIds);
+
+    const enriched = deliveries.map(d => ({
+      id: d.id,
+      deliveryDate: d.deliveryDate,
+      driverName: d.driverName,
+      vehicleNumber: d.vehicleNumber,
+      deliveryAddress: d.deliveryAddress,
+      notes: d.notes,
+      poNumbers: d.poNumbers || [],
+      customerNames: d.customerNames || [],
+      items: items.filter(i => i.deliveryId === d.id).map(i => ({
+        productName: i.productName,
+        thickness: i.thickness,
+        width: i.width,
+        length: i.length,
+        quantity: i.quantity,
+        kubikasi: i.kubikasi,
+      })),
+    }));
+
+    res.json(enriched);
+  } catch (error) {
+    console.error('All deliveries report error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // GET /api/deliveries - List all deliveries
 router.get('/', auth, async (req, res) => {
   try {
