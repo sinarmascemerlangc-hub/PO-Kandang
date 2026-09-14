@@ -580,61 +580,65 @@
 
     /* === DELIVERY CARD === */
     .del-card {
-      background: white; border-radius: 14px; border: 1px solid #f1f5f9;
-      padding: 16px; margin-bottom: 10px; transition: all 0.2s;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+      background: white; border-radius: 14px; border: 1px solid #e2e8f0;
+      padding: 0; margin-bottom: 14px; transition: all 0.2s;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04); overflow: hidden;
     }
     .del-card:active { transform: scale(0.995); }
     .del-card-header {
-      display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 14px 16px; background: #f8fafc; border-bottom: 1px solid #e2e8f0;
     }
+    .del-card-header-left { display: flex; align-items: center; gap: 10px; }
     .del-card-driver { font-size: 14px; font-weight: 700; color: #0f172a; }
-    .del-card-vehicle { font-size: 12px; color: #94a3b8; margin-top: 2px; }
-    .del-card-date { font-size: 12px; font-weight: 600; color: #0d9488; white-space: nowrap; }
+    .del-card-vehicle {
+      display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 600;
+      color: #64748b; background: #f1f5f9; padding: 3px 8px; border-radius: 6px;
+    }
+    .del-card-header-right { text-align: right; }
+    .del-card-date { font-size: 12px; font-weight: 600; color: #0d9488; }
+    .del-card-kub { font-size: 11px; color: #94a3b8; margin-top: 2px; }
     .del-card-po {
       display: inline-flex; align-items: center; gap: 4px; font-size: 10px; font-weight: 700;
       color: #0d9488; background: #f0fdfa; padding: 3px 8px; border-radius: 6px;
-      margin-bottom: 8px; border: 1px solid rgba(13,148,136,0.12);
+      border: 1px solid rgba(13,148,136,0.12); margin: 0 16px 0;
     }
-    .del-card-addr { font-size: 12px; color: #94a3b8; margin-bottom: 10px; }
-    .del-card-items { margin-bottom: 10px; }
-    .del-card-item {
+    .del-card-po-wrap { padding: 10px 16px 0; }
+    .del-card-body { padding: 14px 16px; }
+    .del-card-items-table {
+      width: 100%; border-collapse: collapse; font-size: 12px;
+    }
+    .del-card-items-table th {
+      text-align: left; font-size: 10px; font-weight: 700; color: #94a3b8;
+      text-transform: uppercase; letter-spacing: 0.5px; padding: 6px 0;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    .del-card-items-table th:last-child { text-align: right; }
+    .del-card-items-table td {
+      padding: 8px 0; border-bottom: 1px solid #f1f5f9; color: #1e293b;
+    }
+    .del-card-items-table tr:last-child td { border-bottom: none; }
+    .del-card-items-table td:last-child { text-align: right; font-weight: 600; white-space: nowrap; }
+    .del-card-items-table .item-name { font-weight: 600; }
+    .del-card-items-table .item-size { color: #94a3b8; font-size: 11px; }
+    .del-card-items-table .item-kub { color: #0d9488; font-weight: 700; }
+    .del-card-footer {
       display: flex; justify-content: space-between; align-items: center;
-      padding: 7px 0; border-bottom: 1px solid #f8fafc; font-size: 12px;
+      padding: 12px 16px; border-top: 1px solid #e2e8f0; background: #fafbfc;
     }
-    .del-card-item:last-child { border-bottom: none; }
-    .del-card-item-name { font-weight: 600; color: #1e293b; }
-    .del-card-item-size { color: #94a3b8; font-size: 11px; margin-left: 4px; }
-    .del-card-item-qty { font-weight: 700; color: #1e293b; }
-    .del-card-item-kub { font-weight: 700; color: #0d9488; margin-left: 6px; }
-    .del-card-section {
-      border-top: 1px solid #f1f5f9; padding-top: 10px; margin-top: 4px;
-    }
-    .del-card-section-title {
-      font-size: 10px; font-weight: 700; color: #94a3b8; text-transform: uppercase;
-      letter-spacing: 0.5px; margin-bottom: 6px;
-    }
-    .del-card-actions {
-      display: flex; gap: 6px; flex-wrap: wrap; align-items: center;
-    }
+    .del-card-addr { font-size: 11px; color: #64748b; display: flex; align-items: center; gap: 4px; max-width: 55%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .del-card-actions { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
     .del-card-btn {
-      display: inline-flex; align-items: center; gap: 4px; padding: 6px 12px;
-      border-radius: 8px; font-size: 11px; font-weight: 600; cursor: pointer;
+      display: inline-flex; align-items: center; gap: 3px; padding: 5px 10px;
+      border-radius: 7px; font-size: 11px; font-weight: 600; cursor: pointer;
       border: 1px solid transparent; transition: all 0.15s; font-family: inherit;
+      white-space: nowrap;
     }
     .del-card-btn:active { transform: scale(0.95); }
-    .del-card-btn.proof {
-      background: #f0fdfa; color: #0d9488; border-color: rgba(13,148,136,0.15);
-    }
-    .del-card-btn.upload {
-      background: #ecfdf5; color: #059669; border-color: rgba(5,150,105,0.15);
-    }
-    .del-card-btn.edit {
-      background: #eff6ff; color: #3b82f6; border-color: rgba(59,130,246,0.15);
-    }
-    .del-card-btn.delete {
-      background: #fef2f2; color: #dc2626; border-color: rgba(220,38,38,0.15);
-    }
+    .del-card-btn.proof { background: #f0fdfa; color: #0d9488; border-color: rgba(13,148,136,0.15); }
+    .del-card-btn.upload { background: #ecfdf5; color: #059669; border-color: rgba(5,150,105,0.15); }
+    .del-card-btn.edit { background: #eff6ff; color: #3b82f6; border-color: rgba(59,130,246,0.15); }
+    .del-card-btn.delete { background: #fef2f2; color: #dc2626; border-color: rgba(220,38,38,0.15); }
 
     /* === PROOF SECTION === */
     .proof-preview-wrap { border-radius: 14px; overflow: hidden; border: 1.5px solid #e2e8f0; margin-bottom: 14px; }
@@ -1773,26 +1777,35 @@ async function viewPO(id) {
             return `
             <div class="del-card">
               <div class="del-card-header">
-                <div>
+                <div class="del-card-header-left">
                   <div class="del-card-driver">${d.driverName||'Tanpa Sopir'}</div>
                   <div class="del-card-vehicle">🚗 ${d.vehicleNumber||'-'}</div>
                 </div>
-                <div class="del-card-date">${new Date(d.deliveryDate).toLocaleDateString('id-ID',{day:'2-digit',month:'short',year:'numeric'})}</div>
+                <div class="del-card-header-right">
+                  ${poNames.length>0?`<div class="del-card-po">📦 ${poNames.join(' • ')}</div>`:''}
+                  <div class="del-card-date">${new Date(d.deliveryDate).toLocaleDateString('id-ID',{day:'2-digit',month:'short',year:'numeric'})}</div>
+                  <div class="del-card-kub">${totalQty} pcs • ${totalKub.toFixed(4)} m³</div>
+                </div>
               </div>
-              ${poNames.length>1?`<div class="del-card-po">📦 ${poNames.join(' • ')}</div>`:''}
-              <div class="del-card-addr">📍 ${d.deliveryAddress||'-'}</div>
-              <div class="del-card-items">
-                ${d.items.map(di=>`<div class="del-card-item">
-                  <div><span class="del-card-item-name">${di.poItem?.productName||'-'}</span><span class="del-card-item-size">${di.poItem?.thickness||''}×${di.poItem?.width||''}×${di.poItem?.length||''}cm</span></div>
-                  <div><span class="del-card-item-qty">${di.quantity} pcs</span><span class="del-card-item-kub">${di.kubikasi?.toFixed(4)} m³</span></div>
-                </div>`).join('')}
+              <div class="del-card-body">
+                <table class="del-card-items-table">
+                  <thead><tr><th>Produk</th><th>Ukuran</th><th>Qty</th><th>KUB</th></tr></thead>
+                  <tbody>
+                    ${d.items.map(di=>`<tr>
+                      <td><span class="item-name">${di.poItem?.productName||'-'}</span></td>
+                      <td><span class="item-size">${di.poItem?.thickness||''}×${di.poItem?.width||''}×${di.poItem?.length||''}cm</span></td>
+                      <td>${di.quantity} pcs</td>
+                      <td><span class="item-kub">${di.kubikasi?.toFixed(4)} m³</span></td>
+                    </tr>`).join('')}
+                  </tbody>
+                </table>
               </div>
-              <div class="del-card-section">
+              <div class="del-card-footer">
+                <div class="del-card-addr">📍 ${d.deliveryAddress||'-'}</div>
                 <div class="del-card-actions">
-                  <span class="del-card-section-title" style="margin:0;">📷 ${proofs.length} Bukti</span>
-                  ${proofs.map(p => `<button onclick="openProofPreview('${p.url}')" class="del-card-btn proof">📷 Lihat</button>`).join('')}
-                  <button class="del-card-btn upload" onclick="openProofModal('${d.id}')">+ Upload</button>
-                  <button class="del-card-btn edit" onclick="editDeliveryFromDetail('${d.id}','${po.id}')">✏️ Edit</button>
+                  ${proofs.map(p => `<button onclick="openProofPreview('${p.url}')" class="del-card-btn proof">📷</button>`).join('')}
+                  <button class="del-card-btn upload" onclick="openProofModal('${d.id}')">+ Bukti</button>
+                  <button class="del-card-btn edit" onclick="editDeliveryFromDetail('${d.id}','${po.id}')">✏️</button>
                 </div>
               </div>
             </div>`;
@@ -2134,34 +2147,36 @@ async function loadPODeliveries() {
         const totalKub = d.items.reduce((s,di)=>s+(di.kubikasi||0),0);
         html += `<div class="del-card fade-in" style="animation-delay:${idx*0.06}s">
           <div class="del-card-header">
-            <div>
+            <div class="del-card-header-left">
               <div class="del-card-driver">${d.driverName||'Tanpa Sopir'}</div>
               <div class="del-card-vehicle">🚗 ${d.vehicleNumber||'-'}</div>
             </div>
-            <div style="text-align:right;">
+            <div class="del-card-header-right">
+              ${poNames.length>0?`<div class="del-card-po">📦 ${poNames.join(' • ')}</div>`:''}
               <div class="del-card-date">${new Date(d.deliveryDate).toLocaleDateString('id-ID',{day:'2-digit',month:'short',year:'numeric'})}</div>
-              <div style="font-size:11px;color:#94a3b8;">${totalQty} pcs • ${totalKub.toFixed(4)} m³</div>
+              <div class="del-card-kub">${totalQty} pcs • ${totalKub.toFixed(4)} m³</div>
             </div>
           </div>
-          ${poNames.length>0?`<div class="del-card-po">📦 ${poNames.join(' • ')}</div>`:''}
-          <div class="del-card-addr">📍 ${d.deliveryAddress||'-'}</div>
-          <div class="del-card-items">
-            ${d.items.map(di=>`<div class="del-card-item">
-              <div><span class="del-card-item-name">${di.poItem?.productName||'-'}</span><span class="del-card-item-size">${di.poItem?.thickness||''}×${di.poItem?.width||''}×${di.poItem?.length||''}cm</span></div>
-              <div><span class="del-card-item-qty">${di.quantity} pcs</span><span class="del-card-item-kub">${di.kubikasi?.toFixed(4)} m³</span></div>
-            </div>`).join('')}
+          <div class="del-card-body">
+            <table class="del-card-items-table">
+              <thead><tr><th>Produk</th><th>Ukuran</th><th>Qty</th><th>KUB</th></tr></thead>
+              <tbody>
+                ${d.items.map(di=>`<tr>
+                  <td><span class="item-name">${di.poItem?.productName||'-'}</span></td>
+                  <td><span class="item-size">${di.poItem?.thickness||''}×${di.poItem?.width||''}×${di.poItem?.length||''}cm</span></td>
+                  <td>${di.quantity} pcs</td>
+                  <td><span class="item-kub">${di.kubikasi?.toFixed(4)} m³</span></td>
+                </tr>`).join('')}
+              </tbody>
+            </table>
           </div>
-          <div class="del-card-section">
+          <div class="del-card-footer">
+            <div class="del-card-addr">📍 ${d.deliveryAddress||'-'}</div>
             <div class="del-card-actions">
-              <span class="del-card-section-title" style="margin:0;">📷 ${proofs.length} Bukti</span>
-              ${proofs.map(p => `<button onclick="openProofPreview('${p.url}')" class="del-card-btn proof">📷 Lihat</button>`).join('')}
-              <button class="del-card-btn upload" onclick="openProofModal('${d.id}')">+ Upload</button>
-            </div>
-          </div>
-          <div class="del-card-section">
-            <div class="del-card-actions">
-              <button class="del-card-btn edit" onclick="editDelivery('${d.id}')">✏️ Edit</button>
-              <button class="del-card-btn delete" onclick="deleteDelivery('${d.id}')">🗑️ Hapus</button>
+              ${proofs.map(p => `<button onclick="openProofPreview('${p.url}')" class="del-card-btn proof">📷</button>`).join('')}
+              <button class="del-card-btn upload" onclick="openProofModal('${d.id}')">+ Bukti</button>
+              <button class="del-card-btn edit" onclick="editDelivery('${d.id}')">✏️</button>
+              <button class="del-card-btn delete" onclick="deleteDelivery('${d.id}')">🗑️</button>
             </div>
           </div>
         </div>`;
@@ -2200,7 +2215,7 @@ async function editDelivery(id) {
   try {
     const res = await fetch(`${API}/api/deliveries/${id}`, { headers: authHeaders() });
     const d = await res.json();
-    await openDeliveryModal();
+    await openDeliveryModal(true);
     document.querySelector('#deliveryModal .modal-header h3').textContent = 'Edit Pengiriman';
     document.getElementById('deliveryDate').value = d.deliveryDate?.split('T')[0] || '';
     document.getElementById('driverName').value = d.driverName || '';
@@ -2215,8 +2230,9 @@ async function editDelivery(id) {
   } catch(e) { showToast('Error: '+e.message, 'error'); }
 }
 
-async function openDeliveryModal() {
-  editingDeliveryId = null; selectedPOIds = [];
+async function openDeliveryModal(isEdit = false) {
+  if (!isEdit) editingDeliveryId = null;
+  selectedPOIds = [];
   document.getElementById('deliveryModal').classList.remove('hidden');
   document.querySelector('#deliveryModal .modal-header h3').textContent = 'Tambah Pengiriman';
   document.getElementById('deliveryDate').value = new Date().toISOString().split('T')[0];
@@ -2267,7 +2283,7 @@ async function loadPOForDelivery() {
   } catch(e) { console.error(e); }
 }
 
-function closeDeliveryModal() { document.getElementById('deliveryModal').classList.add('hidden'); }
+function closeDeliveryModal() { editingDeliveryId = null; document.getElementById('deliveryModal').classList.add('hidden'); }
 
 async function saveDelivery() {
   if (selectedPOIds.length === 0) { showToast('Pilih minimal 1 PO', 'error'); return; }
