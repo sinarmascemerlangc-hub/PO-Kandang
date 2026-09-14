@@ -78,6 +78,66 @@ router.get('/', auth, async (req, res) => {
   }
 });
 
+// GET /api/po/report-items - All POs with per-item shipped quantities (for Laporan tabs)
+router.get('/report-items', auth, async (req, res) => {
+  try {
+    const pos = await prisma.$queryRawUnsafe(`
+      SELECT p.*, COALESCE(s.ship_kub, 0)::float as "shippedKubikasi",
+        COALESCE(s.ship_qty, 0)::int as "shippedQuantity"
+      FROM "PurchaseOrder" p
+      LEFT JOIN (
+        SELECT poi."poId", SUM(di.kubikasi)::float as ship_kub, SUM(di.quantity)::int as ship_qty
+        FROM "DeliveryItem" di JOIN "POItem" poi ON poi.id = di."poItemId"
+        GROUP BY poi."poId"
+      ) s ON s."poId" = p.id
+      ORDER BY p."createdAt" DESC
+    `);
+
+    const poIds = pos.map(p => p.id);
+    if (poIds.length === 0) return res.json([]);
+
+    const items = await prisma.$queryRawUnsafe(`
+      SELECT poi.*, COALESCE(ds.shipped_qty, 0)::int as "shippedQty",
+        COALESCE(ds.shipped_kub, 0)::float as "shippedKubikasi"
+      FROM "POItem" poi
+      LEFT JOIN (
+        SELECT di."poItemId", SUM(di.quantity)::int as shipped_qty, SUM(di.kubikasi)::float as shipped_kub
+        FROM "DeliveryItem" di
+        GROUP BY di."poItemId"
+      ) ds ON ds."poItemId" = poi.id
+      WHERE poi."poId" = ANY($1)
+    `, poIds);
+
+    const itemsByPo = {};
+    items.forEach(i => {
+      if (!itemsByPo[i.poId]) itemsByPo[i.poId] = [];
+      const sisaQty = (i.quantity || 0) - (i.shippedQty || 0);
+      const kubikasiPerUnit = (i.thickness / 100) * (i.width / 100) * (i.length / 100);
+      const sisaKub = kubikasiPerUnit * sisaQty;
+      itemsByPo[i.poId].push({
+        id: i.id, productName: i.productName, thickness: i.thickness,
+        width: i.width, length: i.length, quantity: i.quantity, unit: i.unit,
+        kubikasi: kubikasiPerUnit * (i.quantity || 0),
+        shippedQty: i.shippedQty || 0, shippedKubikasi: i.shippedKubikasi || 0,
+        sisaQty, sisaKubikasi: sisaKub,
+      });
+    });
+
+    const enriched = pos.map(po => ({
+      id: po.id, poNumber: po.poNumber, customerName: po.customerName,
+      orderDate: po.orderDate, deadline: po.deadline, status: po.status,
+      totalQuantity: po.totalQuantity, totalKubikasi: po.totalKubikasi,
+      shippedKubikasi: po.shippedKubikasi, shippedQuantity: po.shippedQuantity,
+      items: itemsByPo[po.id] || [],
+    }));
+
+    res.json(enriched);
+  } catch (error) {
+    console.error('PO report items error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // GET /api/po/stats - Dashboard statistics (single raw query)
 router.get('/stats', auth, async (req, res) => {
   try {
