@@ -103,6 +103,35 @@ app.get('/api/dashboard', authMiddleware, async (req, res) => {
   }
 });
 
+// One-time migration: link orphaned deliveries to their POs
+app.post('/api/deliveries/fix-orphaned', authMiddleware, async (req, res) => {
+  try {
+    const orphans = await prisma.$queryRawUnsafe(`
+      SELECT d.id FROM "Delivery" d
+      WHERE NOT EXISTS (SELECT 1 FROM "DeliveryPO" dp WHERE dp."deliveryId" = d.id)
+    `);
+    let fixed = 0;
+    for (const o of orphans) {
+      const poIds = await prisma.$queryRawUnsafe(`
+        SELECT DISTINCT poi."poId" FROM "DeliveryItem" di
+        JOIN "POItem" poi ON poi.id = di."poItemId"
+        WHERE di."deliveryId" = $1
+      `, o.id);
+      if (poIds.length > 0) {
+        const firstPoId = poIds[0].poId;
+        await prisma.$executeRawUnsafe(`UPDATE "Delivery" SET "poId" = $1 WHERE id = $2`, firstPoId, o.id);
+        for (const p of poIds) {
+          await prisma.$executeRawUnsafe(`INSERT INTO "DeliveryPO" ("id", "deliveryId", "poId") VALUES (gen_random_uuid()::text, $1, $2) ON CONFLICT DO NOTHING`, o.id, p.poId);
+        }
+        fixed++;
+      }
+    }
+    res.json({ fixed, total_orphans: orphans.length });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.get('*', (req, res) => {
   if (!req.path.startsWith('/api') && !req.path.includes('.')) {
     res.set('Cache-Control', 'no-cache');
