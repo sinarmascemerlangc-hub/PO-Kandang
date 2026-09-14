@@ -1,6 +1,7 @@
 {
   "version": 2,
   "regions": ["sin1"],
+  "buildCommand": "prisma generate && prisma db push",
   "builds": [
     {
       "src": "server.js",

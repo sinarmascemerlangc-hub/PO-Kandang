@@ -3444,17 +3444,19 @@ async function loadWoodGesekPage() {
     fetch(`${API}/api/wood/gesek`, { headers: authHeaders() }).then(r => r.json()).catch(() => []),
   ]);
 
-  woodGesekTargetCache = (poRes.data || []).flatMap(g => g.items.map(i => ({ ...i, poNumber: g.poNumber, customerName: g.customerName })));
-  woodStockCache = stockRes || [];
+  const poGroups = poRes && Array.isArray(poRes.data) ? poRes.data : [];
+  woodGesekTargetCache = poGroups.flatMap(g => (g.items || []).map(i => ({ ...i, poNumber: g.poNumber, customerName: g.customerName })));
+  woodStockCache = Array.isArray(stockRes) ? stockRes : [];
+  const gesekLogs = Array.isArray(logRes) ? logRes : [];
 
-  const gs = poRes.stats || {};
+  const gs = (poRes && poRes.stats) || {};
   const e = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
   e('woodGesekStatRemaining', (gs.totalRemainingNeed ?? 0) + ' pcs');
   e('woodGesekStatReady', (gs.totalReady ?? 0) + ' pcs');
 
-  renderWoodPOProgress(poRes.data || []);
-  renderWoodStock(stockRes || []);
-  renderWoodGesekLogs(logRes || []);
+  renderWoodPOProgress(poGroups);
+  renderWoodStock(woodStockCache);
+  renderWoodGesekLogs(gesekLogs);
 }
 
 function renderWoodPOProgress(groups) {
