@@ -921,9 +921,9 @@
       body { background: white !important; }
     }
   </style>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.2/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.4/j.plugin.autotable.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.4/dist/jspdf.plugin.autotable.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 </head>
 <body>
@@ -2512,6 +2512,7 @@ function excelNoteRow(wsData, note) {
 async function exportAllPO(format) {
   const pos = _reportData.allPO || [];
   if (!pos.length) return showToast('Tidak ada data', 'error');
+  if (format === 'pdf' && !window.jspdf) return showToast('Library PDF belum terload. Muat ulang halaman.', 'error');
   let grandQty = 0, grandKub = 0;
   pos.forEach(p => { grandQty += (p.totalQuantity || 0); grandKub += (p.totalKubikasi || 0); });
   const period = document.getElementById('reportPeriod')?.selectedOptions[0]?.text || 'Semua';
@@ -2621,6 +2622,7 @@ function renderUnsentGrouped(unsent) {
 async function exportUnsentPO(format) {
   const unsent = _reportData.unsentPO || [];
   if (!unsent.length) return showToast('Tidak ada data', 'error');
+  if (format === 'pdf' && !window.jspdf) return showToast('Library PDF belum terload. Muat ulang halaman.', 'error');
   let grandSisaQty = 0, grandSisaKub = 0;
   unsent.forEach(p => {
     grandSisaQty += (p.totalQuantity || 0) - (p.shippedQuantity || 0);
@@ -2744,6 +2746,7 @@ function renderDeliveryFlat(deliveries) {
 async function exportDeliveryReport(format) {
   const deliveries = _reportData.allDeliveries || [];
   if (!deliveries.length) return showToast('Tidak ada data pengiriman', 'error');
+  if (format === 'pdf' && !window.jspdf) return showToast('Library PDF belum terload. Muat ulang halaman.', 'error');
   let grandQty = 0, grandKub = 0;
   deliveries.forEach(d => { (d.items || []).forEach(it => { grandQty += (it.quantity || 0); grandKub += (it.kubikasi || 0); }); });
   const printDate = new Date().toLocaleDateString('id-ID') + ' ' + new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
