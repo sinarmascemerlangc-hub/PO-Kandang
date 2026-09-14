@@ -212,10 +212,10 @@
 
     /* === PROFILE CARD (Dashboard) === */
     .profile-card-dash {
-      background: linear-gradient(135deg, #1e40af 0%, #3b82f6 50%, #60a5fa 100%);
+      background: linear-gradient(135deg, #0f766e 0%, #0d9488 50%, #14b8a6 100%);
       border-radius: 20px; padding: 24px 20px 20px; color: white;
       position: relative; overflow: hidden; margin-bottom: 16px;
-      box-shadow: 0 8px 24px rgba(30,64,175,0.25);
+      box-shadow: 0 8px 24px rgba(13,148,136,0.25);
     }
     .profile-card-dash::before {
       content: ''; position: absolute; width: 180px; height: 180px; border-radius: 50%;
@@ -386,14 +386,19 @@
     .po-card-meta { margin-top: 10px; display: flex; gap: 12px; flex-wrap: wrap; }
     .po-card-meta .meta { font-size: 12px; color: #94a3b8; display: flex; align-items: center; gap: 4px; }
     .po-card-meta .meta strong { color: var(--slate-700); }
-    .po-card-bottom {
-      display: flex; justify-content: space-between; align-items: center;
-      margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--slate-100);
-    }
-    .kubikasi-badge { padding: 4px 12px; border-radius: 8px; font-size: 11px; font-weight: 700; }
-    .kubikasi-badge.total { background: var(--teal-50); color: var(--teal-700); }
-    .kubikasi-badge.sisa { background: #fef3c7; color: #b45309; }
+.po-card-bottom {
+  margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--slate-100);
+}
+.kubikasi-badge { padding: 4px 12px; border-radius: 8px; font-size: 11px; font-weight: 700; }
+.kubikasi-badge.total { background: var(--teal-50); color: var(--teal-700); }
+.kubikasi-badge.sisa { background: #fef3c7; color: #b45309; }
 .kubikasi-badge.lunas { background: #d1fae5; color: #047857; }
+.po-progress-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; }
+.po-progress-pct { font-size:13px; font-weight:800; color:#0d9488; }
+.po-progress-meta { font-size:11px; color:#94a3b8; font-weight:600; }
+.po-progress-track { height:6px; background:#f1f5f9; border-radius:999px; overflow:hidden; }
+.po-progress-fill { height:100%; background:linear-gradient(90deg,#0d9488,#2dd4bf); border-radius:999px; transition:width .5s cubic-bezier(.16,1,.3,1); }
+.po-progress-fill.done { background:linear-gradient(90deg,#059669,#34d399); }
 
     .po-remaining-items { margin-top: 10px; padding: 10px; background: #fef3c7; border-radius: 12px; border: 1px solid #fde68a; }
     .remain-row { display: flex; align-items: center; gap: 6px; padding: 6px 0; border-bottom: 1px solid rgba(253,230,138,0.5); font-size: 11px; }
@@ -407,13 +412,13 @@
     .status-dot.diterima { background: #3b82f6; box-shadow: 0 0 6px rgba(59,130,246,0.4); }
     .status-dot.diproses { background: #f59e0b; box-shadow: 0 0 6px rgba(245,158,11,0.4); }
     .status-dot.dikirim { background: #0d9488; box-shadow: 0 0 6px rgba(13,148,136,0.4); }
-    .status-dot.selesai { background: #8b5cf6; box-shadow: 0 0 6px rgba(139,92,246,0.4); }
+    .status-dot.selesai { background: #10b981; box-shadow: 0 0 6px rgba(16,185,129,0.4); }
     .status-dot.dibatalkan { background: #ef4444; box-shadow: 0 0 6px rgba(239,68,68,0.4); }
     .status-text { font-size: 11px; font-weight: 700; text-transform: capitalize; }
     .status-text.diterima { color: #3b82f6; }
     .status-text.diproses { color: #f59e0b; }
     .status-text.dikirim { color: #0d9488; }
-    .status-text.selesai { color: #8b5cf6; }
+    .status-text.selesai { color: #059669; }
     .status-text.dibatalkan { color: #ef4444; }
 
     /* === DETAIL === */
@@ -569,7 +574,7 @@
 
     /* === DELIVERY CARD === */
     .del-card {
-      background: white; border-radius: 14px; border: 1px solid #e2e8f0;
+      background: white; border-radius: 14px; border: 1px solid #e2e8f0; border-left: 4px solid #0d9488;
       padding: 0; margin-bottom: 14px; transition: all 0.2s;
       box-shadow: 0 1px 3px rgba(0,0,0,0.04); overflow: hidden;
     }
@@ -608,6 +613,12 @@
     }
     .del-card-items-table tr:last-child td { border-bottom: none; }
     .del-card-items-table td:last-child { text-align: right; font-weight: 600; white-space: nowrap; }
+.del-items { display:flex; flex-direction:column; gap:8px; }
+.del-item { display:flex; align-items:center; gap:8px; flex-wrap:wrap; padding:10px 12px; background:#f8fafc; border:1px solid #f1f5f9; border-radius:10px; font-size:12px; }
+.del-item-name { font-weight:700; color:#0f172a; flex:1; min-width:120px; }
+.del-item-size { color:#94a3b8; font-size:11px; white-space:nowrap; }
+.del-item-qty { font-weight:700; color:#334155; white-space:nowrap; }
+.del-item-kub { color:#0d9488; font-weight:700; white-space:nowrap; }
     .del-card-items-table .item-name { font-weight: 600; }
     .del-card-items-table .item-size { color: #94a3b8; font-size: 11px; }
     .del-card-items-table .item-kub { color: #0d9488; font-weight: 700; }
@@ -939,6 +950,16 @@
       .page { display: block !important; animation: none !important; }
       .card, .po-card, .stat-card, .report-card { box-shadow: none !important; border: 1px solid #ddd !important; }
       body { background: white !important; }
+    }
+
+    /* === REDUCED MOTION === */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+      }
     }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
@@ -1645,6 +1666,7 @@ function renderPOCards(pos, containerId, compact) {
     const totalRemKub = remainingItems.reduce((s, ri) => s + ri.remKub, 0);
     const totalRemQty = remainingItems.reduce((s, ri) => s + ri.remaining, 0);
     const isComplete = totalRemQty === 0 && (p.items || []).length > 0;
+    const shipPct = p.totalQuantity > 0 ? Math.min(100, Math.round(((p.totalQuantity - totalRemQty) / p.totalQuantity) * 100)) : 0;
     return `
     <div class="po-card fade-in" style="animation-delay:${i*0.06}s" onclick="viewPO('${p.id}')">
       <span class="status-badge ${p.status}">${p.status}</span>
@@ -1667,10 +1689,11 @@ function renderPOCards(pos, containerId, compact) {
         </div>`).join('')}
       </div>` : ''}
       <div class="po-card-bottom">
-        ${isComplete
-          ? `<span class="kubikasi-badge lunas">✓ Lunas</span>`
-          : `<span class="kubikasi-badge sisa">Sisa ${totalRemQty} pcs • ${totalRemKub.toFixed(4)} m³</span>`
-        }
+        <div class="po-progress-head">
+          <span class="po-progress-pct">${shipPct}%</span>
+          <span class="po-progress-meta">${isComplete ? '✓ Lunas' : `Sisa ${totalRemQty} pcs · ${totalRemKub.toFixed(4)} m³`}</span>
+        </div>
+        <div class="po-progress-track"><div class="po-progress-fill${isComplete ? ' done' : ''}" style="width:${shipPct}%"></div></div>
       </div>
     </div>`;
   }).join('');
@@ -2216,17 +2239,14 @@ async function loadPODeliveries() {
             </div>
           </div>
           <div class="del-card-body">
-            <table class="del-card-items-table">
-              <thead><tr><th>Produk</th><th>Ukuran</th><th>Qty</th><th>KUB</th></tr></thead>
-              <tbody>
-                ${d.items.map(di=>`<tr>
-                  <td><span class="item-name">${di.poItem?.productName||'-'}</span></td>
-                  <td><span class="item-size">${di.poItem?.thickness||''}×${di.poItem?.width||''}×${di.poItem?.length||''}cm</span></td>
-                  <td>${di.quantity} pcs</td>
-                  <td><span class="item-kub">${di.kubikasi?.toFixed(4)} m³</span></td>
-                </tr>`).join('')}
-              </tbody>
-            </table>
+            <div class="del-items">
+              ${d.items.map(di=>`<div class="del-item">
+                <span class="del-item-name">${di.poItem?.productName||'-'}</span>
+                <span class="del-item-size">${di.poItem?.thickness||''}×${di.poItem?.width||''}×${di.poItem?.length||''}cm</span>
+                <span class="del-item-qty">${di.quantity} pcs</span>
+                <span class="del-item-kub">${di.kubikasi?.toFixed(4)} m³</span>
+              </div>`).join('')}
+            </div>
           </div>
           <div class="del-card-footer">
             <div class="del-card-addr">📍 ${d.deliveryAddress||'-'}</div>
