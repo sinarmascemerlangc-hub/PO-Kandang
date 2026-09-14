@@ -31,7 +31,7 @@ router.get('/', auth, async (req, res) => {
     const lim = listParams.length - 1;
     const off = listParams.length;
 
-    const [pos, items] = await Promise.all([
+    const [pos, items, shippedItems] = await Promise.all([
       prisma.$queryRawUnsafe(`
         SELECT p.*, u.name as "userName",
           COALESCE(s.ship_kub, 0)::float as "shippedKubikasi",
@@ -53,6 +53,14 @@ router.get('/', auth, async (req, res) => {
         JOIN "PurchaseOrder" p ON p.id = poi."poId"
         WHERE ${whereClause}
       `, ...searchParams),
+      prisma.$queryRawUnsafe(`
+        SELECT di."poItemId", SUM(di.quantity)::int as "shippedQty", SUM(di.kubikasi)::float as "shippedKub"
+        FROM "DeliveryItem" di
+        JOIN "POItem" poi ON poi.id = di."poItemId"
+        JOIN "PurchaseOrder" p ON p.id = poi."poId"
+        WHERE ${whereClause}
+        GROUP BY di."poItemId"
+      `, ...searchParams),
     ]);
 
     const itemsByPo = {};
@@ -61,9 +69,22 @@ router.get('/', auth, async (req, res) => {
       itemsByPo[i.poId].push(i);
     });
 
+    const shippedMap = {};
+    shippedItems.forEach(si => { shippedMap[si.poItemId] = { shippedQty: si.shippedQty || 0, shippedKub: si.shippedKub || 0 }; });
+
     const enriched = pos.map(po => ({
       ...po,
-      items: itemsByPo[po.id] || [],
+      items: (itemsByPo[po.id] || []).map(item => {
+        const shipped = shippedMap[item.id] || { shippedQty: 0, shippedKub: 0 };
+        const rem = (item.quantity || 0) - shipped.shippedQty;
+        return {
+          ...item,
+          shippedQty: shipped.shippedQty,
+          shippedKub: shipped.shippedKub,
+          remaining: rem > 0 ? rem : 0,
+          remainingKub: rem > 0 ? ((item.kubikasi || 0) / (item.quantity || 1)) * rem : 0,
+        };
+      }),
       user: po.userName ? { name: po.userName } : null,
       remainingKubikasi: (Number(po.totalKubikasi) || 0) - (Number(po.shippedKubikasi) || 0),
       remainingQuantity: (po.totalQuantity || 0) - (po.shippedQuantity || 0),
