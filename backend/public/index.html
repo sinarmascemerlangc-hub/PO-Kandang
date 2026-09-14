@@ -417,29 +417,17 @@
 
     /* === DETAIL === */
     .detail-header {
-      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-      color: white; border-radius: 20px; padding: 24px; margin-bottom: 16px;
-      box-shadow: 0 8px 30px rgba(15,23,42,0.3); position: relative; overflow: hidden;
+      padding: 20px; border-radius: 14px; margin-bottom: 0; position: relative;
+      background: white; border: 1px solid #e2e8f0;
     }
-    .detail-header::before {
-      content: ''; position: absolute; top: -30%; right: -10%; width: 150px; height: 150px;
-      background: rgba(255,255,255,0.08); border-radius: 50%;
-    }
-    .detail-header h2 { font-size: 22px; font-weight: 800; margin-bottom: 6px; letter-spacing: -0.5px; position: relative; }
-    .detail-header p { font-size: 13px; opacity: 0.85; margin-bottom: 3px; position: relative; }
-    .detail-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 16px; position: relative; }
-    .detail-stat { background: rgba(255,255,255,0.12); padding: 12px 8px; border-radius: 12px; text-align: center; backdrop-filter: blur(4px); }
-    .detail-stat .ds-label { font-size: 10px; opacity: 0.8; text-transform: uppercase; font-weight: 600; }
-    .detail-stat .ds-value { font-size: 16px; font-weight: 800; margin-top: 4px; }
-    .detail-actions { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; position: relative; }
-    .detail-actions .btn { background: rgba(255,255,255,0.15); color: white; border: 1px solid rgba(255,255,255,0.25); backdrop-filter: blur(4px); }
-    .detail-actions .btn:active { background: rgba(255,255,255,0.3); }
-    .detail-actions select {
-      padding: 8px 12px; border-radius: var(--radius-xs); font-size: 12px; font-weight: 600;
-      border: 1px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.15); color: white;
-      backdrop-filter: blur(4px); font-family: inherit; cursor: pointer;
-    }
-    .detail-actions select option { color: var(--slate-900); background: white; }
+    .detail-header h2 { font-size: 18px; font-weight: 800; margin-bottom: 4px; letter-spacing: -0.3px; color: #0f172a; }
+    .detail-header p { font-size: 12px; color: #64748b; margin-bottom: 2px; }
+    .detail-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 14px; }
+    .detail-stat { background: #f8fafc; padding: 12px 10px; border-radius: 10px; text-align: center; border: 1px solid #e2e8f0; }
+    .detail-stat .ds-label { font-size: 10px; color: #94a3b8; text-transform: uppercase; font-weight: 700; letter-spacing: 0.3px; }
+    .detail-stat .ds-value { font-size: 15px; font-weight: 800; margin-top: 4px; color: #0f172a; }
+    .detail-stat.sisa .ds-value { color: #0d9488; }
+    .detail-actions { display: flex; gap: 6px; margin-top: 12px; flex-wrap: wrap; }
 
     /* === TABLES (MOBILE) === */
     .mobile-table { width: 100%; }
@@ -1725,91 +1713,145 @@ async function viewPO(id) {
   try {
     const res = await fetch(`${API}/api/po/${id}`, { headers: authHeaders() });
     const po = await res.json();
-    document.getElementById('detailModalTitle').textContent = po.poNumber + ' - ' + po.customerName;
+    document.getElementById('detailModalTitle').textContent = 'PO #' + po.poNumber;
     document.getElementById('page-detail').classList.remove('hidden');
+
+    const statusColors = { diterima:'#3b82f6', diproses:'#f59e0b', dikirim:'#8b5cf6', selesai:'#10b981', dibatalkan:'#ef4444' };
+    const statusColor = statusColors[po.status] || '#64748b';
+
     document.getElementById('detailContent').innerHTML = `
-      <div class="detail-header fade-in">
-        <h2>${po.poNumber}</h2>
-        <p>👤 ${po.customerName}</p>
-        <p>📅 ${new Date(po.orderDate).toLocaleDateString('id-ID')}${po.deadline?' • Deadline: '+new Date(po.deadline).toLocaleDateString('id-ID'):''}</p>
-        <p>📍 ${po.notes || '-'}</p>
-        <div class="detail-stats">
-          <div class="detail-stat"><div class="ds-label">Total</div><div class="ds-value">${po.totalKubikasi?.toFixed(4)||0} m³</div></div>
-          <div class="detail-stat"><div class="ds-label">Terkirim</div><div class="ds-value">${(po.shippedKubikasi||0).toFixed(4)} m³</div></div>
-          <div class="detail-stat"><div class="ds-label">Sisa</div><div class="ds-value">${(po.remainingKubikasi||0).toFixed(4)} m³</div></div>
-        </div>
-        <div class="detail-actions">
-          <button class="btn btn-sm" onclick="editPO('${po.id}')">✏️ Edit</button>
-          <button class="btn btn-sm" onclick="openDeliveryModalForPO('${po.id}')">🚚 Kirim</button>
-          <button class="btn btn-sm" onclick="printPO('${po.id}')">🖨️ Print</button>
-          <select onchange="updatePOStatus('${po.id}',this.value)">
-            <option value="diterima" ${po.status==='diterima'?'selected':''}>Diterima</option>
-            <option value="diproses" ${po.status==='diproses'?'selected':''}>Diproses</option>
-            <option value="dikirim" ${po.status==='dikirim'?'selected':''}>Dikirim</option>
-            <option value="selesai" ${po.status==='selesai'?'selected':''}>Selesai</option>
-            <option value="dibatalkan" ${po.status==='dibatalkan'?'selected':''}>Dibatalkan</option>
-          </select>
-          <button class="btn btn-sm btn-danger-solid" onclick="deletePO('${po.id}')">🗑️ Hapus</button>
-        </div>
-      </div>
-      <div class="card slide-up"><div class="card-header"><h3>🪵 Item PO</h3><button class="btn btn-primary btn-sm" onclick="openItemModal('${po.id}')">+ Item</button></div>
-        <div class="card-body" style="padding:0;overflow-x:auto;">
-          <table class="mobile-table"><thead><tr><th>Produk</th><th>Ukuran</th><th>Qty</th><th>KUB</th><th></th></tr></thead>
-          <tbody>${po.items.map(i=>`<tr>
-            <td><strong>${i.productName}</strong></td>
-            <td style="font-size:11px;color:var(--slate-500);">${i.thickness}×${i.width}×${i.length}cm</td>
-            <td><strong>${i.quantity}</strong> ${i.unit}</td>
-            <td class="kub-val">${i.kubikasi?.toFixed(4)} m³</td>
-            <td style="white-space:nowrap;">
-              <button class="btn btn-secondary btn-sm" onclick="openItemModal('${po.id}','${i.id}')" style="padding:4px 8px;font-size:11px;">Edit</button>
-              <button class="btn btn-danger btn-sm" onclick="deleteItem('${po.id}','${i.id}')" style="padding:4px 8px;font-size:11px;">Hapus</button>
-            </td>
-          </tr>`).join('')}</tbody></table>
-        </div>
-      </div>
-      <div class="card slide-up" style="animation-delay:0.1s"><div class="card-header"><h3>🚚 Riwayat Pengiriman</h3></div>
-        <div class="card-body">
-          ${po.deliveries&&po.deliveries.length>0?po.deliveries.map(d=>{
-            const proofs = d.proofs || (d.proofUrl ? [{ id: null, url: d.proofUrl }] : []);
-            const poNames = (d.deliveryPOs||[]).map(dp => dp.po?.poNumber).filter(Boolean);
-            const totalQty = d.items.reduce((s,di)=>s+di.quantity,0);
-            const totalKub = d.items.reduce((s,di)=>s+(di.kubikasi||0),0);
-            return `
-            <div class="del-card">
-              <div class="del-card-header">
-                <div class="del-card-header-left">
-                  <div class="del-card-driver">${d.driverName||'Tanpa Sopir'}</div>
-                  <div class="del-card-vehicle">🚗 ${d.vehicleNumber||'-'}</div>
-                </div>
-                <div class="del-card-header-right">
-                  ${poNames.length>0?`<div class="del-card-po">📦 ${poNames.join(' • ')}</div>`:''}
-                  <div class="del-card-date">${new Date(d.deliveryDate).toLocaleDateString('id-ID',{day:'2-digit',month:'short',year:'numeric'})}</div>
-                  <div class="del-card-kub">${totalQty} pcs • ${totalKub.toFixed(4)} m³</div>
-                </div>
+      <div style="padding:20px;">
+        <!-- HEADER: PO Number + Status + Actions -->
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;">
+          <div>
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;">
+              <h2 style="font-size:20px;font-weight:800;color:#0f172a;margin:0;letter-spacing:-0.3px;">${po.poNumber}</h2>
+              <span style="display:inline-flex;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:white;background:${statusColor};">${po.status}</span>
+            </div>
+            <p style="font-size:13px;color:#64748b;margin:0;">${po.customerName}</p>
+          </div>
+          <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+            <button class="del-card-btn upload" onclick="openDeliveryModalForPO('${po.id}')">🚚 Kirim</button>
+            <button class="del-card-btn proof" onclick="printPO('${po.id}')">🖨️ Print</button>
+            <button class="del-card-btn edit" onclick="editPO('${po.id}')">✏️ Edit</button>
+            <div style="position:relative;">
+              <button class="del-card-btn" onclick="this.nextElementSibling.classList.toggle('hidden')" style="background:#f1f5f9;color:#64748b;border-color:#e2e8f0;">⋯</button>
+              <div class="hidden" style="position:absolute;right:0;top:100%;background:white;border:1px solid #e2e8f0;border-radius:10px;box-shadow:0 4px 16px rgba(0,0,0,0.1);z-index:20;min-width:160px;padding:6px 0;">
+                <div style="padding:6px 14px;font-size:11px;color:#94a3b8;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;">Status</div>
+                ${['diterima','diproses','dikirim','selesai','dibatalkan'].map(s => `<div onclick="updatePOStatus('${po.id}','${s}');this.closest('.hidden').classList.add('hidden')" style="padding:8px 14px;font-size:12px;cursor:pointer;font-weight:${po.status===s?'700':'500'};color:${po.status===s?'#0d9488':'#475569'};${po.status===s?'background:#f0fdfa;':''}">${s.charAt(0).toUpperCase()+s.slice(1)}</div>`).join('')}
+                <div style="border-top:1px solid #f1f5f9;margin:4px 0;"></div>
+                <div onclick="if(confirm('Hapus PO ini?'))deletePO('${po.id}')" style="padding:8px 14px;font-size:12px;cursor:pointer;font-weight:600;color:#dc2626;">🗑️ Hapus PO</div>
               </div>
-              <div class="del-card-body">
-                <table class="del-card-items-table">
-                  <thead><tr><th>Produk</th><th>Ukuran</th><th>Qty</th><th>KUB</th></tr></thead>
-                  <tbody>
-                    ${d.items.map(di=>`<tr>
-                      <td><span class="item-name">${di.poItem?.productName||'-'}</span></td>
-                      <td><span class="item-size">${di.poItem?.thickness||''}×${di.poItem?.width||''}×${di.poItem?.length||''}cm</span></td>
-                      <td>${di.quantity} pcs</td>
-                      <td><span class="item-kub">${di.kubikasi?.toFixed(4)} m³</span></td>
-                    </tr>`).join('')}
-                  </tbody>
-                </table>
+            </div>
+            <button onclick="closeDetail()" style="width:32px;height:32px;border-radius:8px;border:1px solid #e2e8f0;background:white;color:#64748b;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;">&times;</button>
+          </div>
+        </div>
+
+        <!-- INFO: Supplier + Volume Stats -->
+        <div style="display:grid;grid-template-columns:1fr auto;gap:16px;margin-bottom:16px;">
+          <div style="background:#f8fafc;border-radius:12px;padding:14px 16px;border:1px solid #e2e8f0;">
+            <div style="font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">Informasi Supplier</div>
+            <div style="display:flex;flex-direction:column;gap:6px;">
+              <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:#475569;">
+                <span>👤</span><span style="font-weight:600;">${po.customerName}</span>
               </div>
-              <div class="del-card-footer">
-                <div class="del-card-addr">📍 ${d.deliveryAddress||'-'}</div>
-                <div class="del-card-actions">
-                  ${proofs.map(p => `<button onclick="openProofPreview('${p.url}')" class="del-card-btn proof">📷</button>`).join('')}
-                  <button class="del-card-btn upload" onclick="openProofModal('${d.id}')">+ Bukti</button>
-                  <button class="del-card-btn edit" onclick="editDeliveryFromDetail('${d.id}','${po.id}')">✏️</button>
+              <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:#64748b;">
+                <span>📅</span><span>Tanggal: ${new Date(po.orderDate).toLocaleDateString('id-ID',{day:'2-digit',month:'short',year:'numeric'})}${po.deadline?' • Deadline: '+new Date(po.deadline).toLocaleDateString('id-ID',{day:'2-digit',month:'short',year:'numeric'}):''}</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:#64748b;">
+                <span>📍</span><span>${po.notes||'-'}</span>
+              </div>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <div style="background:#f8fafc;border-radius:10px;padding:12px 16px;border:1px solid #e2e8f0;text-align:center;min-width:110px;">
+              <div style="font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;">Total</div>
+              <div style="font-size:16px;font-weight:800;color:#0f172a;margin-top:2px;">${po.totalKubikasi?.toFixed(4)||0} m³</div>
+            </div>
+            <div style="background:#f8fafc;border-radius:10px;padding:12px 16px;border:1px solid #e2e8f0;text-align:center;min-width:110px;">
+              <div style="font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;">Terkirim</div>
+              <div style="font-size:16px;font-weight:800;color:#8b5cf6;margin-top:2px;">${(po.shippedKubikasi||0).toFixed(4)} m³</div>
+            </div>
+            <div style="background:#f0fdfa;border-radius:10px;padding:12px 16px;border:1px solid rgba(13,148,136,0.15);text-align:center;min-width:110px;">
+              <div style="font-size:10px;font-weight:700;color:#0d9488;text-transform:uppercase;">Sisa</div>
+              <div style="font-size:16px;font-weight:800;color:#0d9488;margin-top:2px;">${(po.remainingKubikasi||0).toFixed(4)} m³</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ITEM PO TABLE -->
+        <div style="background:white;border-radius:14px;border:1px solid #e2e8f0;overflow:hidden;margin-bottom:16px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-bottom:1px solid #e2e8f0;">
+            <div style="font-size:14px;font-weight:700;color:#0f172a;">🪵 Item PO</div>
+            <button class="del-card-btn upload" onclick="openItemModal('${po.id}')" style="font-size:11px;">+ Item</button>
+          </div>
+          <div style="overflow-x:auto;">
+            <table class="del-card-items-table" style="padding:0 16px;">
+              <thead><tr><th style="padding-left:0;">Produk</th><th>Ukuran</th><th>Qty</th><th>KUB</th><th style="width:60px;"></th></tr></thead>
+              <tbody>
+                ${po.items.map(i=>`<tr>
+                  <td style="padding-left:0;"><span class="item-name">${i.productName}</span></td>
+                  <td><span class="item-size">${i.thickness}×${i.width}×${i.length}cm</span></td>
+                  <td><strong>${i.quantity}</strong> ${i.unit}</td>
+                  <td><span class="item-kub">${i.kubikasi?.toFixed(4)} m³</span></td>
+                  <td style="text-align:right;">
+                    <span onclick="openItemModal('${po.id}','${i.id}')" style="cursor:pointer;font-size:13px;margin-right:8px;" title="Edit">✏️</span>
+                    <span onclick="deleteItem('${po.id}','${i.id}')" style="cursor:pointer;font-size:13px;" title="Hapus">🗑️</span>
+                  </td>
+                </tr>`).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- RIWAYAT PENGIRIMAN -->
+        <div style="background:white;border-radius:14px;border:1px solid #e2e8f0;overflow:hidden;">
+          <div style="padding:14px 16px;border-bottom:1px solid #e2e8f0;">
+            <div style="font-size:14px;font-weight:700;color:#0f172a;">🚚 Riwayat Pengiriman</div>
+          </div>
+          <div style="padding:16px;">
+            ${po.deliveries&&po.deliveries.length>0?po.deliveries.map(d=>{
+              const proofs = d.proofs || (d.proofUrl ? [{ id: null, url: d.proofUrl }] : []);
+              const poNames = (d.deliveryPOs||[]).map(dp => dp.po?.poNumber).filter(Boolean);
+              const totalQty = d.items.reduce((s,di)=>s+di.quantity,0);
+              const totalKub = d.items.reduce((s,di)=>s+(di.kubikasi||0),0);
+              return `
+              <div class="del-card">
+                <div class="del-card-header">
+                  <div class="del-card-header-left">
+                    <div class="del-card-driver">${d.driverName||'Tanpa Sopir'}</div>
+                    <div class="del-card-vehicle">🚗 ${d.vehicleNumber||'-'}</div>
+                  </div>
+                  <div class="del-card-header-right">
+                    ${poNames.length>0?`<div class="del-card-po">📦 ${poNames.join(' • ')}</div>`:''}
+                    <div class="del-card-date">${new Date(d.deliveryDate).toLocaleDateString('id-ID',{day:'2-digit',month:'short',year:'numeric'})}</div>
+                    <div class="del-card-kub">${totalQty} pcs • ${totalKub.toFixed(4)} m³</div>
+                  </div>
                 </div>
-              </div>
-            </div>`;
-          }).join(''):'<div class="empty-state"><span class="empty-icon">📭</span><p>Belum ada pengiriman</p></div>'}
+                <div class="del-card-body">
+                  <table class="del-card-items-table">
+                    <thead><tr><th>Produk</th><th>Ukuran</th><th>Qty</th><th>KUB</th></tr></thead>
+                    <tbody>
+                      ${d.items.map(di=>`<tr>
+                        <td><span class="item-name">${di.poItem?.productName||'-'}</span></td>
+                        <td><span class="item-size">${di.poItem?.thickness||''}×${di.poItem?.width||''}×${di.poItem?.length||''}cm</span></td>
+                        <td>${di.quantity} pcs</td>
+                        <td><span class="item-kub">${di.kubikasi?.toFixed(4)} m³</span></td>
+                      </tr>`).join('')}
+                    </tbody>
+                  </table>
+                </div>
+                <div class="del-card-footer">
+                  <div class="del-card-addr">📍 ${d.deliveryAddress||'-'}</div>
+                  <div class="del-card-actions">
+                    ${proofs.map(p => `<button onclick="openProofPreview('${p.url}')" class="del-card-btn proof">📷</button>`).join('')}
+                    <button class="del-card-btn upload" onclick="openProofModal('${d.id}')">+ Bukti</button>
+                    <button class="del-card-btn edit" onclick="editDeliveryFromDetail('${d.id}','${po.id}')">✏️</button>
+                  </div>
+                </div>
+              </div>`;
+            }).join(''):'<div class="empty-state"><span class="empty-icon">📭</span><p>Belum ada pengiriman</p></div>'}
+          </div>
         </div>
       </div>
     `;
