@@ -57,6 +57,7 @@ router.post('/', auth, async (req, res) => {
           vehicleNumber: vehicleNumber || '',
           deliveryAddress: deliveryAddress || '',
           notes: notes || '',
+          poId: allPoIds[0] || null,
         },
       });
 
@@ -103,6 +104,44 @@ router.post('/', auth, async (req, res) => {
 
     res.status(201).json(delivery);
   } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// GET /api/deliveries - List all deliveries
+router.get('/', auth, async (req, res) => {
+  try {
+    const { limit = 50, page = 1 } = req.query;
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const take = parseInt(limit);
+
+    const deliveries = await prisma.$queryRawUnsafe(`
+      SELECT d.*, 
+        (SELECT array_agg(DISTINCT p."poNumber") FROM "DeliveryPO" dpo JOIN "PurchaseOrder" p ON p.id = dpo."poId" WHERE dpo."deliveryId" = d.id) as "poNumbers"
+      FROM "Delivery" d
+      ORDER BY d."deliveryDate" DESC
+      LIMIT $1 OFFSET $2
+    `, take, skip);
+
+    const items = await prisma.$queryRawUnsafe(`
+      SELECT di.*, poi."productName", poi.thickness, poi.width, poi.length
+      FROM "DeliveryItem" di
+      JOIN "POItem" poi ON poi.id = di."poItemId"
+    `);
+
+    const enriched = deliveries.map(d => ({
+      ...d,
+      poNumbers: d.poNumbers || [],
+      items: items.filter(i => i.deliveryId === d.id).map(i => ({
+        id: i.id, deliveryId: i.deliveryId, poItemId: i.poItemId,
+        quantity: i.quantity, kubikasi: i.kubikasi, notes: i.notes,
+        poItem: { productName: i.productName, thickness: i.thickness, width: i.width, length: i.length },
+      })),
+    }));
+
+    res.json(enriched);
+  } catch (error) {
+    console.error('Deliveries list error:', error);
     res.status(500).json({ error: error.message });
   }
 });

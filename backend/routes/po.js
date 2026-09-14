@@ -123,13 +123,59 @@ router.get('/:id', auth, async (req, res) => {
   try {
     const po = await prisma.purchaseOrder.findUnique({
       where: { id: req.params.id },
-      include: { items: true, deliveries: { include: { items: { include: { poItem: true } }, proofs: true, deliveryPOs: { include: { po: true } } } }, user: { select: { name: true } } },
+      include: { items: true, user: { select: { name: true } } },
     });
     if (!po) return res.status(404).json({ error: 'PO tidak ditemukan' });
 
+    // Fetch deliveries via DeliveryPO junction table
+    const deliveryRows = await prisma.$queryRawUnsafe(`
+      SELECT DISTINCT d.*
+      FROM "Delivery" d
+      JOIN "DeliveryPO" dp ON dp."deliveryId" = d.id
+      WHERE dp."poId" = $1
+      ORDER BY d."deliveryDate" DESC
+    `, po.id);
+
+    const deliveryItems = await prisma.$queryRawUnsafe(`
+      SELECT di.*, poi."productName", poi.thickness, poi.width, poi.length
+      FROM "DeliveryItem" di
+      JOIN "POItem" poi ON poi.id = di."poItemId"
+      JOIN "DeliveryPO" dp ON dp."deliveryId" = di."deliveryId"
+      WHERE dp."poId" = $1
+    `, po.id);
+
+    const proofs = await prisma.$queryRawUnsafe(`
+      SELECT dp2.*
+      FROM "DeliveryProof" dp2
+      JOIN "DeliveryPO" dpo ON dpo."deliveryId" = dp2."deliveryId"
+      WHERE dpo."poId" = $1
+    `, po.id);
+
+    const deliveryPOs = await prisma.$queryRawUnsafe(`
+      SELECT dpo.*, p."poNumber"
+      FROM "DeliveryPO" dpo
+      JOIN "PurchaseOrder" p ON p.id = dpo."poId"
+      WHERE dpo."deliveryId" IN (SELECT "deliveryId" FROM "DeliveryPO" WHERE "poId" = $1)
+    `, po.id);
+
+    // Assemble deliveries with items, proofs, deliveryPOs
+    const deliveries = deliveryRows.map(d => ({
+      ...d,
+      items: deliveryItems.filter(di => di.deliveryId === d.id).map(di => ({
+        id: di.id, deliveryId: di.deliveryId, poItemId: di.poItemId,
+        quantity: di.quantity, kubikasi: di.kubikasi, notes: di.notes,
+        poItem: { id: di.poItemId, productName: di.productName, thickness: di.thickness, width: di.width, length: di.length },
+      })),
+      proofs: proofs.filter(p => p.deliveryId === d.id),
+      deliveryPOs: deliveryPOs.filter(dp => dp.deliveryId === d.id).map(dp => ({
+        poId: dp.poId,
+        po: { id: dp.poId, poNumber: dp.poNumber },
+      })),
+    }));
+
     let shippedKubikasi = 0;
     let shippedQuantity = 0;
-    po.deliveries.forEach((d) => {
+    deliveries.forEach((d) => {
       d.items.forEach((di) => {
         shippedKubikasi += di.kubikasi;
         shippedQuantity += di.quantity;
@@ -138,13 +184,15 @@ router.get('/:id', auth, async (req, res) => {
 
     res.json({
       ...po,
+      deliveries,
       shippedKubikasi,
       shippedQuantity,
       remainingKubikasi: po.totalKubikasi - shippedKubikasi,
       remainingQuantity: po.totalQuantity - shippedQuantity,
     });
   } catch (error) {
-    res.status(500).json({ error: 'Gagal mengambil data' });
+    console.error('PO detail error:', error);
+    res.status(500).json({ error: 'Gagal mengambil data: ' + error.message });
   }
 });
 
