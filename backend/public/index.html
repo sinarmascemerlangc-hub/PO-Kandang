@@ -1219,21 +1219,34 @@
     .wood-chip { display: inline-flex; align-items: center; gap: 4px; background: #f1f5f9; border-radius: 8px; padding: 2px 8px; font-size: 11px; font-weight: 600; color: #475569; white-space: nowrap; }
 
     /* Chip bukti (surat jalan/faktur) di kartu Kayu Masuk */
-    .wood-proof-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+    .wood-proof-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
     .wood-proof-chip { max-width: 100%; min-width: 0; }
     .wood-proof-chip .wp-name {
       display: inline-block; max-width: 210px; overflow: hidden;
       text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom;
     }
-    .wood-proof-x {
-      width: 20px; height: 20px; padding: 0; border: none; border-radius: 50%;
-      background: #ef4444; color: #fff; font-size: 12px; line-height: 1; cursor: pointer;
-      display: inline-flex; align-items: center; justify-content: center;
-      box-shadow: 0 1px 3px rgba(239, 68, 68, .45);
+    .wood-proof-del {
+      display: inline-flex; align-items: center; gap: 4px;
+      height: 26px; padding: 0 10px; border-radius: 8px; cursor: pointer;
+      background: #fff; border: 1px solid rgba(239, 68, 68, .28); color: #ef4444;
+      font-family: inherit; font-size: 11px; font-weight: 700; transition: all .15s;
     }
-    .wood-proof-x:active { transform: scale(0.92); }
+    .wood-proof-del:hover { background: #fef2f2; border-color: #ef4444; }
+    .wood-proof-del:active { transform: scale(0.96); }
     .wood-intake-footer { display: flex; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
     .wood-intake-footer .del-card-btn { flex: 0 0 auto; }
+    /* Header halaman: judul sebaris dengan tombol aksi */
+    .wood-page-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
+    .wood-page-head .section-title { margin: 0 !important; }
+    /* Nomor di tabel rata kanan & angka selalu lebar sama (presisi) */
+    .wood-stock-table { font-variant-numeric: tabular-nums; }
+    .wood-stock-table th:not(:first-child), .wood-stock-table td:not(:first-child) { text-align: right; }
+    /* Metadata kartu (tanggal/supplier/kendaraan) jadi chip kecil yang rapi */
+    .wood-intake-meta span {
+      display: inline-flex; align-items: center; gap: 4px;
+      background: #f8fafc; border: 1px solid var(--slate-100); border-radius: 7px;
+      padding: 2px 7px; font-size: 11px; font-weight: 600; color: #475569; white-space: nowrap;
+    }
 
     .wood-po-card { background: white; border: 1px solid var(--slate-100); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 12px; }
     .wood-po-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
@@ -1243,11 +1256,21 @@
     .wood-po-row:last-child { border-bottom: none; }
     .wood-po-row .w-name { flex: 1; font-weight: 700; color: #334155; min-width: 0; }
     .wood-po-row .w-size { color: #94a3b8; font-size: 11px; white-space: nowrap; }
-    .wood-po-meters { display: flex; gap: 10px; color: #64748b; font-size: 11px; font-weight: 600; white-space: nowrap; }
+    .wood-po-meters { display: flex; gap: 8px; color: #64748b; font-size: 11px; font-weight: 700; white-space: nowrap; }
+    .wood-po-meters span { display: inline-block; min-width: 44px; text-align: right; font-variant-numeric: tabular-nums; }
     .wood-po-meters .needed { color: #0284c7; }
     .wood-po-meters .shipped { color: #8b5cf6; }
     .wood-po-meters .ready { color: #059669; }
     .wood-po-meters .miss { color: #d97706; }
+    /* Legenda warna angka "Kebutuhan per PO" */
+    .wood-po-legend { display: flex; flex-wrap: wrap; gap: 6px 14px; padding: 0 4px 10px; font-size: 11px; font-weight: 700; }
+    .wood-po-legend span { display: inline-flex; align-items: center; gap: 5px; color: #64748b; }
+    .wood-po-legend i { font-style: normal; font-size: 13px; line-height: 1; }
+    .wood-po-legend .needed i, .wood-po-legend .needed b { color: #0284c7; }
+    .wood-po-legend .shipped i, .wood-po-legend .shipped b { color: #8b5cf6; }
+    .wood-po-legend .ready i, .wood-po-legend .ready b { color: #059669; }
+    .wood-po-legend .miss i, .wood-po-legend .miss b { color: #d97706; }
+    .wood-po-legend b { color: #475569; font-weight: 700; }
     .wood-progress-track { height: 6px; background: #eef2f7; border-radius: 99px; overflow: hidden; margin-top: 8px; }
     .wood-progress-fill { height: 100%; background: linear-gradient(90deg, #0d9488, #14b8a6); border-radius: 99px; transition: width 0.4s; }
     .wood-progress-fill.done { background: #059669; }
@@ -2059,8 +2082,8 @@
 
     <!-- KAYU MASUK -->
     <div id="page-wood-intake" class="page">
-      <div class="section-title" style="margin-bottom:8px;">🪵 Kayu Masuk</div>
-      <div style="padding:0 4px 14px;">
+      <div class="wood-page-head">
+        <div class="section-title">🪵 Kayu Masuk</div>
         <button class="btn btn-primary btn-sm" onclick="openWoodIntakeModal()">+ Kayu Masuk</button>
       </div>
       <div class="wood-stats-row">
@@ -2078,8 +2101,8 @@
 
     <!-- GESEK KAYU -->
     <div id="page-wood-gesek" class="page">
-      <div class="section-title" style="margin-bottom:8px;">⚒️ Gesek Kayu</div>
-      <div style="padding:0 4px 14px;">
+      <div class="wood-page-head">
+        <div class="section-title">⚒️ Gesek Kayu</div>
         <button class="btn btn-primary btn-sm" onclick="openGesekModal()">+ Gesek Kayu</button>
       </div>
       <div class="wood-stats-row">
@@ -2088,6 +2111,12 @@
         <div class="wood-stat-card"><div class="wood-stat-value" id="woodGesekStatReady">-</div><div class="wood-stat-label">Stok Gesek</div></div>
       </div>
       <div class="wood-section-title">📋 Kebutuhan per PO</div>
+      <div class="wood-po-legend">
+        <span class="needed"><i>●</i> <b>Dibutuhkan</b></span>
+        <span class="shipped"><i>●</i> <b>Terkirim</b></span>
+        <span class="ready"><i>●</i> <b>Digesek</b></span>
+        <span class="miss"><i>●</i> <b>Perlu digesek</b></span>
+      </div>
       <div id="woodPOProgress"></div>
       <div class="wood-section-title">🪵 Stok Kayu Sisa</div>
       <div id="woodStockList"></div>
@@ -2442,12 +2471,25 @@ function showConfirm(title, message, type='danger') {
       <h3>${title}</h3>
       <p>${message}</p>
       <div class="confirm-actions">
-        <button class="btn-cancel" onclick="this.closest('.confirm-overlay').remove()">Batal</button>
-        <button class="btn-confirm ${type}" onclick="this.closest('.confirm-overlay').remove();window._confirmResolve(true)">Ya, Lanjut</button>
+        <button class="btn-cancel" type="button">Batal</button>
+        <button class="btn-confirm ${type}" type="button">Ya, Lanjut</button>
       </div>
     </div>`;
+    let selesai = false;
+    const tutup = (val) => {
+      if (selesai) return;
+      selesai = true;
+      document.removeEventListener('keydown', onEsc);
+      ov.remove();
+      resolve(val);
+    };
+    const onEsc = (e) => { if (e.key === 'Escape') tutup(false); };
+    ov.addEventListener('click', (e) => { if (e.target === ov) tutup(false); }); // klik luar kotak = batal
+    ov.querySelector('.btn-cancel').addEventListener('click', () => tutup(false));
+    ov.querySelector('.btn-confirm').addEventListener('click', () => tutup(true));
     document.body.appendChild(ov);
-    window._confirmResolve = resolve;
+    document.addEventListener('keydown', onEsc);
+    ov.querySelector('.btn-cancel').focus(); // fokus ke Batal supaya Enter tidak menghapus
   });
 }
 
@@ -2807,7 +2849,7 @@ async function viewPO(id) {
                 <div class="po-d-menu-label">Ubah Status</div>
                 ${['diterima','diproses','dikirim','dikirim sebagian','selesai','dibatalkan'].map(s => `<div class="po-d-menu-item ${po.status===s?'is-active':''}" onclick="updatePOStatus('${po.id}','${s}');this.closest('.po-d-menu').classList.add('hidden')">${s.charAt(0).toUpperCase()+s.slice(1)}</div>`).join('')}
                 <div class="po-d-menu-sep"></div>
-                <div class="po-d-menu-item is-danger" onclick="if(confirm('Hapus PO ini?'))deletePO('${po.id}')">🗑️ Hapus PO</div>
+                <div class="po-d-menu-item is-danger" onclick="showConfirm('Hapus PO?','Data PO beserta seluruh itemnya akan dihapus.').then(ok=>{ if(ok) deletePO('${po.id}'); })">🗑️ Hapus PO</div>
               </div>
             </div>
           </div>
@@ -2909,7 +2951,7 @@ async function viewPO(id) {
                 <div class="del-card-footer">
                   <div class="del-card-addr">📍 ${d.deliveryAddress||'-'}</div>
                   <div class="del-card-actions">
-                    ${proofs.map(p => `<button onclick="openProofPreview('${p.url}','${p.id}','${d.id}')" class="del-card-btn proof">📷</button>`).join('')}
+                    ${proofs.map(p => `<button onclick="openProofPreview('${p.url}','${p.id}','${d.id}','delivery')" class="del-card-btn proof">📷</button>`).join('')}
                     <button class="del-card-btn upload" onclick="openProofModal('${d.id}')">+ Bukti</button>
                     <button class="del-card-btn edit" onclick="editDeliveryFromDetail('${d.id}','${po.id}')">✏️</button>
                   </div>
@@ -3149,27 +3191,35 @@ function openProofModal(id, type) {
 function closeProofModal() { document.getElementById('proofModal').classList.add('hidden'); }
 
 let _currentProofId = null;
-let _currentProofDeliveryId = null;
+let _currentProofTargetId = null;   // id delivery ATAU id intake kayu masuk
+let _currentProofType = 'delivery';
 
-function openProofPreview(url, proofId, deliveryId) {
+function openProofPreview(url, proofId, targetId, type = 'delivery') {
   const proxyUrl = API + '/api/deliveries/proxy-image?url=' + encodeURIComponent(url);
   document.getElementById('proofPreviewImg').src = proxyUrl;
   _currentProofId = proofId || null;
-  _currentProofDeliveryId = deliveryId || null;
+  _currentProofTargetId = targetId || null;
+  _currentProofType = (type === 'intake') ? 'intake' : 'delivery';
   const delBtn = document.getElementById('proofDeleteBtn');
-  delBtn.style.display = (proofId && deliveryId) ? 'inline-block' : 'none';
+  delBtn.style.display = (proofId && targetId) ? 'inline-flex' : 'none';
+  delBtn.textContent = '🗑️ Hapus';
   document.getElementById('proofPreviewModal').classList.remove('hidden');
 }
 function closeProofPreview() { document.getElementById('proofPreviewModal').classList.add('hidden'); }
 
 async function deleteDeliveryProof() {
-  if (!_currentProofId || !_currentProofDeliveryId) return;
-  if (!confirm('Hapus bukti surat jalan ini?')) return;
+  if (!_currentProofId || !_currentProofTargetId) return;
+  const ok = await showConfirm('Hapus Bukti?', 'Bukti ini akan dihapus permanen dan tidak bisa dikembalikan.');
+  if (!ok) return;
+  const base = _currentProofType === 'intake'
+    ? `${API}/api/wood/intake/${_currentProofTargetId}`
+    : `${API}/api/deliveries/${_currentProofTargetId}`;
   try {
-    const res = await fetch(API + '/api/deliveries/' + _currentProofDeliveryId + '/proof/' + _currentProofId, { method: 'DELETE', headers: authHeaders() });
-    if (!res.ok) { const e = await res.json(); throw new Error(e.error); }
+    const res = await fetch(`${base}/proof/${_currentProofId}`, { method: 'DELETE', headers: authHeaders() });
+    if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || 'Gagal menghapus'); }
     closeProofPreview();
     showToast('Bukti berhasil dihapus', 'success');
+    if (_currentProofType === 'intake') { loadWoodIntakes(); return; }
     loadDeliveries();
     const detailPage = document.getElementById('page-detail');
     if (!detailPage.classList.contains('hidden')) {
@@ -3481,7 +3531,7 @@ function renderDeliveriesList(deliveries, hasHeaderInfo = false, extraHtml = '',
           <div class="del-card-footer">
             <div class="del-card-addr">📍 ${d.deliveryAddress||'-'}</div>
             <div class="del-card-actions">
-              ${proofs.map(p => `<button onclick="openProofPreview('${p.url}','${p.id}','${d.id}')" class="del-card-btn proof">📷</button>`).join('')}
+              ${proofs.map(p => `<button onclick="openProofPreview('${p.url}','${p.id}','${d.id}','delivery')" class="del-card-btn proof">📷</button>`).join('')}
               <button class="del-card-btn upload" onclick="openProofModal('${d.id}')">+ Bukti</button>
               <button class="del-card-btn edit" onclick="editDelivery('${d.id}')">✏️</button>
               <button class="del-card-btn delete" onclick="deleteDelivery('${d.id}')">🗑️</button>
@@ -4605,8 +4655,8 @@ function renderWoodIntakes(intakes) {
         <div style="font-size:11px;font-weight:700;color:#64748b;margin-bottom:6px;">📄 Surat Jalan / Faktur</div>
         <div class="wood-proof-row">
           ${it.proofs.map(p => `
-            <button onclick="openProofPreview('${p.url}','${p.id}','${it.id}')" class="del-card-btn proof wood-proof-chip" title="${p.fileName ? escHtml(p.fileName) : 'Lihat bukti'}">📄 <span class="wp-name">${p.fileName ? escHtml(p.fileName) : 'Lihat bukti'}</span></button>
-            <button class="wood-proof-x" onclick="deleteIntakeProof('${it.id}','${p.id}')" title="Hapus bukti ini">&times;</button>`).join('')}
+            <button onclick="openProofPreview('${p.url}','${p.id}','${it.id}','intake')" class="del-card-btn proof wood-proof-chip" title="${p.fileName ? escHtml(p.fileName) : 'Lihat bukti'}">📄 <span class="wp-name">${p.fileName ? escHtml(p.fileName) : 'Lihat bukti'}</span></button>
+            <button class="wood-proof-del" onclick="deleteIntakeProof('${it.id}','${p.id}')" title="Hapus bukti ini">🗑 Hapus</button>`).join('')}
         </div>
       </div>` : ''}
       <div class="wood-intake-footer" style="padding:10px 16px;border-top:1px solid #f8fafc;">
