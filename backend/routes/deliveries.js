@@ -74,7 +74,7 @@ router.post('/', auth, async (req, res) => {
 
       const deliveryItems = items.map((i) => {
         const poItem = poItemMap[i.poItemId];
-        const kubPerPcs = poItem.quantity > 0 ? poItem.kubikasi / poItem.quantity : 0;
+        const kubPerPcs = poItem.kubikasi / poItem.quantity;
         return {
           deliveryId: newDelivery.id,
           poItemId: i.poItemId,
@@ -171,11 +171,21 @@ router.get('/', auth, async (req, res) => {
       LIMIT $1 OFFSET $2
     `, take, skip);
 
-    const items = await prisma.$queryRawUnsafe(`
-      SELECT di.*, poi."productName", poi.thickness, poi.width, poi.length
-      FROM "DeliveryItem" di
-      JOIN "POItem" poi ON poi.id = di."poItemId"
-    `);
+    if (deliveries.length === 0) return res.json([]);
+
+    // Scope items & proofs ke pengiriman yang benar-benar dirender
+    // (sebelumnya menarik SELURUH tabel lalu difilter di JS)
+    const dIds = deliveries.map(d => d.id);
+
+    const [items, allProofs] = await Promise.all([
+      prisma.$queryRawUnsafe(`
+        SELECT di.*, poi."productName", poi.thickness, poi.width, poi.length
+        FROM "DeliveryItem" di
+        JOIN "POItem" poi ON poi.id = di."poItemId"
+        WHERE di."deliveryId" = ANY($1)
+      `, dIds),
+      prisma.deliveryProof.findMany({ where: { deliveryId: { in: dIds } } }),
+    ]);
 
     const enriched = deliveries.map(d => ({
       ...d,
@@ -185,6 +195,7 @@ router.get('/', auth, async (req, res) => {
         quantity: i.quantity, kubikasi: i.kubikasi, notes: i.notes,
         poItem: { productName: i.productName, thickness: i.thickness, width: i.width, length: i.length },
       })),
+      proofs: allProofs.filter(p => p.deliveryId === d.id),
     }));
 
     res.json(enriched);
@@ -237,7 +248,7 @@ router.put('/:id', auth, async (req, res) => {
 
         const deliveryItems = items.map((i) => {
           const poItem = poItemMap[i.poItemId];
-          const kubPerPcs = poItem.quantity > 0 ? poItem.kubikasi / poItem.quantity : 0;
+          const kubPerPcs = poItem.kubikasi / poItem.quantity;
           return {
             deliveryId: req.params.id,
             poItemId: i.poItemId,
@@ -285,8 +296,8 @@ router.get('/po/:poId', auth, async (req, res) => {
         SELECT di.*, poi."productName", poi.thickness, poi.width, poi.length
         FROM "DeliveryItem" di
         JOIN "POItem" poi ON poi.id = di."poItemId"
-        WHERE di."deliveryId" = ANY($1)
-      `, dIds),
+        WHERE di."deliveryId" = ANY($1) AND poi."poId" = $2
+      `, dIds, poId),
       prisma.$queryRawUnsafe(`SELECT * FROM "DeliveryProof" WHERE "deliveryId" = ANY($1)`, dIds),
       prisma.$queryRawUnsafe(`
         SELECT dlp.*, po."poNumber" FROM "DeliveryPO" dlp
@@ -368,17 +379,25 @@ router.post('/:id/proof', auth, async (req, res) => {
 
     const poNumbers = delivery.deliveryPOs.map(dp => dp.po.poNumber).join(', ') || 'N/A';
 
-    const response = await fetch(googleScriptUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        image: image.replace(/^data:image\/\w+;base64,/, ''),
-        mimeType: 'image/jpeg',
-        deliveryId: delivery.id,
-        poNumber: poNumbers,
-        customerName: '',
-      }),
-    });
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 50000);
+    let response;
+    try {
+      response = await fetch(googleScriptUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          image: image.replace(/^data:image\/\w+;base64,/, ''),
+          mimeType: 'image/jpeg',
+          deliveryId: delivery.id,
+          poNumber: poNumbers,
+          customerName: '',
+        }),
+        signal: ctrl.signal,
+      });
+    } finally {
+      clearTimeout(timer);
+    }
 
     const result = await response.json();
     if (result.error) throw new Error(result.error);

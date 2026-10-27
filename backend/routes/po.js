@@ -72,23 +72,36 @@ router.get('/', auth, async (req, res) => {
     const shippedMap = {};
     shippedItems.forEach(si => { shippedMap[si.poItemId] = { shippedQty: si.shippedQty || 0, shippedKub: si.shippedKub || 0 }; });
 
-    const enriched = pos.map(po => ({
-      ...po,
-      items: (itemsByPo[po.id] || []).map(item => {
-        const shipped = shippedMap[item.id] || { shippedQty: 0, shippedKub: 0 };
-        const rem = (item.quantity || 0) - shipped.shippedQty;
-        return {
-          ...item,
-          shippedQty: shipped.shippedQty,
-          shippedKub: shipped.shippedKub,
-          remaining: rem > 0 ? rem : 0,
-          remainingKub: rem > 0 ? ((item.kubikasi || 0) / (item.quantity || 1)) * rem : 0,
-        };
-      }),
-      user: po.userName ? { name: po.userName } : null,
-      remainingKubikasi: (Number(po.totalKubikasi) || 0) - (Number(po.shippedKubikasi) || 0),
-      remainingQuantity: (po.totalQuantity || 0) - (po.shippedQuantity || 0),
-    }));
+    const enriched = pos.map(po => {
+      const shippedQty = Number(po.shippedQuantity) || 0;
+      const totalQ = Number(po.totalQuantity) || 0;
+      let status = po.status;
+      if (status !== 'selesai' && status !== 'dibatalkan') {
+        if (shippedQty > 0 && shippedQty < totalQ) {
+          status = 'dikirim sebagian';
+        } else if (shippedQty >= totalQ && totalQ > 0 && status === 'diproses') {
+          status = 'dikirim';
+        }
+      }
+      return {
+        ...po,
+        status,
+        items: (itemsByPo[po.id] || []).map(item => {
+          const shipped = shippedMap[item.id] || { shippedQty: 0, shippedKub: 0 };
+          const rem = (item.quantity || 0) - shipped.shippedQty;
+          return {
+            ...item,
+            shippedQty: shipped.shippedQty,
+            shippedKub: shipped.shippedKub,
+            remaining: rem > 0 ? rem : 0,
+            remainingKub: rem > 0 ? ((item.kubikasi || 0) / (item.quantity || 1)) * rem : 0,
+          };
+        }),
+        user: po.userName ? { name: po.userName } : null,
+        remainingKubikasi: (Number(po.totalKubikasi) || 0) - (Number(po.shippedKubikasi) || 0),
+        remainingQuantity: (po.totalQuantity || 0) - (po.shippedQuantity || 0),
+      };
+    });
 
     res.json({
       data: enriched,
@@ -159,6 +172,73 @@ router.get('/report-items', auth, async (req, res) => {
   }
 });
 
+// GET /api/po/remaining-by-size - Sisa PO per Customer & Ukuran (belum terkirim)
+router.get('/remaining-by-size', auth, async (req, res) => {
+  try {
+    const rows = await prisma.$queryRawUnsafe(`
+      SELECT
+        p."customerName",
+        poi."productName",
+        poi.thickness,
+        poi.width,
+        poi.length,
+        poi.id as "poItemId",
+        p."poNumber",
+        poi.quantity as "orderQty",
+        COALESCE(ds.shipped_qty, 0)::int as "shippedQty"
+      FROM "POItem" poi
+      JOIN "PurchaseOrder" p ON p.id = poi."poId"
+      LEFT JOIN (
+        SELECT di."poItemId", SUM(di.quantity)::int as shipped_qty
+        FROM "DeliveryItem" di
+        GROUP BY di."poItemId"
+      ) ds ON ds."poItemId" = poi.id
+      WHERE p.status != 'dibatalkan'
+      ORDER BY p."customerName", poi.thickness, poi.width, poi.length
+    `);
+
+    const result = [];
+    const customerMap = {};
+
+    rows.forEach(r => {
+      const sisaQty = (r.orderQty || 0) - (r.shippedQty || 0);
+      if (sisaQty <= 0) return;
+
+      const kubPerUnit = (r.thickness / 100) * (r.width / 100) * (r.length / 100);
+      const sisaKub = kubPerUnit * sisaQty;
+      const sizeKey = `${r.thickness}×${r.width}×${r.length}`;
+
+      if (!customerMap[r.customerName]) {
+        customerMap[r.customerName] = { customerName: r.customerName, sizes: {} };
+      }
+      if (!customerMap[r.customerName].sizes[sizeKey]) {
+        customerMap[r.customerName].sizes[sizeKey] = {
+          thickness: r.thickness, width: r.width, length: r.length,
+          productName: r.productName, pos: [], totalSisaQty: 0, totalSisaKub: 0,
+        };
+      }
+
+      const sizeGroup = customerMap[r.customerName].sizes[sizeKey];
+      sizeGroup.pos.push({
+        poNumber: r.poNumber, sisaQty, sisaKub,
+      });
+      sizeGroup.totalSisaQty += sisaQty;
+      sizeGroup.totalSisaKub += sisaKub;
+    });
+
+    Object.values(customerMap).forEach(c => {
+      c.sizes = Object.values(c.sizes).sort((a, b) => (a.thickness - b.thickness) || (a.width - b.width) || (a.length - b.length));
+      c.totalSisaQty = c.sizes.reduce((s, sz) => s + sz.totalSisaQty, 0);
+      c.totalSisaKub = c.sizes.reduce((s, sz) => s + sz.totalSisaKub, 0);
+    });
+
+    res.json(Object.values(customerMap).sort((a, b) => a.customerName.localeCompare(b.customerName)));
+  } catch (error) {
+    console.error('Remaining by size error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // GET /api/po/stats - Dashboard statistics (single raw query)
 router.get('/stats', auth, async (req, res) => {
   try {
@@ -222,7 +302,7 @@ router.get('/:id', auth, async (req, res) => {
       FROM "DeliveryItem" di
       JOIN "POItem" poi ON poi.id = di."poItemId"
       JOIN "DeliveryPO" dp ON dp."deliveryId" = di."deliveryId"
-      WHERE dp."poId" = $1
+      WHERE dp."poId" = $1 AND poi."poId" = $1
     `, po.id);
 
     const proofs = await prisma.$queryRawUnsafe(`
@@ -263,8 +343,18 @@ router.get('/:id', auth, async (req, res) => {
       });
     });
 
+    let status = po.status;
+    if (status !== 'selesai' && status !== 'dibatalkan') {
+      if (shippedQuantity > 0 && shippedQuantity < po.totalQuantity) {
+        status = 'dikirim sebagian';
+      } else if (shippedQuantity >= po.totalQuantity && po.totalQuantity > 0 && status === 'diproses') {
+        status = 'dikirim';
+      }
+    }
+
     res.json({
       ...po,
+      status,
       deliveries,
       shippedKubikasi,
       shippedQuantity,
@@ -407,9 +497,9 @@ router.put('/:id/status', auth, async (req, res) => {
 // DELETE /api/po/:id - Delete PO
 router.delete('/:id', auth, async (req, res) => {
   try {
-    const po = await prisma.purchaseOrder.findUnique({ where: { id: req.params.id }, include: { _count: { select: { deliveries: true } } } });
+    const po = await prisma.purchaseOrder.findUnique({ where: { id: req.params.id } });
     if (!po) return res.status(404).json({ error: 'PO tidak ditemukan' });
-    if (po._count.deliveries > 0) return res.status(400).json({ error: 'PO memiliki data pengiriman, tidak bisa dihapus. Batalkan statusnya saja.' });
+    await prisma.poItem.deleteMany({ where: { poId: req.params.id } });
     await prisma.purchaseOrder.delete({ where: { id: req.params.id } });
     res.json({ message: 'PO berhasil dihapus' });
   } catch (error) {
@@ -458,16 +548,16 @@ router.put('/:poId/items/:itemId', auth, async (req, res) => {
     const existing = await prisma.pOItem.findUnique({ where: { id: req.params.itemId } });
     if (!existing) return res.status(404).json({ error: 'Item tidak ditemukan' });
 
-    const kubikasi = calcKubikasi(thickness ?? existing.thickness, width ?? existing.width, length ?? existing.length) * (quantity ?? existing.quantity);
+    const kubikasi = calcKubikasi(thickness || existing.thickness, width || existing.width, length || existing.length) * (quantity || existing.quantity);
     const item = await prisma.pOItem.update({
       where: { id: req.params.itemId },
       data: {
-        productName: productName ?? existing.productName,
+        productName: productName || existing.productName,
         thickness: thickness ?? existing.thickness,
         width: width ?? existing.width,
         length: length ?? existing.length,
         quantity: quantity ?? existing.quantity,
-        unit: unit ?? existing.unit,
+        unit: unit || existing.unit,
         kubikasi,
         notes: notes ?? existing.notes,
       },

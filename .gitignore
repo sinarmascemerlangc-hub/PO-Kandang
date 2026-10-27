@@ -1,6 +1,9 @@
 node_modules/
 .env
+.env.vercel
 uploads/
 .vercel/
 *.log
+*.old-local-backup
+push-wood-tables.js
 .DS_Store

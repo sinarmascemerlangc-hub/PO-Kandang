@@ -1,7 +1,6 @@
 {
   "version": 2,
   "regions": ["sin1"],
-  "installCommand": "npm install && npx prisma generate && npx prisma db push",
   "builds": [
     {
       "src": "server.js",

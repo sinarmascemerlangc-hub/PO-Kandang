@@ -11,6 +11,9 @@ const auth = async (req, res, next) => {
     req.user = user;
     next();
   } catch (error) {
+    if (error.name === 'TokenExpiredError') {
+      return res.status(401).json({ error: 'Sesi berakhir, silakan login ulang' });
+    }
     res.status(401).json({ error: 'Token tidak valid' });
   }
 };

@@ -1,4 +1,5 @@
 const express = require('express');
+const cors = require('cors');
 const compression = require('compression');
 const path = require('path');
 const prisma = require('./config/database');
@@ -8,27 +9,12 @@ const app = express();
 const PORT = process.env.PORT || 5001;
 
 app.use(compression());
-app.use((req, res, next) => {
-  const origin = req.headers.origin;
-  const allowed = (process.env.CORS_ORIGINS || '').split(',').map(s => s.trim()).filter(Boolean);
-  let sameOrigin = false;
-  if (origin && req.headers.host) {
-    try { sameOrigin = new URL(origin).host === req.headers.host; } catch (e) { sameOrigin = false; }
-  }
-  if (!origin || sameOrigin || allowed.includes(origin)) {
-    res.setHeader('Access-Control-Allow-Origin', origin || '*');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-    if (req.method === 'OPTIONS') return res.sendStatus(204);
-    return next();
-  }
-  return res.status(403).json({ error: 'Origin tidak diizinkan' });
-});
+app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
 app.use(express.static(path.join(__dirname, 'public'), {
-  maxAge: '1h',
+  maxAge: 0,
   etag: true,
   lastModified: true,
 }));
@@ -73,12 +59,33 @@ app.get('/api/dashboard', authMiddleware, async (req, res) => {
       FROM "DeliveryItem"
     `);
 
-    const recentPOs = await prisma.$queryRawUnsafe(`
+    const recentPOsRaw = await prisma.$queryRawUnsafe(`
       SELECT p.id, p."poNumber", p."customerName", p."orderDate", p.status,
-        p."totalKubikasi", p."totalQuantity"
+        p."totalKubikasi", p."totalQuantity",
+        COALESCE(s.ship_qty, 0)::int as "shippedQuantity"
       FROM "PurchaseOrder" p
+      LEFT JOIN (
+        SELECT poi."poId", SUM(di.quantity)::int as ship_qty
+        FROM "DeliveryItem" di
+        JOIN "POItem" poi ON poi.id = di."poItemId"
+        GROUP BY poi."poId"
+      ) s ON s."poId" = p.id
       ORDER BY p."createdAt" DESC LIMIT 5
     `);
+
+    const recentPOs = recentPOsRaw.map(p => {
+      let status = p.status;
+      const shippedQ = Number(p.shippedQuantity) || 0;
+      const totalQ = Number(p.totalQuantity) || 0;
+      if (status !== 'selesai' && status !== 'dibatalkan') {
+        if (shippedQ > 0 && shippedQ < totalQ) {
+          status = 'dikirim sebagian';
+        } else if (shippedQ >= totalQ && totalQ > 0 && status === 'diproses') {
+          status = 'dikirim';
+        }
+      }
+      return { ...p, status };
+    });
 
     const todayStart = new Date(); todayStart.setHours(0,0,0,0);
     const todayDeliveries = await prisma.$queryRawUnsafe(`
