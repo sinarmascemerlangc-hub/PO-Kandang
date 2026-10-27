@@ -1218,6 +1218,23 @@
     .wood-stock-table .w-del { color: #f43f5e; font-weight: 800; white-space: nowrap; }
     .wood-chip { display: inline-flex; align-items: center; gap: 4px; background: #f1f5f9; border-radius: 8px; padding: 2px 8px; font-size: 11px; font-weight: 600; color: #475569; white-space: nowrap; }
 
+    /* Chip bukti (surat jalan/faktur) di kartu Kayu Masuk */
+    .wood-proof-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+    .wood-proof-chip { max-width: 100%; min-width: 0; }
+    .wood-proof-chip .wp-name {
+      display: inline-block; max-width: 210px; overflow: hidden;
+      text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom;
+    }
+    .wood-proof-x {
+      width: 20px; height: 20px; padding: 0; border: none; border-radius: 50%;
+      background: #ef4444; color: #fff; font-size: 12px; line-height: 1; cursor: pointer;
+      display: inline-flex; align-items: center; justify-content: center;
+      box-shadow: 0 1px 3px rgba(239, 68, 68, .45);
+    }
+    .wood-proof-x:active { transform: scale(0.92); }
+    .wood-intake-footer { display: flex; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
+    .wood-intake-footer .del-card-btn { flex: 0 0 auto; }
+
     .wood-po-card { background: white; border: 1px solid var(--slate-100); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 12px; }
     .wood-po-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
     .wood-po-num { font-size: 14px; font-weight: 800; color: #0f172a; }
@@ -1552,7 +1569,8 @@
       min-height: 32px; padding: 6px 11px; border-radius: 9px;
       font-size: 11.5px; font-weight: 700; border-color: var(--line);
     }
-    .del-card-btn.proof { width: 34px; padding: 6px 0; justify-content: center; }
+    /* Hanya chip ikon 📷 di kartu pengiriman yang dibuat 34px — kartu lain (Kayu Masuk dst) tetap lebar penuh */
+    .del-card-actions .del-card-btn.proof { width: 34px; padding: 6px 0; justify-content: center; }
     .del-card-btn.upload { background: var(--brand-50); color: var(--brand-700); border-color: var(--brand-100); }
 
     /* === KARTU PENGIRIMAN RINGKAS (detail disembunyikan sampai diklik) === */
@@ -4498,7 +4516,10 @@ async function loadWoodStats() {
     if (res.ok) {
       const fill = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
       fill('woodStatTotalIn', s.totalIn.toFixed(2) + ' m³');
-      fill('woodStatRemaining', s.remainingQty + ' pcs · ' + s.remainingKubikasi.toFixed(2) + ' m³');
+      fill('woodStatRemaining', s.remainingQty + ' pcs');
+      const remEl = document.getElementById('woodStatRemaining');
+      if (remEl) remEl.insertAdjacentHTML('beforeend',
+        `<span style="display:block;font-size:11px;font-weight:700;color:#94a3b8;margin-top:1px;">${s.remainingKubikasi.toFixed(2)} m³</span>`);
       fill('woodStatGesek', s.gesekQty + ' pcs');
       fill('woodGesekStatStock', s.remainingQty + ' pcs');
       fill('woodGesekStatReady', s.gesekQty + ' pcs');
@@ -4516,6 +4537,7 @@ async function loadWoodIntakes() {
     renderWoodIntakes((data.data || []).filter(i =>
       !search || (i.intakeNumber + ' ' + (i.supplier || '') + ' ' + (i.vehicleNumber || '')).toLowerCase().includes(search.toLowerCase())
     ));
+    loadWoodStats(); // dipanggil di sini supaya statistik tetap terisi walau hanya 1 halaman
     const p = data.pagination;
     const el = document.getElementById('woodIntakePagination');
     if (!p || p.totalPages <= 1) { el.innerHTML = ''; return; }
@@ -4581,14 +4603,13 @@ function renderWoodIntakes(intakes) {
       </div>` : ''}
       ${(it.proofs && it.proofs.length > 0) ? `<div style="padding:10px 16px;border-top:1px solid #f8fafc;">
         <div style="font-size:11px;font-weight:700;color:#64748b;margin-bottom:6px;">📄 Surat Jalan / Faktur</div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;">
-          ${it.proofs.map(p => `<div style="position:relative;display:inline-block;">
-            <button onclick="openProofPreview('${p.url}','${p.id}','${it.id}')" class="del-card-btn proof" style="padding:4px 10px;font-size:11px;">📷 ${p.fileName ? escHtml(p.fileName.slice(0,15)) : 'Lihat'}</button>
-            <button onclick="deleteIntakeProof('${it.id}','${p.id}')" style="position:absolute;top:-4px;right:-4px;width:18px;height:18px;border-radius:50%;background:#ef4444;color:#fff;border:none;font-size:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;">×</button>
-          </div>`).join('')}
+        <div class="wood-proof-row">
+          ${it.proofs.map(p => `
+            <button onclick="openProofPreview('${p.url}','${p.id}','${it.id}')" class="del-card-btn proof wood-proof-chip" title="${p.fileName ? escHtml(p.fileName) : 'Lihat bukti'}">📄 <span class="wp-name">${p.fileName ? escHtml(p.fileName) : 'Lihat bukti'}</span></button>
+            <button class="wood-proof-x" onclick="deleteIntakeProof('${it.id}','${p.id}')" title="Hapus bukti ini">&times;</button>`).join('')}
         </div>
       </div>` : ''}
-      <div style="padding:10px 16px;border-top:1px solid #f8fafc;display:flex;justify-content:flex-end;gap:8px;">
+      <div class="wood-intake-footer" style="padding:10px 16px;border-top:1px solid #f8fafc;">
         <button class="del-card-btn proof" style="padding:4px 10px;font-size:11px;" onclick="openProofModal('${it.id}','intake')">📄 Upload Surat Jalan</button>
         <button class="del-card-btn upload" style="padding:4px 10px;font-size:11px;" onclick="editWoodIntake('${it.id}')">✏️ Edit</button>
         <button class="del-card-btn delete" onclick="deleteWoodIntake('${it.id}')">🗑️ Hapus</button>
