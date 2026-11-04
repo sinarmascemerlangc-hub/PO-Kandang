@@ -3848,182 +3848,336 @@ function renderAllPOGrouped(pos) {
   document.getElementById('reportAllContent').innerHTML = html;
 }
 
-/* === SHARED REPORT BRANDING (PDF & EXCEL) === */
-const REPORT_BRAND = 'PO KANDANG';
-const REPORT_TAGLINE = 'Sistem Manajemen PO Kayu';
-const RC = {
-  teal: [13, 148, 136], tealDark: [15, 118, 110], ink: [30, 41, 59],
-  muted: [100, 116, 139], line: [226, 232, 240], soft2: [241, 245, 249],
-  white: [255, 255, 255]
-};
-const EX = {
-  teal: '0F766E', tealDark: '115E59', ink: '1E293B', muted: '64748B',
-  line: 'E2E8F0', soft: 'F8FAFC', soft2: 'F1F5F9', white: 'FFFFFF'
+/* === SHARED REPORT STYLE (PDF & EXCEL) — tabel klasik bergaris === */
+const RPT = {
+  line: [70, 70, 70],
+  head: [217, 217, 217],
+  padX: 1.6,
+  padY: 1.2,
+  gap: 2.8,
+  lineW: 0.12,
+  groupW: 0.3
 };
 
-function reportStamp() {
-  return new Date().toLocaleString('id-ID', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-}
+function rptDate() { return new Date().toLocaleDateString('id-ID'); }
 function fmtInt(n) { return (Number(n) || 0).toLocaleString('id-ID'); }
-function fmt4(n) { return (Number(n) || 0).toFixed(4); }
-function pdfTint(cell, color) {
-  if (cell && typeof cell === 'object') {
-    cell.styles = Object.assign({}, cell.styles, { fillColor: color });
-    return cell;
-  }
-  return { content: cell, styles: { fillColor: color } };
-}
+function fmt4(n) { return (Number(n) || 0).toLocaleString('id-ID', { minimumFractionDigits: 4, maximumFractionDigits: 4 }); }
 
-function pdfReportHeader(doc, title, subtitle, stats) {
+/* Judul laporan: di tengah, huruf kapital, + baris periode */
+function pdfRptHeader(doc, title, subtitle) {
   const pageW = doc.internal.pageSize.getWidth();
-  const mL = 10, mR = 10, rX = pageW - mR;
-  // Pita identitas laporan
-  doc.setFillColor(RC.tealDark[0], RC.tealDark[1], RC.tealDark[2]);
-  doc.rect(0, 0, pageW, 17, 'F');
-  doc.setFont('helvetica', 'bold'); doc.setFontSize(14); doc.setTextColor(255, 255, 255);
-  doc.text(REPORT_BRAND, mL, 8);
-  doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(209, 250, 229);
-  doc.text(REPORT_TAGLINE, mL, 13);
-  doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(255, 255, 255);
-  doc.text('LAPORAN', rX, 8, { align: 'right' });
-  if (subtitle) {
-    doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(209, 250, 229);
-    const periodLabel = subtitle.split('·')[0].replace(/^Periode:\s*/i, '').trim();
-    doc.text(periodLabel, rX, 13, { align: 'right' });
-  }
-  // Judul laporan
-  doc.setTextColor(RC.ink[0], RC.ink[1], RC.ink[2]);
-  doc.setFont('helvetica', 'bold'); doc.setFontSize(14);
-  doc.text(title, mL, 26);
-  doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(RC.muted[0], RC.muted[1], RC.muted[2]);
-  if (subtitle) doc.text(subtitle, mL, 31);
-
-  let y = 35;
-  if (stats && stats.length) {
-    const gap = 3, boxH = 14;
-    const w = (pageW - mL - mR - gap * (stats.length - 1)) / stats.length;
-    stats.forEach((s, i) => {
-      const x = mL + i * (w + gap);
-      doc.setFillColor(RC.soft2[0], RC.soft2[1], RC.soft2[2]);
-      doc.setDrawColor(RC.line[0], RC.line[1], RC.line[2]); doc.setLineWidth(0.2);
-      doc.roundedRect(x, y, w, boxH, 2, 2, 'FD');
-      const col = s.color || RC.tealDark;
-      doc.setFont('helvetica', 'bold'); doc.setFontSize(6.5); doc.setTextColor(RC.muted[0], RC.muted[1], RC.muted[2]);
-      doc.text(String(s.label).toUpperCase(), x + 3, y + 5);
-      doc.setFontSize(10.5); doc.setTextColor(col[0], col[1], col[2]);
-      doc.text(String(s.value), x + 3, y + 11.2);
-    });
-    y += boxH + 5;
-  }
-  return y;
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(11.5); doc.setTextColor(0, 0, 0);
+  doc.text(String(title).toUpperCase(), pageW / 2, 13, { align: 'center' });
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5);
+  doc.text(subtitle, pageW / 2, 18.5, { align: 'center' });
+  return 24;
 }
 
-// Header kecil di halaman ke-2 dan seterusnya
-function pdfPageChrome(doc, title) {
-  return function () {
-    const info = doc.internal.getCurrentPageInfo();
-    if (!info || info.pageNumber <= 1) return;
-    const pageW = doc.internal.pageSize.getWidth();
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5); doc.setTextColor(RC.tealDark[0], RC.tealDark[1], RC.tealDark[2]);
-    doc.text(REPORT_BRAND, 10, 6);
-    doc.setFont('helvetica', 'normal'); doc.setTextColor(RC.muted[0], RC.muted[1], RC.muted[2]);
-    doc.text(title, pageW - 10, 6, { align: 'right' });
-    doc.setDrawColor(RC.line[0], RC.line[1], RC.line[2]); doc.setLineWidth(0.2);
-    doc.line(10, 7.5, pageW - 10, 7.5);
-  };
-}
-
-// Footer semua halaman: identitas + nomor halaman
-function pdfReportFooter(doc, title) {
+function pdfRptFooter(doc, title) {
   const pageW = doc.internal.pageSize.getWidth();
   const pageH = doc.internal.pageSize.getHeight();
   const total = doc.internal.getNumberOfPages();
   for (let i = 1; i <= total; i++) {
     doc.setPage(i);
-    doc.setDrawColor(RC.line[0], RC.line[1], RC.line[2]); doc.setLineWidth(0.2);
-    doc.line(10, pageH - 9, pageW - 10, pageH - 9);
-    doc.setFont('helvetica', 'normal'); doc.setFontSize(6.8); doc.setTextColor(RC.muted[0], RC.muted[1], RC.muted[2]);
-    doc.text(`${REPORT_BRAND} · ${title}`, 10, pageH - 5);
-    doc.text(`Halaman ${i} dari ${total}`, pageW - 10, pageH - 5, { align: 'right' });
+    doc.setDrawColor(150, 150, 150); doc.setLineWidth(0.15);
+    doc.line(9, pageH - 9, pageW - 9, pageH - 9);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(7); doc.setTextColor(90, 90, 90);
+    doc.text(`PO KANDANG · ${title}`, 9, pageH - 5.5);
+    doc.text(`Halaman ${i} dari ${total}`, pageW - 9, pageH - 5.5, { align: 'right' });
   }
 }
 
-/* --- Excel builder ber-style (xlsx-js-style) --- */
-function excelNewReport({ title, period, summary, headers, widths }) {
-  const rows = [], meta = [];
-  rows.push([REPORT_BRAND]); meta.push({ kind: 'brand' });
-  rows.push([title]); meta.push({ kind: 'title' });
-  rows.push([`Periode: ${period}   ·   Dicetak: ${reportStamp()}`]); meta.push({ kind: 'subtitle' });
-  rows.push([summary]); meta.push({ kind: 'summary' });
-  rows.push([]); meta.push({ kind: 'spacer' });
-  rows.push(headers.slice()); meta.push({ kind: 'head' });
-  return { rows, meta, headers, widths };
+/* Tabel bergaris: tiap grup (PO) digambar sebagai kotak terpisah,
+   kolom yang ada di cfg.groups[].merge digabung vertikal. */
+function pdfRptTable(doc, cfg) {
+  const pageW = doc.internal.pageSize.getWidth();
+  const pageH = doc.internal.pageSize.getHeight();
+  const mL = cfg.marginL, mR = cfg.marginR;
+  const bottom = pageH - 13;
+  const size = cfg.fontSize || 7.4;
+  const lh = size * 0.3528 * 1.18;
+  const padX = RPT.padX, padY = RPT.padY;
+  const cols = cfg.cols;
+  const xs = [];
+  let cx = mL;
+  cols.forEach(c => { xs.push(cx); cx += c.w; });
+  const tableW = cx - mL;
+  let y = cfg.startY;
+
+  function setFont(c, forceBold) {
+    doc.setFont('helvetica', (forceBold || c.bold) ? 'bold' : 'normal');
+    doc.setFontSize(c.size || size);
+    doc.setTextColor(0, 0, 0);
+  }
+  function lines(v, c) {
+    return doc.splitTextToSize(String(v == null ? '' : v), c.w - padX * 2);
+  }
+  function textX(c, i) {
+    if (c.align === 'center') return xs[i] + c.w / 2;
+    if (c.align === 'right') return xs[i] + c.w - padX;
+    return xs[i] + padX;
+  }
+  function textOpt(c) {
+    if (c.align === 'center') return { align: 'center' };
+    if (c.align === 'right') return { align: 'right' };
+    return {};
+  }
+  function baselineY(centerY, n) {
+    return centerY - ((n - 1) * lh) / 2 + size * 0.3528 * 0.34;
+  }
+
+  function headHeight() {
+    let n = 1;
+    cols.forEach((c, i) => { const l = lines(c.title, c).length; if (l > n) n = l; });
+    return Math.max(size * 0.3528 + padY * 2, n * lh + padY * 2);
+  }
+
+  function drawHead() {
+    const hh = headHeight();
+    doc.setDrawColor(RPT.line[0], RPT.line[1], RPT.line[2]);
+    doc.setLineWidth(RPT.lineW);
+    cols.forEach((c, i) => {
+      doc.setFillColor(RPT.head[0], RPT.head[1], RPT.head[2]);
+      doc.rect(xs[i], y, c.w, hh, 'F');
+      doc.setDrawColor(RPT.line[0], RPT.line[1], RPT.line[2]);
+      doc.setLineWidth(RPT.lineW);
+      doc.rect(xs[i], y, c.w, hh, 'S');
+      setFont(c, true);
+      const ls = lines(c.title, c);
+      doc.text(ls, xs[i] + c.w / 2, baselineY(y + hh / 2, ls.length), { align: 'center' });
+    });
+    y += hh;
+  }
+
+  function rowHeight(row) {
+    let n = 1;
+    cols.forEach((c, i) => {
+      const l = lines(row[i], c).length;
+      if (l > n) n = l;
+    });
+    return Math.max(size * 0.3528 + padY * 2, n * lh + padY * 2);
+  }
+
+  function drawChunk(rows, heights, mergeCols, isFirst, labelRow) {
+    const totalH = heights.reduce((a, b) => a + b, 0);
+    const top = y;
+    doc.setDrawColor(RPT.line[0], RPT.line[1], RPT.line[2]);
+    doc.setLineWidth(RPT.lineW);
+
+    mergeCols.forEach(ci => {
+      const c = cols[ci];
+      if (!c) return;
+      doc.rect(xs[ci], top, c.w, totalH, 'S');
+      let v = isFirst ? rows[0][ci] : ((labelRow && labelRow[ci]) || rows[0][ci]);
+      if (!isFirst && v) v = `${v} (lanj.)`;
+      if (v == null || v === '') return;
+      setFont(c);
+      const ls = lines(v, c);
+      doc.text(ls, textX(c, ci), baselineY(top + totalH / 2, ls.length), textOpt(c));
+    });
+
+    let ry = top;
+    rows.forEach((row, ri) => {
+      const h = heights[ri];
+      cols.forEach((c, ci) => {
+        if (mergeCols.indexOf(ci) >= 0) return;
+        doc.rect(xs[ci], ry, c.w, h, 'S');
+        const v = row[ci];
+        if (v == null || v === '') return;
+        setFont(c);
+        const ls = lines(v, c);
+        doc.text(ls, textX(c, ci), baselineY(ry + h / 2, ls.length), textOpt(c));
+      });
+      ry += h;
+    });
+
+    doc.setDrawColor(RPT.line[0], RPT.line[1], RPT.line[2]);
+    doc.setLineWidth(RPT.groupW);
+    doc.rect(mL, top, tableW, totalH, 'S');
+    doc.setLineWidth(RPT.lineW);
+    y = top + totalH;
+  }
+
+  function drawGroup(g) {
+    const mergeCols = g.merge || [];
+    const heights = g.rows.map(rowHeight);
+    const labelRow = g.rows[0] || [];
+    let idx = 0, first = true;
+    while (idx < g.rows.length) {
+      let take = 0, hsum = 0;
+      while (idx + take < g.rows.length && hsum + heights[idx + take] <= bottom - y) {
+        hsum += heights[idx + take]; take++;
+      }
+      if (take === 0) {
+        doc.addPage();
+        y = 14;
+        drawHead();
+        while (idx + take < g.rows.length && hsum + heights[idx + take] <= bottom - y) {
+          hsum += heights[idx + take]; take++;
+        }
+        if (take === 0) { take = 1; hsum = heights[idx]; }
+      }
+      drawChunk(g.rows.slice(idx, idx + take), heights.slice(idx, idx + take), mergeCols, first, labelRow);
+      idx += take;
+      first = false;
+      if (idx < g.rows.length) { doc.addPage(); y = 14; drawHead(); }
+    }
+    y += RPT.gap;
+  }
+
+  function drawTotal(label, values, mergeTo) {
+    const h = size * 0.3528 + padY * 2 + 0.6;
+    if (y + h > bottom) { doc.addPage(); y = 14; drawHead(); }
+    const to = mergeTo || 1;
+    const labelW = xs[to] - mL;
+    doc.setFillColor(RPT.head[0], RPT.head[1], RPT.head[2]);
+    doc.rect(mL, y, labelW, h, 'F');
+    doc.setDrawColor(RPT.line[0], RPT.line[1], RPT.line[2]);
+    doc.setLineWidth(RPT.groupW);
+    doc.rect(mL, y, labelW, h, 'S');
+    setFont({ bold: true }, true);
+    doc.text(label, xs[to] - padX, baselineY(y + h / 2, 1), { align: 'right' });
+    for (let ci = to; ci < cols.length; ci++) {
+      doc.setFillColor(RPT.head[0], RPT.head[1], RPT.head[2]);
+      doc.rect(xs[ci], y, cols[ci].w, h, 'F');
+      doc.setDrawColor(RPT.line[0], RPT.line[1], RPT.line[2]);
+      doc.setLineWidth(ci === to ? RPT.groupW : RPT.lineW);
+      doc.rect(xs[ci], y, cols[ci].w, h, 'S');
+      const v = values[ci];
+      if (v == null || v === '') continue;
+      setFont({ bold: true }, true);
+      doc.text(String(v), xs[ci] + cols[ci].w - padX, baselineY(y + h / 2, 1), { align: 'right' });
+    }
+    y += h;
+  }
+
+  drawHead();
+  (cfg.groups || []).forEach(drawGroup);
+  if (cfg.total) drawTotal(cfg.total.label, cfg.total.values || {}, cfg.total.mergeTo);
+  return y;
 }
-function excelRow(rep, cells, kind, extra) {
-  rep.rows.push(cells);
-  rep.meta.push(Object.assign({ kind: kind || 'data' }, extra || {}));
-}
-function excelWrite(rep, { sheetName, fileName, intCols = [], decCols = [] }) {
-  const nCols = rep.headers.length;
-  const ws = XLSX.utils.aoa_to_sheet(rep.rows);
-  ws['!ref'] = XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: Math.max(rep.rows.length - 1, 0), c: nCols - 1 } });
-  const merges = [];
-  const box = (color, style = 'thin') => ({
+
+/* === EXCEL: tabel klasik bergaris (xlsx-js-style) === */
+function excelRpt(cfg) {
+  const nCols = cfg.headers.length;
+  const rows = [], meta = [], merges = [];
+  const add = (cells, m) => { rows.push(cells); meta.push(m || { kind: 'data' }); return rows.length - 1; };
+
+  add([String(cfg.title).toUpperCase()], { kind: 'title' });
+  merges.push({ s: { r: 0, c: 0 }, e: { r: 0, c: nCols - 1 } });
+  add([cfg.subtitle], { kind: 'subtitle' });
+  merges.push({ s: { r: 1, c: 0 }, e: { r: 1, c: nCols - 1 } });
+  add([], { kind: 'spacer' });
+  add(cfg.headers.slice(), { kind: 'head' });
+
+  const groups = (cfg.groups || []).filter(g => g && g.rows && g.rows.length);
+  const widths = cfg.widths || [];
+  const mergeColsCfg = cfg.mergeCols || [];
+  const estLines = (v, w) => {
+    const s = String(v == null ? '' : v);
+    if (!s) return 1;
+    return Math.max(1, Math.ceil(s.length / Math.max(4, (w || 20) * 1.05)));
+  };
+  groups.forEach((g, gi) => {
+    const start = rows.length;
+    let mergeNeed = 18;
+    mergeColsCfg.forEach(ci => {
+      mergeNeed = Math.max(mergeNeed, estLines(g.rows[0][ci], widths[ci]) * 13 + 6);
+    });
+    const baseH = Math.max(18, Math.ceil(mergeNeed / g.rows.length));
+    g.rows.forEach(r => {
+      let h = baseH;
+      r.forEach((v, ci) => {
+        if (mergeColsCfg.indexOf(ci) >= 0) return;
+        h = Math.max(h, estLines(v, widths[ci]) * 13 + 6);
+      });
+      add(r, { kind: 'data', hpt: h });
+    });
+    const end = rows.length - 1;
+    (cfg.mergeCols || []).forEach(ci => {
+      if (end > start) merges.push({ s: { r: start, c: ci }, e: { r: end, c: ci } });
+    });
+    if (gi < groups.length - 1) add([], { kind: 'spacer' });
+  });
+
+  if (cfg.total) {
+    const vals = cfg.total.values || {};
+    const r = rows.length;
+    const line = [cfg.total.label];
+    for (let c = 1; c < nCols; c++) line.push(vals[c] != null ? vals[c] : '');
+    add(line, { kind: 'total' });
+    const to = cfg.total.mergeTo || 1;
+    if (to > 1) merges.push({ s: { r, c: 0 }, e: { r, c: to - 1 } });
+  }
+  if (cfg.note) {
+    add([], { kind: 'spacer' });
+    const nr = add([cfg.note], { kind: 'note' });
+    if (nCols > 1) merges.push({ s: { r: nr, c: 0 }, e: { r: nr, c: nCols - 1 } });
+  }
+
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  ws['!ref'] = XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: Math.max(rows.length - 1, 0), c: nCols - 1 } });
+  const LINE = '404040';
+  const box = (color, style) => ({
     top: { style, color: { rgb: color } }, bottom: { style, color: { rgb: color } },
     left: { style, color: { rgb: color } }, right: { style, color: { rgb: color } }
   });
-  rep.meta.forEach((m, r) => {
-    if (['brand', 'title', 'subtitle', 'summary', 'spacer', 'note'].includes(m.kind) && nCols > 1) {
-      merges.push({ s: { r, c: 0 }, e: { r, c: nCols - 1 } });
-    }
-    if ((m.kind === 'subtotal' || m.kind === 'total') && (m.labelCols || 1) > 1) {
-      merges.push({ s: { r, c: 0 }, e: { r, c: (m.labelCols || 1) - 1 } });
-    }
+  const aligns = cfg.aligns || [];
+  const boldCols = cfg.boldCols || [];
+  const intCols = cfg.intCols || [];
+  const decCols = cfg.decCols || [];
+  const mergeTo = cfg.total ? (cfg.total.mergeTo || 1) : 0;
+
+  meta.forEach((m, r) => {
     for (let c = 0; c < nCols; c++) {
       const addr = XLSX.utils.encode_cell({ r, c });
       if (!ws[addr]) ws[addr] = { t: 's', v: '' };
       const cell = ws[addr];
-      let st = null;
-      if (m.kind === 'brand') {
-        st = { font: { name: 'Calibri', sz: 18, bold: true, color: { rgb: EX.tealDark } }, alignment: { vertical: 'center' } };
-      } else if (m.kind === 'title') {
-        st = { font: { name: 'Calibri', sz: 13, bold: true, color: { rgb: EX.ink } }, alignment: { vertical: 'center' } };
+      if (m.kind === 'title') {
+        cell.s = { font: { name: 'Calibri', sz: 13, bold: true, color: { rgb: '000000' } }, alignment: { horizontal: 'center', vertical: 'center' } };
       } else if (m.kind === 'subtitle') {
-        st = { font: { name: 'Calibri', sz: 9, italic: true, color: { rgb: EX.muted } }, alignment: { vertical: 'center' } };
-      } else if (m.kind === 'summary') {
-        st = { font: { name: 'Calibri', sz: 10, bold: true, color: { rgb: EX.tealDark } }, fill: { patternType: 'solid', fgColor: { rgb: 'F0FDFA' } }, alignment: { vertical: 'center' } };
+        cell.s = { font: { name: 'Calibri', sz: 9.5, color: { rgb: '000000' } }, alignment: { horizontal: 'center', vertical: 'center' } };
       } else if (m.kind === 'head') {
-        st = { font: { name: 'Calibri', sz: 10, bold: true, color: { rgb: EX.white } }, fill: { patternType: 'solid', fgColor: { rgb: EX.teal } }, alignment: { horizontal: 'center', vertical: 'center', wrapText: true }, border: box(EX.tealDark) };
-      } else if (m.kind === 'subtotal') {
-        const right = c === 0 || intCols.includes(c) || decCols.includes(c);
-        st = { font: { name: 'Calibri', sz: 10, bold: true, color: { rgb: EX.ink } }, fill: { patternType: 'solid', fgColor: { rgb: EX.soft2 } }, alignment: { vertical: 'center', horizontal: right ? 'right' : 'left' }, border: box('CBD5E1') };
+        cell.s = {
+          font: { name: 'Calibri', sz: 9.5, bold: true, color: { rgb: '000000' } },
+          fill: { patternType: 'solid', fgColor: { rgb: 'D9D9D9' } },
+          alignment: { horizontal: 'center', vertical: 'center', wrapText: true },
+          border: box(LINE, 'thin')
+        };
       } else if (m.kind === 'total') {
-        st = { font: { name: 'Calibri', sz: 10.5, bold: true, color: { rgb: EX.white } }, fill: { patternType: 'solid', fgColor: { rgb: EX.tealDark } }, alignment: { vertical: 'center', horizontal: c === 0 ? 'left' : 'right' }, border: box(EX.tealDark) };
+        cell.s = {
+          font: { name: 'Calibri', sz: 9.5, bold: true, color: { rgb: '000000' } },
+          fill: { patternType: 'solid', fgColor: { rgb: 'D9D9D9' } },
+          alignment: { horizontal: c >= mergeTo ? 'right' : 'left', vertical: 'center' },
+          border: box(LINE, 'thin')
+        };
       } else if (m.kind === 'note') {
-        st = { font: { name: 'Calibri', sz: 9, italic: true, color: { rgb: EX.muted } }, alignment: { vertical: 'center' } };
+        cell.s = { font: { name: 'Calibri', sz: 9, italic: true, color: { rgb: '555555' } }, alignment: { vertical: 'center' } };
       } else if (m.kind === 'spacer') {
-        st = null;
+        cell.s = null;
       } else {
-        st = {
-          font: { name: 'Calibri', sz: 10, color: { rgb: EX.ink } },
-          fill: m.fill ? { patternType: 'solid', fgColor: { rgb: m.fill } } : undefined,
-          alignment: { vertical: 'center', horizontal: (intCols.includes(c) || decCols.includes(c)) ? 'right' : 'left' },
-          border: box(EX.line)
+        cell.s = {
+          font: { name: 'Calibri', sz: 9.5, bold: boldCols.indexOf(c) >= 0, color: { rgb: '000000' } },
+          alignment: { horizontal: aligns[c] || 'left', vertical: 'center', wrapText: true },
+          border: box(LINE, 'thin')
         };
       }
-      if (st) cell.s = st;
-      if (m.kind === 'data' || m.kind === 'subtotal' || m.kind === 'total') {
-        if (intCols.includes(c)) cell.z = '#,##0';
-        if (decCols.includes(c)) cell.z = '#,##0.0000';
+      if (m.kind === 'data' || m.kind === 'total') {
+        if (intCols.indexOf(c) >= 0) cell.z = '#,##0';
+        if (decCols.indexOf(c) >= 0) cell.z = '#,##0.0000';
       }
     }
   });
+
   ws['!merges'] = merges;
-  ws['!cols'] = (rep.widths || []).map(w => ({ wch: w }));
-  ws['!rows'] = rep.meta.map(m => ({ hpt: m.kind === 'brand' ? 26 : m.kind === 'title' ? 20 : m.kind === 'head' ? 26 : m.kind === 'spacer' ? 8 : 17 }));
+  ws['!cols'] = (cfg.widths || []).map(w => ({ wch: w }));
+  ws['!rows'] = meta.map(m => ({
+    hpt: m.hpt || (m.kind === 'title' ? 20 : m.kind === 'subtitle' ? 14 : m.kind === 'head' ? 28
+      : m.kind === 'spacer' ? 7 : m.kind === 'total' ? 20 : m.kind === 'note' ? 14 : 18)
+  }));
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, sheetName);
-  XLSX.writeFile(wb, fileName);
+  XLSX.utils.book_append_sheet(wb, ws, cfg.sheetName);
+  XLSX.writeFile(wb, cfg.fileName);
 }
 
 /* --- Tab 3: Export PO Sudah Kirim --- */
@@ -4033,87 +4187,70 @@ async function exportAllPO(format) {
   if (format === 'pdf' && !window.jspdf) return showToast('Library PDF belum terload. Muat ulang halaman.', 'error');
   let grandQty = 0, grandKub = 0;
   pos.forEach(p => { (p.items || []).forEach(it => { grandQty += (it.quantity || 0); grandKub += (it.kubikasi || 0); }); });
-  const period = document.getElementById('reportPeriod')?.selectedOptions[0]?.text || 'Semua';
-  const TITLE = 'Laporan PO & Item';
-  const stamp = reportStamp();
+  const period = document.getElementById('reportPeriod')?.selectedOptions[0]?.text || 'Semua Periode';
+  const TITLE = 'LAPORAN SEMUA PO & ITEM - PO KANDANG';
+  const SUB = `Periode: ${period} | Dicetak: ${rptDate()}`;
+  const groups = pos.map(p => {
+    const items = (p.items && p.items.length) ? p.items : [{ productName: '-', quantity: 0, kubikasi: 0 }];
+    return {
+      merge: [0, 1],
+      rows: items.map((it, ii) => [
+        ii === 0 ? p.poNumber : '',
+        ii === 0 ? p.customerName : '',
+        fmtDate(p.orderDate),
+        it.productName || '-',
+        `${it.thickness || 0}×${it.width || 0}×${it.length || 0}`,
+        fmtInt(it.quantity),
+        fmt4(it.kubikasi)
+      ])
+    };
+  });
 
   if (format === 'pdf') {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF('l', 'mm', 'a4');
-    const y = pdfReportHeader(doc, TITLE, `Periode: ${period}  ·  Dicetak: ${stamp}`, [
-      { label: 'Total PO', value: `${pos.length} PO` },
-      { label: 'Total Qty', value: `${fmtInt(grandQty)} pcs` },
-      { label: 'Total Volume', value: `${fmt4(grandKub)} m³` },
-    ]);
-    const body = [];
-    pos.forEach((p, gi) => {
-      const items = p.items || [];
-      let sq = 0, sk = 0;
-      items.forEach((it, ii) => {
-        sq += (it.quantity || 0); sk += (it.kubikasi || 0);
-        const row = [
-          ii === 0 ? p.poNumber : '',
-          ii === 0 ? p.customerName : '',
-          ii === 0 ? fmtDate(p.orderDate) : '',
-          it.productName || '-',
-          `${it.thickness || 0}×${it.width || 0}×${it.length || 0}`,
-          { content: fmtInt(it.quantity), styles: { halign: 'right' } },
-          { content: fmt4(it.kubikasi), styles: { halign: 'right' } },
-        ];
-        body.push(gi % 2 ? row.map(c => pdfTint(c, RC.soft2)) : row);
-      });
-      body.push([
-        { content: `Subtotal ${p.poNumber}`, colSpan: 5, styles: { halign: 'right', fontStyle: 'bold', fillColor: RC.soft2, textColor: RC.ink } },
-        { content: fmtInt(sq), styles: { halign: 'right', fontStyle: 'bold', fillColor: RC.soft2, textColor: RC.ink } },
-        { content: fmt4(sk), styles: { halign: 'right', fontStyle: 'bold', fillColor: RC.soft2, textColor: RC.ink } },
-      ]);
+    const y = pdfRptHeader(doc, TITLE, SUB);
+    pdfRptTable(doc, {
+      startY: y, marginL: 9, marginR: 9,
+      cols: [
+        { title: 'No PO', w: 46, bold: true },
+        { title: 'Customer', w: 64 },
+        { title: 'Tanggal', w: 25, align: 'center' },
+        { title: 'Nama Kayu', w: 46 },
+        { title: 'Ukuran', w: 28, align: 'center' },
+        { title: 'Qty (Pcs)', w: 26, align: 'right' },
+        { title: 'Volume (m³)', w: 28, align: 'right' }
+      ],
+      groups,
+      total: { label: 'GRAND TOTAL', mergeTo: 5, values: { 5: fmtInt(grandQty), 6: fmt4(grandKub) } }
     });
-    body.push([
-      { content: 'GRAND TOTAL', colSpan: 5, styles: { halign: 'right', fontStyle: 'bold', fillColor: RC.tealDark, textColor: RC.white } },
-      { content: fmtInt(grandQty), styles: { halign: 'right', fontStyle: 'bold', fillColor: RC.tealDark, textColor: RC.white } },
-      { content: fmt4(grandKub), styles: { halign: 'right', fontStyle: 'bold', fillColor: RC.tealDark, textColor: RC.white } },
-    ]);
-    doc.autoTable({
-      startY: y,
-      head: [['No PO', 'Customer', 'Tanggal', 'Nama Kayu', 'Ukuran', 'Qty (Pcs)', 'Volume (m³)']],
-      body,
-      theme: 'grid',
-      styles: { fontSize: 7.8, cellPadding: 2.2, textColor: RC.ink, lineColor: RC.line, lineWidth: 0.1, valign: 'middle', overflow: 'ellipsize' },
-      headStyles: { fillColor: RC.tealDark, textColor: RC.white, fontStyle: 'bold', halign: 'center', fontSize: 7.8, lineColor: RC.tealDark },
-      columnStyles: {
-        0: { cellWidth: 46, fontStyle: 'bold' }, 1: { cellWidth: 34, overflow: 'linebreak' }, 2: { cellWidth: 22 },
-        3: { cellWidth: 30, overflow: 'linebreak' }, 4: { cellWidth: 25 },
-        5: { cellWidth: 24, halign: 'right' }, 6: { cellWidth: 26, halign: 'right' },
-      },
-      margin: { top: 12, bottom: 14, left: 10, right: 10 },
-      showHead: 'everyPage',
-      didDrawPage: pdfPageChrome(doc, TITLE),
-    });
-    doc.setFont('helvetica', 'italic'); doc.setFontSize(7); doc.setTextColor(RC.muted[0], RC.muted[1], RC.muted[2]);
-    doc.text('* Subtotal per PO dan grand total dihitung dari seluruh item pada PO.', 10, doc.lastAutoTable.finalY + 6);
-    pdfReportFooter(doc, TITLE);
+    pdfRptFooter(doc, 'Laporan Semua PO & Item');
     doc.save('Laporan_PO_dan_Item.pdf');
   } else {
-    const rep = excelNewReport({
-      title: TITLE,
-      period,
-      summary: `Total PO: ${pos.length}   ·   Total Qty: ${fmtInt(grandQty)} pcs   ·   Total Volume: ${fmt4(grandKub)} m³`,
+    excelRpt({
+      title: TITLE, subtitle: SUB, sheetName: 'PO dan Item', fileName: 'Laporan_PO_dan_Item.xlsx',
       headers: ['No PO', 'Customer', 'Tanggal', 'Nama Kayu', 'Ukuran (T×L×P)', 'Qty (Pcs)', 'Volume (m³)'],
-      widths: [26, 34, 14, 20, 17, 12, 14],
+      widths: [26, 36, 14, 24, 16, 11, 14],
+      aligns: ['left', 'left', 'center', 'left', 'center', 'right', 'right'],
+      boldCols: [0],
+      mergeCols: [0, 1],
+      intCols: [5], decCols: [6],
+      groups: pos.map(p => {
+        const items = (p.items && p.items.length) ? p.items : [{ productName: '-', quantity: 0, kubikasi: 0 }];
+        return {
+          rows: items.map((it, ii) => [
+            ii === 0 ? p.poNumber : '',
+            ii === 0 ? p.customerName : '',
+            fmtDate(p.orderDate),
+            it.productName || '-',
+            `${it.thickness || 0}×${it.width || 0}×${it.length || 0}`,
+            it.quantity || 0,
+            Number((it.kubikasi || 0).toFixed(4))
+          ])
+        };
+      }),
+      total: { label: 'GRAND TOTAL', mergeTo: 5, values: { 5: grandQty, 6: Number(grandKub.toFixed(4)) } }
     });
-    pos.forEach((p, gi) => {
-      const items = p.items || [];
-      let sq = 0, sk = 0;
-      items.forEach(it => {
-        sq += (it.quantity || 0); sk += (it.kubikasi || 0);
-        excelRow(rep, [p.poNumber, p.customerName, fmtDate(p.orderDate), it.productName || '-', `${it.thickness || 0}×${it.width || 0}×${it.length || 0}`, it.quantity || 0, Number(fmt4(it.kubikasi))], 'data', { fill: gi % 2 ? EX.soft : undefined });
-      });
-      excelRow(rep, [`Subtotal ${p.poNumber}`, '', '', '', '', sq, Number(fmt4(sk))], 'subtotal', { labelCols: 5 });
-    });
-    excelRow(rep, ['GRAND TOTAL', '', '', '', '', grandQty, Number(fmt4(grandKub))], 'total', { labelCols: 5 });
-    excelRow(rep, [], 'spacer');
-    excelRow(rep, ['* Subtotal per PO dan grand total dihitung dari seluruh item pada PO.'], 'note');
-    excelWrite(rep, { sheetName: 'PO dan Item', fileName: 'Laporan_PO_dan_Item.xlsx', intCols: [5], decCols: [6] });
   }
   showToast(`${format.toUpperCase()} berhasil diunduh!`, 'success');
 }
@@ -4258,99 +4395,82 @@ async function exportUnsentPO(format) {
     gSQ += (p.totalQuantity || 0) - (p.shippedQuantity || 0);
     gSK += (p.totalKubikasi || 0) - (p.shippedKubikasi || 0);
   });
-  const period = document.getElementById('reportPeriod')?.selectedOptions[0]?.text || 'Semua';
-  const TITLE = 'Laporan PO Belum Kirim';
-  const stamp = reportStamp();
+  const period = document.getElementById('reportPeriod')?.selectedOptions[0]?.text || 'Semua Periode';
+  const TITLE = 'LAPORAN PO BELUM TERKIRIM - PO KANDANG';
+  const SUB = `Periode: ${period} | Dicetak: ${rptDate()}`;
+
+  const groupsData = [];
+  unsent.forEach(p => {
+    const visibleItems = (p.items || []).filter(it => (it.sisaQty || 0) > 0);
+    if (!visibleItems.length) return;
+    groupsData.push({ po: p, items: visibleItems });
+  });
+
+  const pdfGroups = groupsData.map(({ po, items }) => ({
+    merge: [0, 1, 3],
+    rows: items.map((it, ii) => [
+      ii === 0 ? po.poNumber : '',
+      ii === 0 ? po.customerName : '',
+      fmtDate(po.orderDate),
+      ii === 0 ? po.status : '',
+      it.productName || '-',
+      `${it.thickness || 0}×${it.width || 0}×${it.length || 0}`,
+      fmtInt(it.quantity),
+      fmtInt(it.shippedQty),
+      fmtInt(it.sisaQty),
+      fmt4(it.sisaKubikasi)
+    ])
+  }));
 
   if (format === 'pdf') {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF('l', 'mm', 'a4');
-    const y = pdfReportHeader(doc, TITLE, `Periode: ${period}  ·  Dicetak: ${stamp}`, [
-      { label: 'PO Belum Kirim', value: `${unsent.length} PO` },
-      { label: 'Qty PO', value: `${fmtInt(gQP)} pcs` },
-      { label: 'Sudah Terkirim', value: `${fmtInt(gQT)} pcs` },
-      { label: 'Sisa Qty', value: `${fmtInt(gSQ)} pcs`, color: [180, 83, 9] },
-      { label: 'Sisa Volume', value: `${fmt4(gSK)} m³` },
-    ]);
-    const body = [];
-    unsent.forEach((p, gi) => {
-      const visibleItems = (p.items || []).filter(it => (it.sisaQty || 0) > 0);
-      if (visibleItems.length === 0) return;
-      let sSQ = 0, sSK = 0;
-      visibleItems.forEach((it, ii) => {
-        sSQ += (it.sisaQty || 0); sSK += (it.sisaKubikasi || 0);
-        const row = [
-          ii === 0 ? p.poNumber : '',
-          ii === 0 ? p.customerName : '',
-          ii === 0 ? fmtDate(p.orderDate) : '',
-          ii === 0 ? p.status : '',
-          it.productName || '-',
-          `${it.thickness || 0}×${it.width || 0}×${it.length || 0}`,
-          { content: fmtInt(it.quantity), styles: { halign: 'right' } },
-          { content: fmtInt(it.shippedQty), styles: { halign: 'right' } },
-          { content: fmtInt(it.sisaQty), styles: { halign: 'right', fontStyle: 'bold' } },
-          { content: fmt4(it.sisaKubikasi), styles: { halign: 'right' } },
-        ];
-        body.push(gi % 2 ? row.map(c => pdfTint(c, RC.soft2)) : row);
-      });
-      body.push([
-        { content: `Subtotal ${p.poNumber}`, colSpan: 6, styles: { halign: 'right', fontStyle: 'bold', fillColor: RC.soft2, textColor: RC.ink } },
-        { content: fmtInt(p.totalQuantity), styles: { halign: 'right', fontStyle: 'bold', fillColor: RC.soft2, textColor: RC.ink } },
-        { content: fmtInt(p.shippedQuantity), styles: { halign: 'right', fontStyle: 'bold', fillColor: RC.soft2, textColor: RC.ink } },
-        { content: fmtInt(sSQ), styles: { halign: 'right', fontStyle: 'bold', fillColor: RC.soft2, textColor: RC.ink } },
-        { content: fmt4(sSK), styles: { halign: 'right', fontStyle: 'bold', fillColor: RC.soft2, textColor: RC.ink } },
-      ]);
+    const y = pdfRptHeader(doc, TITLE, SUB);
+    pdfRptTable(doc, {
+      startY: y, marginL: 9, marginR: 9, fontSize: 7.2,
+      cols: [
+        { title: 'No PO', w: 40, bold: true },
+        { title: 'Customer', w: 46 },
+        { title: 'Tanggal', w: 22, align: 'center' },
+        { title: 'Status', w: 20 },
+        { title: 'Nama Kayu', w: 34 },
+        { title: 'Ukuran', w: 24, align: 'center' },
+        { title: 'Qty PO', w: 21, align: 'right' },
+        { title: 'Qty Terkirim', w: 23, align: 'right' },
+        { title: 'Sisa Qty', w: 20, align: 'right' },
+        { title: 'Sisa Volume (m³)', w: 24, align: 'right' }
+      ],
+      groups: pdfGroups,
+      total: { label: 'GRAND TOTAL', mergeTo: 6, values: { 6: fmtInt(gQP), 7: fmtInt(gQT), 8: fmtInt(gSQ), 9: fmt4(gSK) } }
     });
-    body.push([
-      { content: 'GRAND TOTAL', colSpan: 6, styles: { halign: 'right', fontStyle: 'bold', fillColor: RC.tealDark, textColor: RC.white } },
-      { content: fmtInt(gQP), styles: { halign: 'right', fontStyle: 'bold', fillColor: RC.tealDark, textColor: RC.white } },
-      { content: fmtInt(gQT), styles: { halign: 'right', fontStyle: 'bold', fillColor: RC.tealDark, textColor: RC.white } },
-      { content: fmtInt(gSQ), styles: { halign: 'right', fontStyle: 'bold', fillColor: RC.tealDark, textColor: RC.white } },
-      { content: fmt4(gSK), styles: { halign: 'right', fontStyle: 'bold', fillColor: RC.tealDark, textColor: RC.white } },
-    ]);
-    doc.autoTable({
-      startY: y,
-      head: [['No PO', 'Customer', 'Tgl PO', 'Status', 'Nama Kayu', 'Ukuran', 'Qty PO', 'Terkirim', 'Sisa Qty', 'Sisa Vol (m³)']],
-      body,
-      theme: 'grid',
-      styles: { fontSize: 7.6, cellPadding: 2.2, textColor: RC.ink, lineColor: RC.line, lineWidth: 0.1, valign: 'middle', overflow: 'ellipsize' },
-      headStyles: { fillColor: RC.tealDark, textColor: RC.white, fontStyle: 'bold', halign: 'center', fontSize: 7.6, lineColor: RC.tealDark },
-      columnStyles: {
-        0: { cellWidth: 46, fontStyle: 'bold' }, 1: { cellWidth: 36, overflow: 'linebreak' }, 2: { cellWidth: 22 }, 3: { cellWidth: 18 },
-        4: { cellWidth: 24, halign: 'left', overflow: 'linebreak' }, 5: { cellWidth: 24, halign: 'center' },
-        6: { cellWidth: 18, halign: 'right' }, 7: { cellWidth: 20, halign: 'right' },
-        8: { cellWidth: 18, halign: 'right' }, 9: { cellWidth: 25, halign: 'right' },
-      },
-      margin: { top: 12, bottom: 14, left: 10, right: 10 },
-      showHead: 'everyPage',
-      didDrawPage: pdfPageChrome(doc, TITLE),
-    });
-    doc.setFont('helvetica', 'italic'); doc.setFontSize(7); doc.setTextColor(RC.muted[0], RC.muted[1], RC.muted[2]);
-    doc.text('* Subtotal dan grand total adalah akumulasi sisa barang yang belum dikirim.', 10, doc.lastAutoTable.finalY + 6);
-    pdfReportFooter(doc, TITLE);
+    pdfRptFooter(doc, 'Laporan PO Belum Kirim');
     doc.save('Laporan_PO_Belum_Kirim.pdf');
   } else {
-    const rep = excelNewReport({
-      title: TITLE,
-      period,
-      summary: `PO: ${unsent.length}   ·   Qty PO: ${fmtInt(gQP)} pcs   ·   Terkirim: ${fmtInt(gQT)} pcs   ·   Sisa: ${fmtInt(gSQ)} pcs   ·   Sisa Volume: ${fmt4(gSK)} m³`,
+    excelRpt({
+      title: TITLE, subtitle: SUB, sheetName: 'PO Belum Kirim', fileName: 'Laporan_PO_Belum_Kirim.xlsx',
       headers: ['No PO', 'Customer', 'Tanggal', 'Status', 'Nama Kayu', 'Ukuran (T×L×P)', 'Qty PO', 'Qty Terkirim', 'Sisa Qty', 'Sisa Volume (m³)'],
-      widths: [24, 32, 14, 14, 18, 16, 10, 13, 11, 15],
+      widths: [24, 30, 14, 13, 20, 16, 10, 13, 10, 15],
+      aligns: ['left', 'left', 'center', 'left', 'left', 'center', 'right', 'right', 'right', 'right'],
+      boldCols: [0],
+      mergeCols: [0, 1, 3],
+      intCols: [6, 7, 8], decCols: [9],
+      groups: groupsData.map(({ po, items }) => ({
+        rows: items.map((it, ii) => [
+          ii === 0 ? po.poNumber : '',
+          ii === 0 ? po.customerName : '',
+          fmtDate(po.orderDate),
+          ii === 0 ? po.status : '',
+          it.productName || '-',
+          `${it.thickness || 0}×${it.width || 0}×${it.length || 0}`,
+          it.quantity || 0,
+          it.shippedQty || 0,
+          it.sisaQty || 0,
+          Number((it.sisaKubikasi || 0).toFixed(4))
+        ])
+      })),
+      total: { label: 'GRAND TOTAL', mergeTo: 6, values: { 6: gQP, 7: gQT, 8: gSQ, 9: Number(gSK.toFixed(4)) } },
+      note: '* Qty PO, Qty Terkirim, Sisa Qty, dan Sisa Volume adalah akumulasi seluruh PO yang belum terkirim.'
     });
-    unsent.forEach((p, gi) => {
-      const visibleItems = (p.items || []).filter(it => (it.sisaQty || 0) > 0);
-      if (visibleItems.length === 0) return;
-      let sSQ = 0, sSK = 0;
-      visibleItems.forEach(it => {
-        sSQ += (it.sisaQty || 0); sSK += (it.sisaKubikasi || 0);
-        excelRow(rep, [p.poNumber, p.customerName, fmtDate(p.orderDate), p.status, it.productName || '-', `${it.thickness || 0}×${it.width || 0}×${it.length || 0}`, it.quantity || 0, it.shippedQty || 0, it.sisaQty || 0, Number(fmt4(it.sisaKubikasi))], 'data', { fill: gi % 2 ? EX.soft : undefined });
-      });
-      excelRow(rep, [`Subtotal ${p.poNumber}`, '', '', '', '', '', p.totalQuantity || 0, p.shippedQuantity || 0, sSQ, Number(fmt4(sSK))], 'subtotal', { labelCols: 6 });
-    });
-    excelRow(rep, ['GRAND TOTAL', '', '', '', '', '', gQP, gQT, gSQ, Number(fmt4(gSK))], 'total', { labelCols: 6 });
-    excelRow(rep, [], 'spacer');
-    excelRow(rep, ['* Subtotal dan grand total adalah akumulasi sisa barang yang belum dikirim.'], 'note');
-    excelWrite(rep, { sheetName: 'PO Belum Kirim', fileName: 'Laporan_PO_Belum_Kirim.xlsx', intCols: [6, 7, 8], decCols: [9] });
   }
   showToast(`${format.toUpperCase()} berhasil diunduh!`, 'success');
 }
@@ -4421,95 +4541,64 @@ async function exportRemainingBySize(format) {
   const data = _reportData.remainingBySize || [];
   if (!data.length) return showToast('Tidak ada data', 'error');
   if (format === 'pdf' && !window.jspdf) return showToast('Library PDF belum terload. Muat ulang halaman.', 'error');
-  const TITLE = 'Laporan Sisa PO per Ukuran';
-  const stamp = reportStamp();
   let grandQty = 0, grandKub = 0;
   data.forEach(c => { grandQty += c.totalSisaQty; grandKub += c.totalSisaKub; });
+  const TITLE = 'LAPORAN SISA PO PER UKURAN - PO KANDANG';
+  const SUB = `Semua PO berjalan | Dicetak: ${rptDate()}`;
+
+  const pdfGroups = data.map(c => ({
+    merge: [0],
+    rows: c.sizes.flatMap(sz => sz.pos.map(po => [
+      c.customerName,
+      `${sz.thickness} × ${sz.width} × ${sz.length}`,
+      sz.productName || '-',
+      po.poNumber,
+      fmtInt(po.sisaQty),
+      fmt4(po.sisaKub)
+    ]))
+  }));
 
   if (format === 'pdf') {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF('p', 'mm', 'a4');
-    const y = pdfReportHeader(doc, TITLE, `Semua PO berjalan  ·  Dicetak: ${stamp}`, [
-      { label: 'Total Customer', value: `${data.length}` },
-      { label: 'Total Sisa Qty', value: `${fmtInt(grandQty)} pcs`, color: [180, 83, 9] },
-      { label: 'Total Sisa Volume', value: `${fmt4(grandKub)} m³` },
-    ]);
-    const body = [];
-    data.forEach((c, ci) => {
-      c.sizes.forEach(sz => {
-        sz.pos.forEach((po, ii) => {
-          body.push([
-            ii === 0 ? c.customerName : '',
-            ii === 0 ? `${sz.thickness} × ${sz.width} × ${sz.length}` : '',
-            ii === 0 ? (sz.productName || '-') : '',
-            po.poNumber,
-            { content: fmtInt(po.sisaQty), styles: { halign: 'right' } },
-            { content: fmt4(po.sisaKub), styles: { halign: 'right' } },
-          ]);
-        });
-        body.push([
-          { content: `Subtotal ukuran ${sz.thickness}×${sz.width}×${sz.length}`, colSpan: 4, styles: { halign: 'right', fontStyle: 'bold', fillColor: RC.soft2, textColor: RC.ink, fontSize: 7.2 } },
-          { content: fmtInt(sz.totalSisaQty), styles: { halign: 'right', fontStyle: 'bold', fillColor: RC.soft2, textColor: RC.ink } },
-          { content: fmt4(sz.totalSisaKub), styles: { halign: 'right', fontStyle: 'bold', fillColor: RC.soft2, textColor: RC.ink } },
-        ]);
-      });
-      body.push([
-        { content: `TOTAL ${c.customerName}`, colSpan: 4, styles: { halign: 'left', fontStyle: 'bold', fillColor: [204, 251, 241], textColor: RC.tealDark } },
-        { content: fmtInt(c.totalSisaQty), styles: { halign: 'right', fontStyle: 'bold', fillColor: [204, 251, 241], textColor: RC.tealDark } },
-        { content: fmt4(c.totalSisaKub), styles: { halign: 'right', fontStyle: 'bold', fillColor: [204, 251, 241], textColor: RC.tealDark } },
-      ]);
-      if (ci < data.length - 1) body.push([{ content: '', colSpan: 6, styles: { cellPadding: { top: 0, bottom: 0 }, lineWidth: 0, fillColor: [255, 255, 255] } }]);
+    const y = pdfRptHeader(doc, TITLE, SUB);
+    pdfRptTable(doc, {
+      startY: y, marginL: 9, marginR: 9, fontSize: 7.2,
+      cols: [
+        { title: 'Customer', w: 42, bold: true },
+        { title: 'Ukuran (T×L×P)', w: 28, align: 'center' },
+        { title: 'Nama Kayu', w: 32 },
+        { title: 'No PO', w: 34 },
+        { title: 'Sisa Qty (Pcs)', w: 28, align: 'right' },
+        { title: 'Sisa Volume (m³)', w: 28, align: 'right' }
+      ],
+      groups: pdfGroups,
+      total: { label: 'GRAND TOTAL', mergeTo: 4, values: { 4: fmtInt(grandQty), 5: fmt4(grandKub) } }
     });
-    body.push([
-      { content: 'GRAND TOTAL', colSpan: 4, styles: { halign: 'left', fontStyle: 'bold', fillColor: RC.tealDark, textColor: RC.white, lineWidth: 0 } },
-      { content: fmtInt(grandQty), styles: { halign: 'right', fontStyle: 'bold', fillColor: RC.tealDark, textColor: RC.white, lineWidth: 0 } },
-      { content: fmt4(grandKub), styles: { halign: 'right', fontStyle: 'bold', fillColor: RC.tealDark, textColor: RC.white, lineWidth: 0 } },
-    ]);
-    doc.autoTable({
-      startY: y,
-      head: [['Customer', 'Ukuran (T×L×P)', 'Nama Kayu', 'No PO', 'Sisa Qty (Pcs)', 'Sisa Vol (m³)']],
-      body,
-      theme: 'grid',
-      styles: { fontSize: 7.8, cellPadding: 2.2, textColor: RC.ink, lineColor: RC.line, lineWidth: 0.1, valign: 'middle', overflow: 'ellipsize' },
-      headStyles: { fillColor: RC.tealDark, textColor: RC.white, fontStyle: 'bold', halign: 'center', fontSize: 7.8, lineColor: RC.tealDark },
-      columnStyles: {
-        0: { fontStyle: 'bold', halign: 'left', cellWidth: 46 },
-        1: { halign: 'center', cellWidth: 30 },
-        2: { halign: 'left', cellWidth: 34 },
-        3: { halign: 'center', cellWidth: 32 },
-        4: { halign: 'right', cellWidth: 24 },
-        5: { halign: 'right', cellWidth: 24 },
-      },
-      margin: { top: 12, bottom: 15, left: 10, right: 10 },
-      showHead: 'everyPage',
-      didDrawPage: pdfPageChrome(doc, TITLE),
-    });
-    doc.setFont('helvetica', 'italic'); doc.setFontSize(7); doc.setTextColor(RC.muted[0], RC.muted[1], RC.muted[2]);
-    doc.text('* Hanya menampilkan PO dengan sisa barang yang belum terkirim (PO dibatalkan dikecualikan).', 10, doc.lastAutoTable.finalY + 6);
-    pdfReportFooter(doc, TITLE);
+    pdfRptFooter(doc, 'Laporan Sisa PO per Ukuran');
     doc.save('Laporan_Sisa_PO_per_Ukuran.pdf');
   } else {
-    const rep = excelNewReport({
-      title: TITLE,
-      period: 'Semua',
-      summary: `Customer: ${data.length}   ·   Total Sisa Qty: ${fmtInt(grandQty)} pcs   ·   Total Sisa Volume: ${fmt4(grandKub)} m³`,
+    excelRpt({
+      title: TITLE, subtitle: SUB, sheetName: 'Sisa per Ukuran', fileName: 'Laporan_Sisa_PO_per_Ukuran.xlsx',
       headers: ['Customer', 'Ukuran (T×L×P)', 'Nama Kayu', 'No PO', 'Sisa Qty (Pcs)', 'Sisa Volume (m³)'],
-      widths: [30, 17, 18, 24, 14, 16],
+      widths: [30, 16, 20, 24, 14, 16],
+      aligns: ['left', 'center', 'left', 'left', 'right', 'right'],
+      boldCols: [0],
+      mergeCols: [0],
+      intCols: [4], decCols: [5],
+      groups: data.map(c => ({
+        rows: c.sizes.flatMap(sz => sz.pos.map(po => [
+          c.customerName,
+          `${sz.thickness}×${sz.width}×${sz.length}`,
+          sz.productName || '-',
+          po.poNumber,
+          po.sisaQty || 0,
+          Number((po.sisaKub || 0).toFixed(4))
+        ]))
+      })),
+      total: { label: 'GRAND TOTAL', mergeTo: 4, values: { 4: grandQty, 5: Number(grandKub.toFixed(4)) } },
+      note: '* Hanya menampilkan PO dengan sisa barang yang belum terkirim (PO dibatalkan dikecualikan).'
     });
-    data.forEach((c, ci) => {
-      c.sizes.forEach(sz => {
-        sz.pos.forEach(po => {
-          excelRow(rep, [c.customerName, `${sz.thickness}×${sz.width}×${sz.length}`, sz.productName || '-', po.poNumber, po.sisaQty || 0, Number(fmt4(po.sisaKub))], 'data', { fill: ci % 2 ? EX.soft : undefined });
-        });
-        excelRow(rep, [`Subtotal ukuran ${sz.thickness}×${sz.width}×${sz.length}`, '', '', '', sz.totalSisaQty || 0, Number(fmt4(sz.totalSisaKub))], 'subtotal', { labelCols: 4 });
-      });
-      excelRow(rep, [`TOTAL ${c.customerName}`, '', '', '', c.totalSisaQty || 0, Number(fmt4(c.totalSisaKub))], 'total', { labelCols: 4 });
-      if (ci < data.length - 1) excelRow(rep, [], 'spacer');
-    });
-    excelRow(rep, ['GRAND TOTAL', '', '', '', grandQty, Number(fmt4(grandKub))], 'total', { labelCols: 4 });
-    excelRow(rep, [], 'spacer');
-    excelRow(rep, ['* Hanya menampilkan PO dengan sisa barang yang belum terkirim (PO dibatalkan dikecualikan).'], 'note');
-    excelWrite(rep, { sheetName: 'Sisa per Ukuran', fileName: 'Laporan_Sisa_PO_per_Ukuran.xlsx', intCols: [4], decCols: [5] });
   }
   showToast(`${format.toUpperCase()} berhasil diunduh!`, 'success');
 }
@@ -4580,96 +4669,87 @@ async function exportDeliveryReport(format) {
   if (format === 'pdf' && !window.jspdf) return showToast('Library PDF belum terload. Muat ulang halaman.', 'error');
   let gQ = 0, gK = 0;
   deliveries.forEach(d => { (d.items || []).forEach(it => { gQ += (it.quantity || 0); gK += (it.kubikasi || 0); }); });
-  const TITLE = 'Laporan Pengiriman';
-  const stamp = reportStamp();
+  const TITLE = 'LAPORAN PENGIRIMAN - PO KANDANG';
+  const SUB = `Semua pengiriman | Dicetak: ${rptDate()}`;
+
+  const norm = deliveries.map((d, di) => {
+    const items = (d.items && d.items.length) ? d.items : [{ productName: '-', quantity: 0, kubikasi: 0 }];
+    return {
+      no: String(di + 1),
+      tanggal: fmtDate(d.deliveryDate),
+      kode: (d.id || '').slice(0, 8),
+      po: (d.poNumbers || []).join(', ') || '-',
+      customer: (d.customerNames || []).join(', ') || '-',
+      sopir: `${d.driverName || '-'}${d.vehicleNumber ? ' · ' + d.vehicleNumber : ''}`,
+      items
+    };
+  });
+
+  const pdfGroups = norm.map(g => ({
+    merge: [0, 1, 2, 3, 4, 5],
+    rows: g.items.map((it, ii) => [
+      ii === 0 ? g.no : '',
+      ii === 0 ? g.tanggal : '',
+      ii === 0 ? g.kode : '',
+      ii === 0 ? g.po : '',
+      ii === 0 ? g.customer : '',
+      ii === 0 ? g.sopir : '',
+      it.productName || '-',
+      `${it.thickness || 0}×${it.width || 0}×${it.length || 0}`,
+      fmtInt(it.quantity),
+      fmt4(it.kubikasi)
+    ])
+  }));
 
   if (format === 'pdf') {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF('l', 'mm', 'a4');
-    const y = pdfReportHeader(doc, TITLE, `Semua pengiriman  ·  Dicetak: ${stamp}`, [
-      { label: 'Total Pengiriman', value: `${deliveries.length}` },
-      { label: 'Total Qty Kirim', value: `${fmtInt(gQ)} pcs` },
-      { label: 'Total Volume', value: `${fmt4(gK)} m³` },
-    ]);
-    const body = [];
-    deliveries.forEach((d, di) => {
-      const po = (d.poNumbers || []).join(', ') || '-';
-      const cu = (d.customerNames || []).join(', ') || '-';
-      const sp = `${d.driverName || '-'}${d.vehicleNumber ? ' · ' + d.vehicleNumber : ''}`;
-      const items = (d.items || []);
-      let sq = 0, sk = 0;
-      items.forEach((it, ii) => {
-        sq += (it.quantity || 0); sk += (it.kubikasi || 0);
-        const row = [
-          ii === 0 ? String(di + 1) : '',
-          ii === 0 ? fmtDate(d.deliveryDate) : '',
-          ii === 0 ? (d.id || '').slice(0, 8) : '',
-          ii === 0 ? po : '',
-          ii === 0 ? cu : '',
-          ii === 0 ? sp : '',
-          it.productName || '-',
-          `${it.thickness || 0}×${it.width || 0}×${it.length || 0}`,
-          { content: fmtInt(it.quantity), styles: { halign: 'right' } },
-          { content: fmt4(it.kubikasi), styles: { halign: 'right' } },
-        ];
-        body.push(di % 2 ? row.map(c => pdfTint(c, RC.soft2)) : row);
-      });
-      body.push([
-        { content: `Subtotal ${(d.id || '').slice(0, 8)} · ${items.length} item`, colSpan: 8, styles: { halign: 'right', fontStyle: 'bold', fillColor: RC.soft2, textColor: RC.ink } },
-        { content: fmtInt(sq), styles: { halign: 'right', fontStyle: 'bold', fillColor: RC.soft2, textColor: RC.ink } },
-        { content: fmt4(sk), styles: { halign: 'right', fontStyle: 'bold', fillColor: RC.soft2, textColor: RC.ink } },
-      ]);
+    const y = pdfRptHeader(doc, TITLE, SUB);
+    pdfRptTable(doc, {
+      startY: y, marginL: 9, marginR: 9, fontSize: 7,
+      cols: [
+        { title: 'No', w: 10, align: 'center' },
+        { title: 'Tgl Kirim', w: 22, align: 'center' },
+        { title: 'No. Kirim', w: 22, align: 'center' },
+        { title: 'No PO', w: 38, bold: true },
+        { title: 'Customer', w: 44 },
+        { title: 'Sopir & Plat', w: 30 },
+        { title: 'Nama Kayu', w: 30 },
+        { title: 'Ukuran', w: 24, align: 'center' },
+        { title: 'Qty (Pcs)', w: 22, align: 'right' },
+        { title: 'Volume (m³)', w: 24, align: 'right' }
+      ],
+      groups: pdfGroups,
+      total: { label: 'GRAND TOTAL', mergeTo: 8, values: { 8: fmtInt(gQ), 9: fmt4(gK) } }
     });
-    body.push([
-      { content: 'GRAND TOTAL', colSpan: 8, styles: { halign: 'right', fontStyle: 'bold', fillColor: RC.tealDark, textColor: RC.white } },
-      { content: fmtInt(gQ), styles: { halign: 'right', fontStyle: 'bold', fillColor: RC.tealDark, textColor: RC.white } },
-      { content: fmt4(gK), styles: { halign: 'right', fontStyle: 'bold', fillColor: RC.tealDark, textColor: RC.white } },
-    ]);
-    doc.autoTable({
-      startY: y,
-      head: [['No', 'Tgl Kirim', 'No. Kirim', 'No PO', 'Customer', 'Sopir & Plat', 'Nama Kayu', 'Ukuran', 'Qty (Pcs)', 'Volume (m³)']],
-      body,
-      theme: 'grid',
-      styles: { fontSize: 7.2, cellPadding: 2, textColor: RC.ink, lineColor: RC.line, lineWidth: 0.1, valign: 'middle', overflow: 'ellipsize' },
-      headStyles: { fillColor: RC.tealDark, textColor: RC.white, fontStyle: 'bold', halign: 'center', fontSize: 7.2, lineColor: RC.tealDark },
-      columnStyles: {
-        0: { cellWidth: 10, halign: 'center', fontStyle: 'bold' }, 1: { cellWidth: 20 },
-        2: { cellWidth: 18 }, 3: { cellWidth: 34, overflow: 'linebreak' }, 4: { cellWidth: 36, overflow: 'linebreak' }, 5: { cellWidth: 24, overflow: 'linebreak' },
-        6: { cellWidth: 22, overflow: 'linebreak' }, 7: { cellWidth: 20 },
-        8: { cellWidth: 18, halign: 'right' }, 9: { cellWidth: 22, halign: 'right' },
-      },
-      margin: { top: 12, bottom: 14, left: 10, right: 10 },
-      showHead: 'everyPage',
-      didDrawPage: pdfPageChrome(doc, TITLE),
-    });
-    doc.setFont('helvetica', 'italic'); doc.setFontSize(7); doc.setTextColor(RC.muted[0], RC.muted[1], RC.muted[2]);
-    doc.text('* Subtotal per pengiriman dan grand total dihitung dari seluruh item yang dikirim.', 10, doc.lastAutoTable.finalY + 6);
-    pdfReportFooter(doc, TITLE);
+    pdfRptFooter(doc, 'Laporan Pengiriman');
     doc.save('Laporan_Pengiriman.pdf');
   } else {
-    const rep = excelNewReport({
-      title: TITLE,
-      period: 'Semua',
-      summary: `Pengiriman: ${deliveries.length}   ·   Total Qty: ${fmtInt(gQ)} pcs   ·   Total Volume: ${fmt4(gK)} m³`,
+    excelRpt({
+      title: TITLE, subtitle: SUB, sheetName: 'Pengiriman', fileName: 'Laporan_Pengiriman.xlsx',
       headers: ['No', 'Tgl Kirim', 'No. Kirim', 'No PO', 'Customer', 'Sopir & Plat', 'Nama Kayu', 'Ukuran (T×L×P)', 'Qty (Pcs)', 'Volume (m³)'],
-      widths: [6, 14, 12, 26, 30, 18, 17, 15, 10, 13],
+      widths: [5, 14, 12, 26, 32, 20, 18, 15, 10, 13],
+      aligns: ['center', 'center', 'center', 'left', 'left', 'left', 'left', 'center', 'right', 'right'],
+      boldCols: [3],
+      mergeCols: [0, 1, 2, 3, 4, 5],
+      intCols: [8], decCols: [9],
+      groups: norm.map(g => ({
+        rows: g.items.map((it, ii) => [
+          ii === 0 ? Number(g.no) : '',
+          ii === 0 ? g.tanggal : '',
+          ii === 0 ? g.kode : '',
+          ii === 0 ? g.po : '',
+          ii === 0 ? g.customer : '',
+          ii === 0 ? g.sopir : '',
+          it.productName || '-',
+          `${it.thickness || 0}×${it.width || 0}×${it.length || 0}`,
+          it.quantity || 0,
+          Number((it.kubikasi || 0).toFixed(4))
+        ])
+      })),
+      total: { label: 'GRAND TOTAL', mergeTo: 8, values: { 8: gQ, 9: Number(gK.toFixed(4)) } },
+      note: '* Subtotal per pengiriman dapat dilihat dari kotak tiap pengiriman; grand total adalah akumulasi semua item.'
     });
-    deliveries.forEach((d, di) => {
-      const po = (d.poNumbers || []).join(', ') || '-';
-      const cu = (d.customerNames || []).join(', ') || '-';
-      const sp = `${d.driverName || '-'}${d.vehicleNumber ? ' · ' + d.vehicleNumber : ''}`;
-      const items = (d.items || []);
-      let sq = 0, sk = 0;
-      items.forEach(it => {
-        sq += (it.quantity || 0); sk += (it.kubikasi || 0);
-        excelRow(rep, [di + 1, fmtDate(d.deliveryDate), (d.id || '').slice(0, 8), po, cu, sp, it.productName || '-', `${it.thickness || 0}×${it.width || 0}×${it.length || 0}`, it.quantity || 0, Number(fmt4(it.kubikasi))], 'data', { fill: di % 2 ? EX.soft : undefined });
-      });
-      excelRow(rep, [`Subtotal ${(d.id || '').slice(0, 8)} · ${items.length} item`, '', '', '', '', '', '', '', sq, Number(fmt4(sk))], 'subtotal', { labelCols: 8 });
-    });
-    excelRow(rep, ['GRAND TOTAL', '', '', '', '', '', '', '', gQ, Number(fmt4(gK))], 'total', { labelCols: 8 });
-    excelRow(rep, [], 'spacer');
-    excelRow(rep, ['* Subtotal per pengiriman dan grand total dihitung dari seluruh item yang dikirim.'], 'note');
-    excelWrite(rep, { sheetName: 'Pengiriman', fileName: 'Laporan_Pengiriman.xlsx', intCols: [8], decCols: [9] });
   }
   showToast(`${format.toUpperCase()} berhasil diunduh!`, 'success');
 }
