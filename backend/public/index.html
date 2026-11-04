@@ -857,6 +857,25 @@
     .report-btn.excel { background: #d1fae5; color: #059669; border-color: #a7f3d0; }
     .report-btn.preview { background: var(--teal-50); color: var(--teal-700); border-color: rgba(16,185,129,0.2); }
 
+    /* === Laporan: deskripsi, kartu statistik, tabel === */
+    .report-desc { font-size: 11.5px; color: #64748b; line-height: 1.5; margin: 0 4px 14px; }
+    .report-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(118px, 1fr)); gap: 10px; }
+    .report-stat { background: #f8fafc; border: 1px solid #eef2f7; border-radius: 12px; padding: 10px 12px; }
+    .report-stat .rs-label { font-size: 9.5px; font-weight: 800; letter-spacing: .4px; text-transform: uppercase; color: #94a3b8; }
+    .report-stat .rs-value { font-size: 19px; font-weight: 800; color: #1e293b; font-variant-numeric: tabular-nums; line-height: 1.3; margin-top: 1px; }
+    .report-stat .rs-value small { font-size: 10px; font-weight: 700; color: #94a3b8; margin-left: 3px; }
+    .report-stat.teal .rs-value { color: #0f766e; }
+    .report-stat.green .rs-value { color: #047857; }
+    .report-stat.amber .rs-value { color: #b45309; }
+    .report-stat.sky .rs-value { color: #0369a1; }
+    .report-table { width: 100%; border-collapse: collapse; }
+    .report-table td { border-bottom: 1px solid #eef2f7; }
+    .report-table tbody tr.data-row:hover td { background: #f0fdfa; }
+    .report-table tbody tr.group-even > td { background: #f8fafc; }
+    .report-table tbody tr.group-even:hover > td { background: #f0fdfa; }
+    .report-table td.grp { vertical-align: top; }
+    .report-table tbody tr.sub-row > td { background: #f1f5f9; }
+
     .preview-overlay {
       position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px);
       z-index: 2000; display: flex; align-items: center; justify-content: center; animation: fadeIn 0.2s;
@@ -1742,7 +1761,7 @@
   </style>
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.4/dist/jspdf.plugin.autotable.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
@@ -2061,9 +2080,11 @@
           <button class="report-btn pdf" onclick="exportAllPO('pdf')">📄 PDF</button>
           <button class="report-btn excel" onclick="exportAllPO('excel')">📊 Excel</button>
         </div>
+        <p class="report-desc">Daftar seluruh PO beserta item, qty, dan volume kayu. Gunakan filter periode di atas untuk mempersempit data.</p>
         <div id="reportAllContent"></div>
       </div>
       <div id="reportPanelUnsent" class="report-panel" style="display:none;">
+        <p class="report-desc">PO yang masih punya sisa barang belum terkirim — lengkap dengan qty PO, qty terkirim, sisa qty, dan sisa volume.</p>
         <div class="report-actions">
           <button class="report-btn pdf" onclick="exportUnsentPO('pdf')">📄 PDF</button>
           <button class="report-btn excel" onclick="exportUnsentPO('excel')">📊 Excel</button>
@@ -2071,6 +2092,7 @@
         <div id="reportUnsentContent"></div>
       </div>
       <div id="reportPanelDelivery" class="report-panel" style="display:none;">
+        <p class="report-desc">Riwayat pengiriman per surat jalan: tanggal, PO, customer, sopir, item kayu, qty, dan volume yang dikirim.</p>
         <div class="report-actions">
           <button class="report-btn pdf" onclick="exportDeliveryReport('pdf')">📄 PDF</button>
           <button class="report-btn excel" onclick="exportDeliveryReport('excel')">📊 Excel</button>
@@ -2078,6 +2100,7 @@
         <div id="reportDeliveryContent"></div>
       </div>
       <div id="reportPanelRemaining" class="report-panel" style="display:none;">
+        <p class="report-desc">Sisa barang dikelompokkan per customer, lalu per ukuran kayu — memudahkan melihat ukuran mana yang masih perlu dikirim.</p>
         <div class="report-actions">
           <button class="report-btn pdf" onclick="exportRemainingBySize('pdf')">📄 PDF</button>
           <button class="report-btn excel" onclick="exportRemainingBySize('excel')">📊 Excel</button>
@@ -3785,69 +3808,222 @@ function renderAllPOGrouped(pos) {
   let grandQty = 0, grandKub = 0;
   pos.forEach(p => { (p.items || []).forEach(it => { grandQty += (it.quantity || 0); grandKub += (it.kubikasi || 0); }); });
   let html = `<div class="report-card slide-up"><h4>📊 Ringkasan</h4>
-    <div class="report-row"><span class="r-label">Total PO</span><span class="r-value">${pos.length}</span></div>
-    <div class="report-row"><span class="r-label">Total Qty</span><span class="r-value">${grandQty} pcs</span></div>
-    <div class="report-row"><span class="r-label">Total Volume</span><span class="r-value teal">${fmtNum(grandKub)} m³</span></div></div>`;
+    <div class="report-stats">
+      <div class="report-stat sky"><div class="rs-label">Total PO</div><div class="rs-value">${pos.length}</div></div>
+      <div class="report-stat green"><div class="rs-label">Total Qty</div><div class="rs-value">${grandQty.toLocaleString('id-ID')}<small>pcs</small></div></div>
+      <div class="report-stat teal"><div class="rs-label">Total Volume</div><div class="rs-value">${fmtNum(grandKub)}<small>m³</small></div></div>
+    </div></div>`;
   html += `<div class="report-card slide-up" style="margin-top:14px;"><h4>📋 Detail PO & Item</h4>`;
-  if (!pos.length) { html += '<div style="padding:20px;text-align:center;color:#9ca3af;">Tidak ada data</div>'; }
+  if (!pos.length) { html += '<div class="empty-state"><span class="empty-icon">📭</span><p>Tidak ada data pada periode ini</p></div>'; }
   else {
-    html += `<div class="table-scroll"><table style="width:100%;border-collapse:collapse;"><thead><tr>
+    html += `<div class="table-scroll"><table class="report-table"><thead><tr>
       <th style="${XL.th}">No PO</th><th style="${XL.th}">Customer</th><th style="${XL.th}">Tanggal</th>
       <th style="${XL.th}">Nama Kayu</th><th style="${XL.th}">Ukuran (T×L×P)</th>
       <th style="${XL.th}text-align:right;">Qty (Pcs)</th><th style="${XL.th}text-align:right;">Volume (m³)</th></tr></thead><tbody>`;
-    pos.forEach(p => {
-      const items = p.items || [];
+    pos.forEach((p, gi) => {
+      const items = (p.items && p.items.length) ? p.items : [{ productName: '-', quantity: 0, kubikasi: 0 }];
+      const span = items.length;
       let subQty = 0, subKub = 0;
       items.forEach((it, ii) => {
-        subQty += (it.quantity || 0);
-        subKub += (it.kubikasi || 0);
-        html += `<tr>
-          <td style="${XL.tdBold}">${ii === 0 ? p.poNumber : ''}</td>
-          <td style="${XL.td}">${ii === 0 ? p.customerName : ''}</td>
-          <td style="${XL.td}">${ii === 0 ? fmtDate(p.orderDate) : ''}</td>
-          <td style="${XL.td}">${it.productName || '-'}</td>
+        subQty += (it.quantity || 0); subKub += (it.kubikasi || 0);
+        html += `<tr class="data-row ${gi % 2 ? 'group-even' : ''}">`;
+        if (ii === 0) {
+          html += `<td class="grp" rowspan="${span}" style="${XL.tdBold}">${escHtml(p.poNumber)}</td>
+            <td class="grp" rowspan="${span}" style="${XL.td}">${escHtml(p.customerName)}</td>
+            <td class="grp" rowspan="${span}" style="${XL.td}">${fmtDate(p.orderDate)}</td>`;
+        }
+        html += `<td style="${XL.td}">${escHtml(it.productName || '-')}</td>
           <td style="${XL.td}">${it.thickness || 0} × ${it.width || 0} × ${it.length || 0}</td>
-          <td style="${XL.tdR}">${it.quantity || 0}</td>
+          <td style="${XL.tdR}">${(it.quantity || 0).toLocaleString('id-ID')}</td>
           <td style="${XL.tdR}">${fmtNum(it.kubikasi)}</td></tr>`;
       });
-      html += `<tr><td colspan="5" style="${XL.sub}text-align:right;">Subtotal ${p.poNumber}</td>
-        <td style="${XL.subR}">${subQty}</td><td style="${XL.subR}">${fmtNum(subKub)}</td></tr>`;
+      html += `<tr class="sub-row"><td colspan="5" style="${XL.sub}text-align:right;">Subtotal ${escHtml(p.poNumber)}</td>
+        <td style="${XL.subR}">${subQty.toLocaleString('id-ID')}</td><td style="${XL.subR}">${fmtNum(subKub)}</td></tr>`;
     });
     html += `<tr><td colspan="5" style="${XL.grand}text-align:right;">GRAND TOTAL</td>
-      <td style="${XL.grandR}">${grandQty}</td><td style="${XL.grandR}">${fmtNum(grandKub)}</td></tr>`;
+      <td style="${XL.grandR}">${grandQty.toLocaleString('id-ID')}</td><td style="${XL.grandR}">${fmtNum(grandKub)}</td></tr>`;
     html += '</tbody></table></div>';
   }
   html += '</div>';
   document.getElementById('reportAllContent').innerHTML = html;
 }
 
-/* --- Shared PDF header/signature --- */
-function pdfReportHeader(doc, title, subtitle) {
-  const mL = 10, mR = 10, pageW = doc.internal.pageSize.getWidth();
-  const cX = pageW / 2, rX = pageW - mR;
-  doc.setDrawColor(13, 148, 136); doc.setLineWidth(0.8);
-  doc.line(mL, 8, rX, 8);
-  doc.setFontSize(18); doc.setFont('helvetica', 'bold'); doc.setTextColor(13, 148, 136);
-  doc.text('PO KANDANG', cX, 16, { align: 'center' });
-  doc.setFontSize(11); doc.setFont('helvetica', 'normal'); doc.setTextColor(100, 100, 100);
-  doc.text(title, cX, 23, { align: 'center' });
-  if (subtitle) { doc.setFontSize(9); doc.text(subtitle, cX, 28, { align: 'center' }); }
-  doc.setDrawColor(13, 148, 136); doc.setLineWidth(0.3);
-  doc.line(mL, 30, rX, 30); doc.setTextColor(0, 0, 0);
-  return 34;
+/* === SHARED REPORT BRANDING (PDF & EXCEL) === */
+const REPORT_BRAND = 'PO KANDANG';
+const REPORT_TAGLINE = 'Sistem Manajemen PO Kayu';
+const RC = {
+  teal: [13, 148, 136], tealDark: [15, 118, 110], ink: [30, 41, 59],
+  muted: [100, 116, 139], line: [226, 232, 240], soft2: [241, 245, 249],
+  white: [255, 255, 255]
+};
+const EX = {
+  teal: '0F766E', tealDark: '115E59', ink: '1E293B', muted: '64748B',
+  line: 'E2E8F0', soft: 'F8FAFC', soft2: 'F1F5F9', white: 'FFFFFF'
+};
+
+function reportStamp() {
+  return new Date().toLocaleString('id-ID', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+function fmtInt(n) { return (Number(n) || 0).toLocaleString('id-ID'); }
+function fmt4(n) { return (Number(n) || 0).toFixed(4); }
+function pdfTint(cell, color) {
+  if (cell && typeof cell === 'object') {
+    cell.styles = Object.assign({}, cell.styles, { fillColor: color });
+    return cell;
+  }
+  return { content: cell, styles: { fillColor: color } };
 }
 
-function pdfReportFooter(doc) {
+function pdfReportHeader(doc, title, subtitle, stats) {
+  const pageW = doc.internal.pageSize.getWidth();
+  const mL = 10, mR = 10, rX = pageW - mR;
+  // Pita identitas laporan
+  doc.setFillColor(RC.tealDark[0], RC.tealDark[1], RC.tealDark[2]);
+  doc.rect(0, 0, pageW, 17, 'F');
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(14); doc.setTextColor(255, 255, 255);
+  doc.text(REPORT_BRAND, mL, 8);
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(209, 250, 229);
+  doc.text(REPORT_TAGLINE, mL, 13);
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(255, 255, 255);
+  doc.text('LAPORAN', rX, 8, { align: 'right' });
+  if (subtitle) {
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(209, 250, 229);
+    const periodLabel = subtitle.split('·')[0].replace(/^Periode:\s*/i, '').trim();
+    doc.text(periodLabel, rX, 13, { align: 'right' });
+  }
+  // Judul laporan
+  doc.setTextColor(RC.ink[0], RC.ink[1], RC.ink[2]);
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(14);
+  doc.text(title, mL, 26);
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(RC.muted[0], RC.muted[1], RC.muted[2]);
+  if (subtitle) doc.text(subtitle, mL, 31);
+
+  let y = 35;
+  if (stats && stats.length) {
+    const gap = 3, boxH = 14;
+    const w = (pageW - mL - mR - gap * (stats.length - 1)) / stats.length;
+    stats.forEach((s, i) => {
+      const x = mL + i * (w + gap);
+      doc.setFillColor(RC.soft2[0], RC.soft2[1], RC.soft2[2]);
+      doc.setDrawColor(RC.line[0], RC.line[1], RC.line[2]); doc.setLineWidth(0.2);
+      doc.roundedRect(x, y, w, boxH, 2, 2, 'FD');
+      const col = s.color || RC.tealDark;
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(6.5); doc.setTextColor(RC.muted[0], RC.muted[1], RC.muted[2]);
+      doc.text(String(s.label).toUpperCase(), x + 3, y + 5);
+      doc.setFontSize(10.5); doc.setTextColor(col[0], col[1], col[2]);
+      doc.text(String(s.value), x + 3, y + 11.2);
+    });
+    y += boxH + 5;
+  }
+  return y;
+}
+
+// Header kecil di halaman ke-2 dan seterusnya
+function pdfPageChrome(doc, title) {
+  return function () {
+    const info = doc.internal.getCurrentPageInfo();
+    if (!info || info.pageNumber <= 1) return;
+    const pageW = doc.internal.pageSize.getWidth();
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5); doc.setTextColor(RC.tealDark[0], RC.tealDark[1], RC.tealDark[2]);
+    doc.text(REPORT_BRAND, 10, 6);
+    doc.setFont('helvetica', 'normal'); doc.setTextColor(RC.muted[0], RC.muted[1], RC.muted[2]);
+    doc.text(title, pageW - 10, 6, { align: 'right' });
+    doc.setDrawColor(RC.line[0], RC.line[1], RC.line[2]); doc.setLineWidth(0.2);
+    doc.line(10, 7.5, pageW - 10, 7.5);
+  };
+}
+
+// Footer semua halaman: identitas + nomor halaman
+function pdfReportFooter(doc, title) {
   const pageW = doc.internal.pageSize.getWidth();
   const pageH = doc.internal.pageSize.getHeight();
-  doc.setFontSize(7); doc.setFont('helvetica', 'normal'); doc.setTextColor(150, 150, 150);
-  doc.text(`Halaman ${doc.internal.getNumberOfPages()}`, pageW / 2, pageH - 5, { align: 'center' });
+  const total = doc.internal.getNumberOfPages();
+  for (let i = 1; i <= total; i++) {
+    doc.setPage(i);
+    doc.setDrawColor(RC.line[0], RC.line[1], RC.line[2]); doc.setLineWidth(0.2);
+    doc.line(10, pageH - 9, pageW - 10, pageH - 9);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(6.8); doc.setTextColor(RC.muted[0], RC.muted[1], RC.muted[2]);
+    doc.text(`${REPORT_BRAND} · ${title}`, 10, pageH - 5);
+    doc.text(`Halaman ${i} dari ${total}`, pageW - 10, pageH - 5, { align: 'right' });
+  }
 }
 
-function excelHeader(wsData, title, period, printDate) {
-  wsData.push([title]);
-  wsData.push([`Periode: ${period} | Dicetak: ${printDate}`]);
-  wsData.push([]);
+/* --- Excel builder ber-style (xlsx-js-style) --- */
+function excelNewReport({ title, period, summary, headers, widths }) {
+  const rows = [], meta = [];
+  rows.push([REPORT_BRAND]); meta.push({ kind: 'brand' });
+  rows.push([title]); meta.push({ kind: 'title' });
+  rows.push([`Periode: ${period}   ·   Dicetak: ${reportStamp()}`]); meta.push({ kind: 'subtitle' });
+  rows.push([summary]); meta.push({ kind: 'summary' });
+  rows.push([]); meta.push({ kind: 'spacer' });
+  rows.push(headers.slice()); meta.push({ kind: 'head' });
+  return { rows, meta, headers, widths };
+}
+function excelRow(rep, cells, kind, extra) {
+  rep.rows.push(cells);
+  rep.meta.push(Object.assign({ kind: kind || 'data' }, extra || {}));
+}
+function excelWrite(rep, { sheetName, fileName, intCols = [], decCols = [] }) {
+  const nCols = rep.headers.length;
+  const ws = XLSX.utils.aoa_to_sheet(rep.rows);
+  ws['!ref'] = XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: Math.max(rep.rows.length - 1, 0), c: nCols - 1 } });
+  const merges = [];
+  const box = (color, style = 'thin') => ({
+    top: { style, color: { rgb: color } }, bottom: { style, color: { rgb: color } },
+    left: { style, color: { rgb: color } }, right: { style, color: { rgb: color } }
+  });
+  rep.meta.forEach((m, r) => {
+    if (['brand', 'title', 'subtitle', 'summary', 'spacer', 'note'].includes(m.kind) && nCols > 1) {
+      merges.push({ s: { r, c: 0 }, e: { r, c: nCols - 1 } });
+    }
+    if ((m.kind === 'subtotal' || m.kind === 'total') && (m.labelCols || 1) > 1) {
+      merges.push({ s: { r, c: 0 }, e: { r, c: (m.labelCols || 1) - 1 } });
+    }
+    for (let c = 0; c < nCols; c++) {
+      const addr = XLSX.utils.encode_cell({ r, c });
+      if (!ws[addr]) ws[addr] = { t: 's', v: '' };
+      const cell = ws[addr];
+      let st = null;
+      if (m.kind === 'brand') {
+        st = { font: { name: 'Calibri', sz: 18, bold: true, color: { rgb: EX.tealDark } }, alignment: { vertical: 'center' } };
+      } else if (m.kind === 'title') {
+        st = { font: { name: 'Calibri', sz: 13, bold: true, color: { rgb: EX.ink } }, alignment: { vertical: 'center' } };
+      } else if (m.kind === 'subtitle') {
+        st = { font: { name: 'Calibri', sz: 9, italic: true, color: { rgb: EX.muted } }, alignment: { vertical: 'center' } };
+      } else if (m.kind === 'summary') {
+        st = { font: { name: 'Calibri', sz: 10, bold: true, color: { rgb: EX.tealDark } }, fill: { patternType: 'solid', fgColor: { rgb: 'F0FDFA' } }, alignment: { vertical: 'center' } };
+      } else if (m.kind === 'head') {
+        st = { font: { name: 'Calibri', sz: 10, bold: true, color: { rgb: EX.white } }, fill: { patternType: 'solid', fgColor: { rgb: EX.teal } }, alignment: { horizontal: 'center', vertical: 'center', wrapText: true }, border: box(EX.tealDark) };
+      } else if (m.kind === 'subtotal') {
+        const right = c === 0 || intCols.includes(c) || decCols.includes(c);
+        st = { font: { name: 'Calibri', sz: 10, bold: true, color: { rgb: EX.ink } }, fill: { patternType: 'solid', fgColor: { rgb: EX.soft2 } }, alignment: { vertical: 'center', horizontal: right ? 'right' : 'left' }, border: box('CBD5E1') };
+      } else if (m.kind === 'total') {
+        st = { font: { name: 'Calibri', sz: 10.5, bold: true, color: { rgb: EX.white } }, fill: { patternType: 'solid', fgColor: { rgb: EX.tealDark } }, alignment: { vertical: 'center', horizontal: c === 0 ? 'left' : 'right' }, border: box(EX.tealDark) };
+      } else if (m.kind === 'note') {
+        st = { font: { name: 'Calibri', sz: 9, italic: true, color: { rgb: EX.muted } }, alignment: { vertical: 'center' } };
+      } else if (m.kind === 'spacer') {
+        st = null;
+      } else {
+        st = {
+          font: { name: 'Calibri', sz: 10, color: { rgb: EX.ink } },
+          fill: m.fill ? { patternType: 'solid', fgColor: { rgb: m.fill } } : undefined,
+          alignment: { vertical: 'center', horizontal: (intCols.includes(c) || decCols.includes(c)) ? 'right' : 'left' },
+          border: box(EX.line)
+        };
+      }
+      if (st) cell.s = st;
+      if (m.kind === 'data' || m.kind === 'subtotal' || m.kind === 'total') {
+        if (intCols.includes(c)) cell.z = '#,##0';
+        if (decCols.includes(c)) cell.z = '#,##0.0000';
+      }
+    }
+  });
+  ws['!merges'] = merges;
+  ws['!cols'] = (rep.widths || []).map(w => ({ wch: w }));
+  ws['!rows'] = rep.meta.map(m => ({ hpt: m.kind === 'brand' ? 26 : m.kind === 'title' ? 20 : m.kind === 'head' ? 26 : m.kind === 'spacer' ? 8 : 17 }));
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, sheetName);
+  XLSX.writeFile(wb, fileName);
 }
 
 /* --- Tab 3: Export PO Sudah Kirim --- */
@@ -3858,65 +4034,86 @@ async function exportAllPO(format) {
   let grandQty = 0, grandKub = 0;
   pos.forEach(p => { (p.items || []).forEach(it => { grandQty += (it.quantity || 0); grandKub += (it.kubikasi || 0); }); });
   const period = document.getElementById('reportPeriod')?.selectedOptions[0]?.text || 'Semua';
-  const pd = new Date().toLocaleDateString('id-ID') + ' ' + new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+  const TITLE = 'Laporan PO & Item';
+  const stamp = reportStamp();
+
   if (format === 'pdf') {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF('l', 'mm', 'a4');
-    const y = pdfReportHeader(doc, 'LAPORAN PO SUDAH TERKIRIM', `Periode: ${period} | Total: ${pos.length} PO | Dicetak: ${pd}`);
+    const y = pdfReportHeader(doc, TITLE, `Periode: ${period}  ·  Dicetak: ${stamp}`, [
+      { label: 'Total PO', value: `${pos.length} PO` },
+      { label: 'Total Qty', value: `${fmtInt(grandQty)} pcs` },
+      { label: 'Total Volume', value: `${fmt4(grandKub)} m³` },
+    ]);
     const body = [];
-    pos.forEach(p => {
+    pos.forEach((p, gi) => {
       const items = p.items || [];
       let sq = 0, sk = 0;
       items.forEach((it, ii) => {
         sq += (it.quantity || 0); sk += (it.kubikasi || 0);
-        body.push([
+        const row = [
           ii === 0 ? p.poNumber : '',
           ii === 0 ? p.customerName : '',
           ii === 0 ? fmtDate(p.orderDate) : '',
           it.productName || '-',
           `${it.thickness || 0}×${it.width || 0}×${it.length || 0}`,
-          String(it.quantity || 0),
-          fmtNum(it.kubikasi),
-        ]);
+          { content: fmtInt(it.quantity), styles: { halign: 'right' } },
+          { content: fmt4(it.kubikasi), styles: { halign: 'right' } },
+        ];
+        body.push(gi % 2 ? row.map(c => pdfTint(c, RC.soft2)) : row);
       });
       body.push([
-        { content: `Subtotal ${p.poNumber}`, colSpan: 5, styles: { halign: 'center', fontStyle: 'bold', fillColor: [245, 245, 245] } },
-        { content: String(sq), styles: { fontStyle: 'bold', halign: 'center', fillColor: [245, 245, 245] } },
-        { content: fmtNum(sk), styles: { fontStyle: 'bold', halign: 'center', fillColor: [245, 245, 245] } },
+        { content: `Subtotal ${p.poNumber}`, colSpan: 5, styles: { halign: 'right', fontStyle: 'bold', fillColor: RC.soft2, textColor: RC.ink } },
+        { content: fmtInt(sq), styles: { halign: 'right', fontStyle: 'bold', fillColor: RC.soft2, textColor: RC.ink } },
+        { content: fmt4(sk), styles: { halign: 'right', fontStyle: 'bold', fillColor: RC.soft2, textColor: RC.ink } },
       ]);
     });
     body.push([
-      { content: 'GRAND TOTAL', colSpan: 5, styles: { halign: 'center', fontStyle: 'bold', lineWidth: 0.5, lineColor: [0, 0, 0] } },
-      { content: String(grandQty), styles: { fontStyle: 'bold', halign: 'center', lineWidth: 0.5, lineColor: [0, 0, 0] } },
-      { content: fmtNum(grandKub), styles: { fontStyle: 'bold', halign: 'center', lineWidth: 0.5, lineColor: [0, 0, 0] } },
+      { content: 'GRAND TOTAL', colSpan: 5, styles: { halign: 'right', fontStyle: 'bold', fillColor: RC.tealDark, textColor: RC.white } },
+      { content: fmtInt(grandQty), styles: { halign: 'right', fontStyle: 'bold', fillColor: RC.tealDark, textColor: RC.white } },
+      { content: fmt4(grandKub), styles: { halign: 'right', fontStyle: 'bold', fillColor: RC.tealDark, textColor: RC.white } },
     ]);
     doc.autoTable({
       startY: y,
       head: [['No PO', 'Customer', 'Tanggal', 'Nama Kayu', 'Ukuran', 'Qty (Pcs)', 'Volume (m³)']],
       body,
-      styles: { fontSize: 8, cellPadding: 2, halign: 'center', overflow: 'ellipsize' },
-      headStyles: { fillColor: [243, 244, 246], textColor: [31, 41, 55], fontStyle: 'bold', halign: 'center' },
-      columnStyles: { 0: { cellWidth: 30, fontStyle: 'bold' }, 1: { cellWidth: 36 }, 2: { cellWidth: 22 }, 3: { cellWidth: 36 }, 4: { cellWidth: 28 }, 5: { cellWidth: 22 }, 6: { cellWidth: 22 } },
-      margin: { top: 10, bottom: 10, left: 10, right: 10 },
+      theme: 'grid',
+      styles: { fontSize: 7.8, cellPadding: 2.2, textColor: RC.ink, lineColor: RC.line, lineWidth: 0.1, valign: 'middle', overflow: 'ellipsize' },
+      headStyles: { fillColor: RC.tealDark, textColor: RC.white, fontStyle: 'bold', halign: 'center', fontSize: 7.8, lineColor: RC.tealDark },
+      columnStyles: {
+        0: { cellWidth: 46, fontStyle: 'bold' }, 1: { cellWidth: 34, overflow: 'linebreak' }, 2: { cellWidth: 22 },
+        3: { cellWidth: 30, overflow: 'linebreak' }, 4: { cellWidth: 25 },
+        5: { cellWidth: 24, halign: 'right' }, 6: { cellWidth: 26, halign: 'right' },
+      },
+      margin: { top: 12, bottom: 14, left: 10, right: 10 },
       showHead: 'everyPage',
-      didDrawPage: function () { pdfReportFooter(doc); },
+      didDrawPage: pdfPageChrome(doc, TITLE),
     });
-    doc.save('Laporan_PO_Terkirim.pdf');
+    doc.setFont('helvetica', 'italic'); doc.setFontSize(7); doc.setTextColor(RC.muted[0], RC.muted[1], RC.muted[2]);
+    doc.text('* Subtotal per PO dan grand total dihitung dari seluruh item pada PO.', 10, doc.lastAutoTable.finalY + 6);
+    pdfReportFooter(doc, TITLE);
+    doc.save('Laporan_PO_dan_Item.pdf');
   } else {
-    const wsData = [];
-    excelHeader(wsData, 'LAPORAN PO SUDAH TERKIRIM - PO KANDANG', period, new Date().toLocaleDateString('id-ID'));
-    wsData.push(['No PO', 'Customer', 'Tanggal', 'Status', 'Nama Kayu', 'Ukuran', 'Qty (Pcs)', 'Volume (m³)']);
-    pos.forEach(p => {
-      (p.items || []).forEach(it => wsData.push([p.poNumber, p.customerName, fmtDate(p.orderDate), p.status, it.productName || '-', `${it.thickness || 0}×${it.width || 0}×${it.length || 0}`, it.quantity || 0, fmtNum(it.kubikasi)]));
-      const sq = (p.items || []).reduce((s, it) => s + (it.quantity || 0), 0);
-      const sk = (p.items || []).reduce((s, it) => s + (it.kubikasi || 0), 0);
-      wsData.push([`Subtotal ${p.poNumber}`, '', '', '', '', '', sq, fmtNum(sk)]);
+    const rep = excelNewReport({
+      title: TITLE,
+      period,
+      summary: `Total PO: ${pos.length}   ·   Total Qty: ${fmtInt(grandQty)} pcs   ·   Total Volume: ${fmt4(grandKub)} m³`,
+      headers: ['No PO', 'Customer', 'Tanggal', 'Nama Kayu', 'Ukuran (T×L×P)', 'Qty (Pcs)', 'Volume (m³)'],
+      widths: [26, 34, 14, 20, 17, 12, 14],
     });
-    wsData.push(['GRAND TOTAL', '', '', '', '', '', grandQty, fmtNum(grandKub)]);
-    const ws = XLSX.utils.aoa_to_sheet(wsData);
-    ws['!cols'] = [{ wch: 18 }, { wch: 18 }, { wch: 14 }, { wch: 10 }, { wch: 22 }, { wch: 18 }, { wch: 14 }, { wch: 14 }];
-    const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'PO Sudah Terkirim');
-    XLSX.writeFile(wb, 'Laporan_PO_Terkirim.xlsx');
+    pos.forEach((p, gi) => {
+      const items = p.items || [];
+      let sq = 0, sk = 0;
+      items.forEach(it => {
+        sq += (it.quantity || 0); sk += (it.kubikasi || 0);
+        excelRow(rep, [p.poNumber, p.customerName, fmtDate(p.orderDate), it.productName || '-', `${it.thickness || 0}×${it.width || 0}×${it.length || 0}`, it.quantity || 0, Number(fmt4(it.kubikasi))], 'data', { fill: gi % 2 ? EX.soft : undefined });
+      });
+      excelRow(rep, [`Subtotal ${p.poNumber}`, '', '', '', '', sq, Number(fmt4(sk))], 'subtotal', { labelCols: 5 });
+    });
+    excelRow(rep, ['GRAND TOTAL', '', '', '', '', grandQty, Number(fmt4(grandKub))], 'total', { labelCols: 5 });
+    excelRow(rep, [], 'spacer');
+    excelRow(rep, ['* Subtotal per PO dan grand total dihitung dari seluruh item pada PO.'], 'note');
+    excelWrite(rep, { sheetName: 'PO dan Item', fileName: 'Laporan_PO_dan_Item.xlsx', intCols: [5], decCols: [6] });
   }
   showToast(`${format.toUpperCase()} berhasil diunduh!`, 'success');
 }
@@ -3940,13 +4137,15 @@ function renderUnsentGrouped(unsent) {
     grandSisaKub += (p.totalKubikasi || 0) - (p.shippedKubikasi || 0);
   });
   let html = `<div class="report-card slide-up"><h4>📦 Ringkasan</h4>
-    <div class="report-row"><span class="r-label">Total PO</span><span class="r-value">${unsent.length}</span></div>
-    <div class="report-row"><span class="r-label">Qty PO (Awal)</span><span class="r-value">${grandQtyPo} pcs</span></div>
-    <div class="report-row"><span class="r-label">Qty Terkirim</span><span class="r-value green">${grandQtyTer} pcs</span></div>
-    <div class="report-row"><span class="r-label">Sisa Qty</span><span class="r-value amber">${grandSisaQty} pcs</span></div>
-    <div class="report-row"><span class="r-label">Sisa Volume</span><span class="r-value teal">${fmtNum(grandSisaKub)} m³</span></div></div>`;
+    <div class="report-stats">
+      <div class="report-stat sky"><div class="rs-label">Total PO</div><div class="rs-value">${unsent.length}</div></div>
+      <div class="report-stat"><div class="rs-label">Qty PO (Awal)</div><div class="rs-value">${grandQtyPo.toLocaleString('id-ID')}<small>pcs</small></div></div>
+      <div class="report-stat green"><div class="rs-label">Qty Terkirim</div><div class="rs-value">${grandQtyTer.toLocaleString('id-ID')}<small>pcs</small></div></div>
+      <div class="report-stat amber"><div class="rs-label">Sisa Qty</div><div class="rs-value">${grandSisaQty.toLocaleString('id-ID')}<small>pcs</small></div></div>
+      <div class="report-stat teal"><div class="rs-label">Sisa Volume</div><div class="rs-value">${fmtNum(grandSisaKub)}<small>m³</small></div></div>
+    </div></div>`;
   html += `<div class="report-card slide-up" style="margin-top:14px;"><h4>📋 Detail PO Belum Kirim</h4>`;
-  if (!unsent.length) { html += '<div style="padding:20px;text-align:center;color:#9ca3af;">Semua PO sudah terkirim</div>'; }
+  if (!unsent.length) { html += '<div class="empty-state"><span class="empty-icon">✅</span><p>Semua PO sudah terkirim</p></div>'; }
   else {
     html += `<div class="unsent-filter-wrap">
       <div class="unsent-filter-label">🔍 Filter PO:</div>
@@ -3959,41 +4158,44 @@ function renderUnsentGrouped(unsent) {
       }
     });
     html += `</div></div>`;
-    html += `<div id="unsentTableWrap"><div class="table-scroll"><table style="width:100%;border-collapse:collapse;"><thead><tr>
+    html += `<div id="unsentTableWrap"><div class="table-scroll"><table class="report-table"><thead><tr>
       <th style="${XL.th}">No PO</th><th style="${XL.th}">Customer</th><th style="${XL.th}">Tanggal</th>
       <th style="${XL.th}">Status</th><th style="${XL.th}">Nama Kayu</th><th style="${XL.th}">Ukuran (T×L×P)</th>
       <th style="${XL.th}text-align:right;">Qty PO</th><th style="${XL.th}text-align:right;">Qty Terkirim</th>
       <th style="${XL.th}text-align:right;">Sisa Qty</th><th style="${XL.th}text-align:right;">Sisa Volume (m³)</th></tr></thead><tbody>`;
-    unsent.forEach(p => {
+    unsent.forEach((p, gi) => {
       const visibleItems = (p.items || []).filter(it => (it.sisaQty || 0) > 0);
       if (visibleItems.length === 0) return;
+      const span = visibleItems.length;
       let subSisaQty = 0, subSisaKub = 0;
       visibleItems.forEach((it, ii) => {
         subSisaQty += (it.sisaQty || 0);
         subSisaKub += (it.sisaKubikasi || 0);
-        html += `<tr class="unsent-row" data-po="${p.poNumber}">
-          <td style="${XL.tdBold}">${ii === 0 ? p.poNumber : ''}</td>
-          <td style="${XL.td}">${ii === 0 ? p.customerName : ''}</td>
-          <td style="${XL.td}">${ii === 0 ? fmtDate(p.orderDate) : ''}</td>
-          <td style="${XL.td}">${ii === 0 ? (() => {
-            const sc = { diterima:['#dbeafe','#1d4ed8'], diproses:['#fef3c7','#b45309'], dikirim:['#ede9fe','#6d28d9'], 'dikirim sebagian':['#e0f2fe','#0284c7'], selesai:['#d1fae5','#047857'], dibatalkan:['#fee2e2','#dc2626'] };
-            const [bg, fg] = sc[p.status] || ['#dbeafe','#1d4ed8'];
-            return `<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;background:${bg};color:${fg}">${p.status}</span>`;
-          })() : ''}</td>
-          <td style="${XL.td}">${it.productName || '-'}</td>
+        html += `<tr class="unsent-row data-row ${gi % 2 ? 'group-even' : ''}" data-po="${p.poNumber}">`;
+        if (ii === 0) {
+          html += `<td class="grp" rowspan="${span}" style="${XL.tdBold}">${escHtml(p.poNumber)}</td>
+            <td class="grp" rowspan="${span}" style="${XL.td}">${escHtml(p.customerName)}</td>
+            <td class="grp" rowspan="${span}" style="${XL.td}">${fmtDate(p.orderDate)}</td>
+            <td class="grp" rowspan="${span}" style="${XL.td}">${(() => {
+              const sc = { diterima:['#dbeafe','#1d4ed8'], diproses:['#fef3c7','#b45309'], dikirim:['#ede9fe','#6d28d9'], 'dikirim sebagian':['#e0f2fe','#0284c7'], selesai:['#d1fae5','#047857'], dibatalkan:['#fee2e2','#dc2626'] };
+              const [bg, fg] = sc[p.status] || ['#dbeafe','#1d4ed8'];
+              return `<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;background:${bg};color:${fg};white-space:nowrap;">${p.status}</span>`;
+            })()}</td>`;
+        }
+        html += `<td style="${XL.td}">${escHtml(it.productName || '-')}</td>
           <td style="${XL.td}">${it.thickness || 0} × ${it.width || 0} × ${it.length || 0}</td>
-          <td style="${XL.tdR}">${it.quantity || 0}</td>
-          <td style="${XL.tdR}">${it.shippedQty || 0}</td>
-          <td style="${XL.tdR}">${it.sisaQty || 0}</td>
+          <td style="${XL.tdR}">${(it.quantity || 0).toLocaleString('id-ID')}</td>
+          <td style="${XL.tdR}">${(it.shippedQty || 0).toLocaleString('id-ID')}</td>
+          <td style="${XL.tdR}font-weight:700;color:#b45309;">${(it.sisaQty || 0).toLocaleString('id-ID')}</td>
           <td style="${XL.tdR}">${fmtNum(it.sisaKubikasi)}</td></tr>`;
       });
-      html += `<tr class="unsent-row" data-po="${p.poNumber}"><td colspan="6" style="${XL.sub}text-align:right;">Subtotal ${p.poNumber}</td>
-        <td style="${XL.subR}">${p.totalQuantity || 0}</td><td style="${XL.subR}">${p.shippedQuantity || 0}</td>
-        <td style="${XL.subR}">${subSisaQty}</td><td style="${XL.subR}">${fmtNum(subSisaKub)}</td></tr>`;
+      html += `<tr class="unsent-row sub-row" data-po="${p.poNumber}"><td colspan="6" style="${XL.sub}text-align:right;">Subtotal ${escHtml(p.poNumber)}</td>
+        <td style="${XL.subR}">${(p.totalQuantity || 0).toLocaleString('id-ID')}</td><td style="${XL.subR}">${(p.shippedQuantity || 0).toLocaleString('id-ID')}</td>
+        <td style="${XL.subR}">${subSisaQty.toLocaleString('id-ID')}</td><td style="${XL.subR}">${fmtNum(subSisaKub)}</td></tr>`;
     });
     html += `<tr id="unsentGrandRow"><td colspan="6" style="${XL.grand}text-align:right;">GRAND TOTAL</td>
-      <td style="${XL.grandR}">${grandQtyPo}</td><td style="${XL.grandR}">${grandQtyTer}</td>
-      <td style="${XL.grandR}">${grandSisaQty}</td><td style="${XL.grandR}">${fmtNum(grandSisaKub)}</td></tr>`;
+      <td style="${XL.grandR}">${grandQtyPo.toLocaleString('id-ID')}</td><td style="${XL.grandR}">${grandQtyTer.toLocaleString('id-ID')}</td>
+      <td style="${XL.grandR}">${grandSisaQty.toLocaleString('id-ID')}</td><td style="${XL.grandR}">${fmtNum(grandSisaKub)}</td></tr>`;
     html += '</tbody></table></div></div>';
     html += `<div style="${XL.note}">* Keterangan: Angka Subtotal dan Grand Total adalah akumulasi sisa barang yang belum dikirim.</div>`;
   }
@@ -4057,86 +4259,98 @@ async function exportUnsentPO(format) {
     gSK += (p.totalKubikasi || 0) - (p.shippedKubikasi || 0);
   });
   const period = document.getElementById('reportPeriod')?.selectedOptions[0]?.text || 'Semua';
-  const pd = new Date().toLocaleDateString('id-ID') + ' ' + new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+  const TITLE = 'Laporan PO Belum Kirim';
+  const stamp = reportStamp();
+
   if (format === 'pdf') {
     const { jsPDF } = window.jspdf;
-    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
-    const pageW = 297, marginL = 10, marginR = 10, usableW = pageW - marginL - marginR;
-    const y = pdfReportHeader(doc, 'LAPORAN PO BELUM TERKIRIM', `Periode: ${period} | Total: ${unsent.length} PO | Dicetak: ${pd}`);
+    const doc = new jsPDF('l', 'mm', 'a4');
+    const y = pdfReportHeader(doc, TITLE, `Periode: ${period}  ·  Dicetak: ${stamp}`, [
+      { label: 'PO Belum Kirim', value: `${unsent.length} PO` },
+      { label: 'Qty PO', value: `${fmtInt(gQP)} pcs` },
+      { label: 'Sudah Terkirim', value: `${fmtInt(gQT)} pcs` },
+      { label: 'Sisa Qty', value: `${fmtInt(gSQ)} pcs`, color: [180, 83, 9] },
+      { label: 'Sisa Volume', value: `${fmt4(gSK)} m³` },
+    ]);
     const body = [];
-    unsent.forEach(p => {
+    unsent.forEach((p, gi) => {
       const visibleItems = (p.items || []).filter(it => (it.sisaQty || 0) > 0);
       if (visibleItems.length === 0) return;
       let sSQ = 0, sSK = 0;
       visibleItems.forEach((it, ii) => {
         sSQ += (it.sisaQty || 0); sSK += (it.sisaKubikasi || 0);
-        body.push([
+        const row = [
           ii === 0 ? p.poNumber : '',
           ii === 0 ? p.customerName : '',
           ii === 0 ? fmtDate(p.orderDate) : '',
           ii === 0 ? p.status : '',
           it.productName || '-',
           `${it.thickness || 0}×${it.width || 0}×${it.length || 0}`,
-          String(it.quantity || 0),
-          String(it.shippedQty || 0),
-          String(it.sisaQty || 0),
-          fmtNum(it.sisaKubikasi),
-        ]);
+          { content: fmtInt(it.quantity), styles: { halign: 'right' } },
+          { content: fmtInt(it.shippedQty), styles: { halign: 'right' } },
+          { content: fmtInt(it.sisaQty), styles: { halign: 'right', fontStyle: 'bold' } },
+          { content: fmt4(it.sisaKubikasi), styles: { halign: 'right' } },
+        ];
+        body.push(gi % 2 ? row.map(c => pdfTint(c, RC.soft2)) : row);
       });
       body.push([
-        { content: `Subtotal ${p.poNumber}`, colSpan: 6, styles: { halign: 'center', fontStyle: 'bold', fillColor: [245, 245, 245] } },
-        { content: String(p.totalQuantity || 0), styles: { fontStyle: 'bold', halign: 'center', fillColor: [245, 245, 245] } },
-        { content: String(p.shippedQuantity || 0), styles: { fontStyle: 'bold', halign: 'center', fillColor: [245, 245, 245] } },
-        { content: String(sSQ), styles: { fontStyle: 'bold', halign: 'center', fillColor: [245, 245, 245] } },
-        { content: fmtNum(sSK), styles: { fontStyle: 'bold', halign: 'center', fillColor: [245, 245, 245] } },
+        { content: `Subtotal ${p.poNumber}`, colSpan: 6, styles: { halign: 'right', fontStyle: 'bold', fillColor: RC.soft2, textColor: RC.ink } },
+        { content: fmtInt(p.totalQuantity), styles: { halign: 'right', fontStyle: 'bold', fillColor: RC.soft2, textColor: RC.ink } },
+        { content: fmtInt(p.shippedQuantity), styles: { halign: 'right', fontStyle: 'bold', fillColor: RC.soft2, textColor: RC.ink } },
+        { content: fmtInt(sSQ), styles: { halign: 'right', fontStyle: 'bold', fillColor: RC.soft2, textColor: RC.ink } },
+        { content: fmt4(sSK), styles: { halign: 'right', fontStyle: 'bold', fillColor: RC.soft2, textColor: RC.ink } },
       ]);
     });
     body.push([
-      { content: 'GRAND TOTAL', colSpan: 6, styles: { halign: 'center', fontStyle: 'bold', lineWidth: 0.5, lineColor: [0, 0, 0] } },
-      { content: String(gQP), styles: { fontStyle: 'bold', halign: 'center', lineWidth: 0.5, lineColor: [0, 0, 0] } },
-      { content: String(gQT), styles: { fontStyle: 'bold', halign: 'center', lineWidth: 0.5, lineColor: [0, 0, 0] } },
-      { content: String(gSQ), styles: { fontStyle: 'bold', halign: 'center', lineWidth: 0.5, lineColor: [0, 0, 0] } },
-      { content: fmtNum(gSK), styles: { fontStyle: 'bold', halign: 'center', lineWidth: 0.5, lineColor: [0, 0, 0] } },
+      { content: 'GRAND TOTAL', colSpan: 6, styles: { halign: 'right', fontStyle: 'bold', fillColor: RC.tealDark, textColor: RC.white } },
+      { content: fmtInt(gQP), styles: { halign: 'right', fontStyle: 'bold', fillColor: RC.tealDark, textColor: RC.white } },
+      { content: fmtInt(gQT), styles: { halign: 'right', fontStyle: 'bold', fillColor: RC.tealDark, textColor: RC.white } },
+      { content: fmtInt(gSQ), styles: { halign: 'right', fontStyle: 'bold', fillColor: RC.tealDark, textColor: RC.white } },
+      { content: fmt4(gSK), styles: { halign: 'right', fontStyle: 'bold', fillColor: RC.tealDark, textColor: RC.white } },
     ]);
-    const colPct = [0.10, 0.15, 0.09, 0.08, 0.10, 0.09, 0.09, 0.09, 0.09, 0.11];
-    const colStyles = {};
-    colPct.forEach((pct, i) => {
-      colStyles[i] = { cellWidth: Math.round(usableW * pct * 10) / 10 };
-    });
-    colStyles[0].fontStyle = 'bold';
     doc.autoTable({
       startY: y,
-      head: [['No PO', 'Customer', 'Tgl PO', 'Status', 'Nama Kayu', 'Ukuran', 'Qty PO', 'Qty Terkirim', 'Sisa Qty', 'Sisa Vol (m³)']],
+      head: [['No PO', 'Customer', 'Tgl PO', 'Status', 'Nama Kayu', 'Ukuran', 'Qty PO', 'Terkirim', 'Sisa Qty', 'Sisa Vol (m³)']],
       body,
-      styles: { fontSize: 8, cellPadding: 3, halign: 'center', overflow: 'ellipsize', cellSpacing: 0 },
-      headStyles: { fillColor: [243, 244, 246], textColor: [31, 41, 55], fontStyle: 'bold', halign: 'center', fontSize: 8, cellPadding: 3 },
-      columnStyles: colStyles,
-      margin: { top: 10, bottom: 10, left: marginL, right: marginR },
+      theme: 'grid',
+      styles: { fontSize: 7.6, cellPadding: 2.2, textColor: RC.ink, lineColor: RC.line, lineWidth: 0.1, valign: 'middle', overflow: 'ellipsize' },
+      headStyles: { fillColor: RC.tealDark, textColor: RC.white, fontStyle: 'bold', halign: 'center', fontSize: 7.6, lineColor: RC.tealDark },
+      columnStyles: {
+        0: { cellWidth: 46, fontStyle: 'bold' }, 1: { cellWidth: 36, overflow: 'linebreak' }, 2: { cellWidth: 22 }, 3: { cellWidth: 18 },
+        4: { cellWidth: 24, halign: 'left', overflow: 'linebreak' }, 5: { cellWidth: 24, halign: 'center' },
+        6: { cellWidth: 18, halign: 'right' }, 7: { cellWidth: 20, halign: 'right' },
+        8: { cellWidth: 18, halign: 'right' }, 9: { cellWidth: 25, halign: 'right' },
+      },
+      margin: { top: 12, bottom: 14, left: 10, right: 10 },
       showHead: 'everyPage',
-      didDrawPage: function () { pdfReportFooter(doc); },
+      didDrawPage: pdfPageChrome(doc, TITLE),
     });
-    const noteY = doc.lastAutoTable.finalY + 6;
-    doc.setFontSize(7.5); doc.setFont('helvetica', 'italic'); doc.setTextColor(120, 120, 120);
-    doc.text('* Keterangan: Angka Subtotal dan Grand Total adalah akumulasi sisa barang yang belum dikirim.', marginL, noteY);
-    doc.save('PO_Belum_Kirim.pdf');
+    doc.setFont('helvetica', 'italic'); doc.setFontSize(7); doc.setTextColor(RC.muted[0], RC.muted[1], RC.muted[2]);
+    doc.text('* Subtotal dan grand total adalah akumulasi sisa barang yang belum dikirim.', 10, doc.lastAutoTable.finalY + 6);
+    pdfReportFooter(doc, TITLE);
+    doc.save('Laporan_PO_Belum_Kirim.pdf');
   } else {
-    const wsData = [];
-    excelHeader(wsData, 'LAPORAN PO BELUM TERKIRIM - PO KANDANG', period, new Date().toLocaleDateString('id-ID'));
-    wsData.push(['No PO', 'Customer', 'Tanggal', 'Status', 'Nama Kayu', 'Ukuran', 'Qty PO', 'Qty Terkirim', 'Sisa Qty', 'Sisa Volume (m³)']);
-    unsent.forEach(p => {
+    const rep = excelNewReport({
+      title: TITLE,
+      period,
+      summary: `PO: ${unsent.length}   ·   Qty PO: ${fmtInt(gQP)} pcs   ·   Terkirim: ${fmtInt(gQT)} pcs   ·   Sisa: ${fmtInt(gSQ)} pcs   ·   Sisa Volume: ${fmt4(gSK)} m³`,
+      headers: ['No PO', 'Customer', 'Tanggal', 'Status', 'Nama Kayu', 'Ukuran (T×L×P)', 'Qty PO', 'Qty Terkirim', 'Sisa Qty', 'Sisa Volume (m³)'],
+      widths: [24, 32, 14, 14, 18, 16, 10, 13, 11, 15],
+    });
+    unsent.forEach((p, gi) => {
       const visibleItems = (p.items || []).filter(it => (it.sisaQty || 0) > 0);
       if (visibleItems.length === 0) return;
-      visibleItems.forEach(it => wsData.push([p.poNumber, p.customerName, fmtDate(p.orderDate), p.status, it.productName || '-', `${it.thickness || 0}×${it.width || 0}×${it.length || 0}`, it.quantity || 0, it.shippedQty || 0, it.sisaQty || 0, fmtNum(it.sisaKubikasi)]));
-      const sq = visibleItems.reduce((s, it) => s + (it.sisaQty || 0), 0);
-      const sk = visibleItems.reduce((s, it) => s + (it.sisaKubikasi || 0), 0);
-      wsData.push([`Subtotal ${p.poNumber}`, '', '', '', '', '', p.totalQuantity || 0, p.shippedQuantity || 0, sq, fmtNum(sk)]);
+      let sSQ = 0, sSK = 0;
+      visibleItems.forEach(it => {
+        sSQ += (it.sisaQty || 0); sSK += (it.sisaKubikasi || 0);
+        excelRow(rep, [p.poNumber, p.customerName, fmtDate(p.orderDate), p.status, it.productName || '-', `${it.thickness || 0}×${it.width || 0}×${it.length || 0}`, it.quantity || 0, it.shippedQty || 0, it.sisaQty || 0, Number(fmt4(it.sisaKubikasi))], 'data', { fill: gi % 2 ? EX.soft : undefined });
+      });
+      excelRow(rep, [`Subtotal ${p.poNumber}`, '', '', '', '', '', p.totalQuantity || 0, p.shippedQuantity || 0, sSQ, Number(fmt4(sSK))], 'subtotal', { labelCols: 6 });
     });
-    wsData.push(['GRAND TOTAL', '', '', '', '', '', gQP, gQT, gSQ, fmtNum(gSK)]);
-    wsData.push([]); wsData.push(['* Keterangan: Angka Subtotal dan Grand Total adalah akumulasi sisa barang yang belum dikirim.']);
-    const ws = XLSX.utils.aoa_to_sheet(wsData);
-    ws['!cols'] = [{ wch: 18 }, { wch: 18 }, { wch: 14 }, { wch: 10 }, { wch: 22 }, { wch: 18 }, { wch: 12 }, { wch: 14 }, { wch: 12 }, { wch: 16 }];
-    const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'PO Belum Kirim');
-    XLSX.writeFile(wb, 'PO_Belum_Kirim.xlsx');
+    excelRow(rep, ['GRAND TOTAL', '', '', '', '', '', gQP, gQT, gSQ, Number(fmt4(gSK))], 'total', { labelCols: 6 });
+    excelRow(rep, [], 'spacer');
+    excelRow(rep, ['* Subtotal dan grand total adalah akumulasi sisa barang yang belum dikirim.'], 'note');
+    excelWrite(rep, { sheetName: 'PO Belum Kirim', fileName: 'Laporan_PO_Belum_Kirim.xlsx', intCols: [6, 7, 8], decCols: [9] });
   }
   showToast(`${format.toUpperCase()} berhasil diunduh!`, 'success');
 }
@@ -4155,11 +4369,13 @@ function renderRemainingBySize(data) {
   let grandQty = 0, grandKub = 0;
   data.forEach(c => { grandQty += c.totalSisaQty; grandKub += c.totalSisaKub; });
   let html = `<div class="report-card slide-up"><h4>📐 Ringkasan Sisa PO per Ukuran</h4>
-    <div class="report-row"><span class="r-label">Total Customer</span><span class="r-value">${data.length}</span></div>
-    <div class="report-row"><span class="r-label">Total Sisa Qty</span><span class="r-value amber">${grandQty} pcs</span></div>
-    <div class="report-row"><span class="r-label">Total Sisa Volume</span><span class="r-value teal">${fmtNum(grandKub)} m³</span></div></div>`;
+    <div class="report-stats">
+      <div class="report-stat sky"><div class="rs-label">Total Customer</div><div class="rs-value">${data.length}</div></div>
+      <div class="report-stat amber"><div class="rs-label">Total Sisa Qty</div><div class="rs-value">${grandQty.toLocaleString('id-ID')}<small>pcs</small></div></div>
+      <div class="report-stat teal"><div class="rs-label">Total Sisa Volume</div><div class="rs-value">${fmtNum(grandKub)}<small>m³</small></div></div>
+    </div></div>`;
   if (!data.length) {
-    html += `<div class="report-card slide-up" style="margin-top:14px;padding:20px;text-align:center;color:#9ca3af;">Semua PO sudah terkirim</div>`;
+    html += `<div class="report-card slide-up" style="margin-top:14px;"><div class="empty-state"><span class="empty-icon">✅</span><p>Semua PO sudah terkirim</p></div></div>`;
   } else {
     data.forEach(c => {
       html += `<div class="remain-cust-card slide-up">
@@ -4204,100 +4420,96 @@ function renderRemainingBySize(data) {
 async function exportRemainingBySize(format) {
   const data = _reportData.remainingBySize || [];
   if (!data.length) return showToast('Tidak ada data', 'error');
-  const pd = new Date().toLocaleDateString('id-ID') + ' ' + new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
-  const fmt2 = n => (n || 0).toFixed(4);
+  if (format === 'pdf' && !window.jspdf) return showToast('Library PDF belum terload. Muat ulang halaman.', 'error');
+  const TITLE = 'Laporan Sisa PO per Ukuran';
+  const stamp = reportStamp();
   let grandQty = 0, grandKub = 0;
   data.forEach(c => { grandQty += c.totalSisaQty; grandKub += c.totalSisaKub; });
 
   if (format === 'pdf') {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF('p', 'mm', 'a4');
-    const pageW = doc.internal.pageSize.getWidth();
-    const usableW = pageW - 20;
-    const y = pdfReportHeader(doc, 'LAPORAN SISA PO PER UKURAN', `Total Customer: ${data.length} | Dicetak: ${pd}`);
+    const y = pdfReportHeader(doc, TITLE, `Semua PO berjalan  ·  Dicetak: ${stamp}`, [
+      { label: 'Total Customer', value: `${data.length}` },
+      { label: 'Total Sisa Qty', value: `${fmtInt(grandQty)} pcs`, color: [180, 83, 9] },
+      { label: 'Total Sisa Volume', value: `${fmt4(grandKub)} m³` },
+    ]);
     const body = [];
     data.forEach((c, ci) => {
-      const custBg = ci % 2 === 0 ? [255, 255, 255] : [248, 250, 252];
-      c.sizes.forEach((sz, si) => {
+      c.sizes.forEach(sz => {
         sz.pos.forEach((po, ii) => {
           body.push([
-            ii === 0 && si === 0 ? c.customerName : (ii === 0 ? '' : ''),
+            ii === 0 ? c.customerName : '',
             ii === 0 ? `${sz.thickness} × ${sz.width} × ${sz.length}` : '',
             ii === 0 ? (sz.productName || '-') : '',
             po.poNumber,
-            { content: String(po.sisaQty), styles: { halign: 'right' } },
-            { content: fmt2(po.sisaKub), styles: { halign: 'right' } },
+            { content: fmtInt(po.sisaQty), styles: { halign: 'right' } },
+            { content: fmt4(po.sisaKub), styles: { halign: 'right' } },
           ]);
         });
         body.push([
-          { content: '', styles: { fillColor: custBg } },
-          { content: '', styles: { fillColor: custBg } },
-          { content: '', styles: { fillColor: custBg } },
-          { content: `Subtotal Ukuran ${sz.thickness}×${sz.width}×${sz.length}`, colSpan: 1, styles: { halign: 'right', fontStyle: 'bold', fillColor: [230, 250, 250], fontSize: 7.5 } },
-          { content: String(sz.totalSisaQty), styles: { fontStyle: 'bold', halign: 'right', fillColor: [230, 250, 250] } },
-          { content: fmt2(sz.totalSisaKub), styles: { fontStyle: 'bold', halign: 'right', fillColor: [230, 250, 250] } },
+          { content: `Subtotal ukuran ${sz.thickness}×${sz.width}×${sz.length}`, colSpan: 4, styles: { halign: 'right', fontStyle: 'bold', fillColor: RC.soft2, textColor: RC.ink, fontSize: 7.2 } },
+          { content: fmtInt(sz.totalSisaQty), styles: { halign: 'right', fontStyle: 'bold', fillColor: RC.soft2, textColor: RC.ink } },
+          { content: fmt4(sz.totalSisaKub), styles: { halign: 'right', fontStyle: 'bold', fillColor: RC.soft2, textColor: RC.ink } },
         ]);
       });
       body.push([
-        { content: `TOTAL ${c.customerName}`, colSpan: 3, styles: { halign: 'left', fontStyle: 'bold', fillColor: [204, 251, 241], textColor: [13, 148, 136] } },
-        { content: `${c.sizes.reduce((s, sz) => s + sz.pos.length, 0)} PO`, styles: { fontStyle: 'bold', halign: 'center', fillColor: [204, 251, 241], textColor: [13, 148, 136] } },
-        { content: String(c.totalSisaQty), styles: { fontStyle: 'bold', halign: 'right', fillColor: [204, 251, 241], textColor: [13, 148, 136] } },
-        { content: fmt2(c.totalSisaKub), styles: { fontStyle: 'bold', halign: 'right', fillColor: [204, 251, 241], textColor: [13, 148, 136] } },
+        { content: `TOTAL ${c.customerName}`, colSpan: 4, styles: { halign: 'left', fontStyle: 'bold', fillColor: [204, 251, 241], textColor: RC.tealDark } },
+        { content: fmtInt(c.totalSisaQty), styles: { halign: 'right', fontStyle: 'bold', fillColor: [204, 251, 241], textColor: RC.tealDark } },
+        { content: fmt4(c.totalSisaKub), styles: { halign: 'right', fontStyle: 'bold', fillColor: [204, 251, 241], textColor: RC.tealDark } },
       ]);
-      if (ci < data.length - 1) {
-        body.push([
-          { content: '', colSpan: 6, styles: { cellPadding: { top: 0, bottom: 0 }, lineWidth: 0, fillColor: [255, 255, 255] } },
-        ]);
-      }
+      if (ci < data.length - 1) body.push([{ content: '', colSpan: 6, styles: { cellPadding: { top: 0, bottom: 0 }, lineWidth: 0, fillColor: [255, 255, 255] } }]);
     });
     body.push([
-      { content: 'GRAND TOTAL', colSpan: 3, styles: { halign: 'left', fontStyle: 'bold', fillColor: [13, 148, 136], textColor: [255, 255, 255], lineWidth: 0 } },
-      { content: `${data.length} Customer`, styles: { fontStyle: 'bold', halign: 'center', fillColor: [13, 148, 136], textColor: [255, 255, 255], lineWidth: 0 } },
-      { content: String(grandQty), styles: { fontStyle: 'bold', halign: 'right', fillColor: [13, 148, 136], textColor: [255, 255, 255], lineWidth: 0 } },
-      { content: fmt2(grandKub), styles: { fontStyle: 'bold', halign: 'right', fillColor: [13, 148, 136], textColor: [255, 255, 255], lineWidth: 0 } },
+      { content: 'GRAND TOTAL', colSpan: 4, styles: { halign: 'left', fontStyle: 'bold', fillColor: RC.tealDark, textColor: RC.white, lineWidth: 0 } },
+      { content: fmtInt(grandQty), styles: { halign: 'right', fontStyle: 'bold', fillColor: RC.tealDark, textColor: RC.white, lineWidth: 0 } },
+      { content: fmt4(grandKub), styles: { halign: 'right', fontStyle: 'bold', fillColor: RC.tealDark, textColor: RC.white, lineWidth: 0 } },
     ]);
     doc.autoTable({
       startY: y,
       head: [['Customer', 'Ukuran (T×L×P)', 'Nama Kayu', 'No PO', 'Sisa Qty (Pcs)', 'Sisa Vol (m³)']],
       body,
-      styles: { fontSize: 8, cellPadding: 2.5, overflow: 'ellipsize' },
-      headStyles: { fillColor: [13, 148, 136], textColor: [255, 255, 255], fontStyle: 'bold', halign: 'center', cellPadding: 3 },
+      theme: 'grid',
+      styles: { fontSize: 7.8, cellPadding: 2.2, textColor: RC.ink, lineColor: RC.line, lineWidth: 0.1, valign: 'middle', overflow: 'ellipsize' },
+      headStyles: { fillColor: RC.tealDark, textColor: RC.white, fontStyle: 'bold', halign: 'center', fontSize: 7.8, lineColor: RC.tealDark },
       columnStyles: {
-        0: { fontStyle: 'bold', halign: 'left' },
-        1: { halign: 'center' },
-        2: { halign: 'left' },
-        3: { halign: 'center' },
-        4: { halign: 'right' },
-        5: { halign: 'right' },
+        0: { fontStyle: 'bold', halign: 'left', cellWidth: 46 },
+        1: { halign: 'center', cellWidth: 30 },
+        2: { halign: 'left', cellWidth: 34 },
+        3: { halign: 'center', cellWidth: 32 },
+        4: { halign: 'right', cellWidth: 24 },
+        5: { halign: 'right', cellWidth: 24 },
       },
-      tableWidth: 190,
-      margin: { top: 10, bottom: 15, left: 10, right: 10 },
+      margin: { top: 12, bottom: 15, left: 10, right: 10 },
       showHead: 'everyPage',
-      didDrawPage: function () { pdfReportFooter(doc); },
+      didDrawPage: pdfPageChrome(doc, TITLE),
     });
-    const noteY = doc.lastAutoTable.finalY + 6;
-    doc.setFontSize(7.5); doc.setFont('helvetica', 'italic'); doc.setTextColor(120, 120, 120);
-    doc.text('* Keterangan: Hanya menampilkan PO dengan sisa barang yang belum terkirim (PO dibatalkan dikecualikan).', 10, noteY);
-    doc.save('Sisa_PO_Per_Ukuran.pdf');
+    doc.setFont('helvetica', 'italic'); doc.setFontSize(7); doc.setTextColor(RC.muted[0], RC.muted[1], RC.muted[2]);
+    doc.text('* Hanya menampilkan PO dengan sisa barang yang belum terkirim (PO dibatalkan dikecualikan).', 10, doc.lastAutoTable.finalY + 6);
+    pdfReportFooter(doc, TITLE);
+    doc.save('Laporan_Sisa_PO_per_Ukuran.pdf');
   } else {
-    const wsData = [];
-    excelHeader(wsData, 'LAPORAN SISA PO PER UKURAN - PO KANDANG', 'Semua', pd);
-    wsData.push(['Customer', 'Ukuran (T×L×P)', 'Nama Kayu', 'No PO', 'Sisa Qty (Pcs)', 'Sisa Volume (m³)']);
-    data.forEach(c => {
+    const rep = excelNewReport({
+      title: TITLE,
+      period: 'Semua',
+      summary: `Customer: ${data.length}   ·   Total Sisa Qty: ${fmtInt(grandQty)} pcs   ·   Total Sisa Volume: ${fmt4(grandKub)} m³`,
+      headers: ['Customer', 'Ukuran (T×L×P)', 'Nama Kayu', 'No PO', 'Sisa Qty (Pcs)', 'Sisa Volume (m³)'],
+      widths: [30, 17, 18, 24, 14, 16],
+    });
+    data.forEach((c, ci) => {
       c.sizes.forEach(sz => {
         sz.pos.forEach(po => {
-          wsData.push([c.customerName, `${sz.thickness}×${sz.width}×${sz.length}`, sz.productName || '-', po.poNumber, po.sisaQty, parseFloat(fmt2(po.sisaKub))]);
+          excelRow(rep, [c.customerName, `${sz.thickness}×${sz.width}×${sz.length}`, sz.productName || '-', po.poNumber, po.sisaQty || 0, Number(fmt4(po.sisaKub))], 'data', { fill: ci % 2 ? EX.soft : undefined });
         });
-        wsData.push([{ t: 's', v: `Subtotal ${sz.thickness}×${sz.width}×${sz.length}`, s: { bold: true } }, '', '', '', { t: 'n', v: sz.totalSisaQty, s: { bold: true } }, { t: 'n', v: parseFloat(fmt2(sz.totalSisaKub)), s: { bold: true } }]);
+        excelRow(rep, [`Subtotal ukuran ${sz.thickness}×${sz.width}×${sz.length}`, '', '', '', sz.totalSisaQty || 0, Number(fmt4(sz.totalSisaKub))], 'subtotal', { labelCols: 4 });
       });
-      wsData.push([{ t: 's', v: `TOTAL ${c.customerName}`, s: { bold: true, color: { rgb: '0D9488' } } }, '', '', '', { t: 'n', v: c.totalSisaQty, s: { bold: true, color: { rgb: '0D9488' } } }, { t: 'n', v: parseFloat(fmt2(c.totalSisaKub)), s: { bold: true, color: { rgb: '0D9488' } } }]);
-      wsData.push([]);
+      excelRow(rep, [`TOTAL ${c.customerName}`, '', '', '', c.totalSisaQty || 0, Number(fmt4(c.totalSisaKub))], 'total', { labelCols: 4 });
+      if (ci < data.length - 1) excelRow(rep, [], 'spacer');
     });
-    wsData.push([{ t: 's', v: 'GRAND TOTAL', s: { bold: true } }, '', '', '', { t: 'n', v: grandQty, s: { bold: true } }, { t: 'n', v: parseFloat(fmt2(grandKub)), s: { bold: true } }]);
-    const ws = XLSX.utils.aoa_to_sheet(wsData);
-    ws['!cols'] = [{ wch: 30 }, { wch: 18 }, { wch: 18 }, { wch: 24 }, { wch: 16 }, { wch: 16 }];
-    const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Sisa per Ukuran');
-    XLSX.writeFile(wb, 'Sisa_PO_Per_Ukuran.xlsx');
+    excelRow(rep, ['GRAND TOTAL', '', '', '', grandQty, Number(fmt4(grandKub))], 'total', { labelCols: 4 });
+    excelRow(rep, [], 'spacer');
+    excelRow(rep, ['* Hanya menampilkan PO dengan sisa barang yang belum terkirim (PO dibatalkan dikecualikan).'], 'note');
+    excelWrite(rep, { sheetName: 'Sisa per Ukuran', fileName: 'Laporan_Sisa_PO_per_Ukuran.xlsx', intCols: [4], decCols: [5] });
   }
   showToast(`${format.toUpperCase()} berhasil diunduh!`, 'success');
 }
@@ -4315,39 +4527,47 @@ function renderDeliveryFlat(deliveries) {
   let grandQty = 0, grandKub = 0;
   deliveries.forEach(d => { (d.items || []).forEach(it => { grandQty += (it.quantity || 0); grandKub += (it.kubikasi || 0); }); });
   let html = `<div class="report-card slide-up"><h4>🚚 Ringkasan</h4>
-    <div class="report-row"><span class="r-label">Total Pengiriman</span><span class="r-value">${deliveries.length}</span></div>
-    <div class="report-row"><span class="r-label">Total Qty Kirim</span><span class="r-value">${grandQty} pcs</span></div>
-    <div class="report-row"><span class="r-label">Total Volume Kirim</span><span class="r-value teal">${fmtNum(grandKub)} m³</span></div></div>`;
+    <div class="report-stats">
+      <div class="report-stat sky"><div class="rs-label">Total Pengiriman</div><div class="rs-value">${deliveries.length}</div></div>
+      <div class="report-stat green"><div class="rs-label">Total Qty Kirim</div><div class="rs-value">${grandQty.toLocaleString('id-ID')}<small>pcs</small></div></div>
+      <div class="report-stat teal"><div class="rs-label">Total Volume Kirim</div><div class="rs-value">${fmtNum(grandKub)}<small>m³</small></div></div>
+    </div></div>`;
   html += `<div class="report-card slide-up" style="margin-top:14px;"><h4>📋 Detail Pengiriman</h4>`;
-  if (!deliveries.length) { html += '<div style="padding:20px;text-align:center;color:#9ca3af;">Belum ada pengiriman</div>'; }
+  if (!deliveries.length) { html += '<div class="empty-state"><span class="empty-icon">🚚</span><p>Belum ada pengiriman</p></div>'; }
   else {
-    html += `<div class="table-scroll"><table style="width:100%;border-collapse:collapse;"><thead><tr>
-      <th style="${XL.th}">No</th><th style="${XL.th}">Tgl Kirim</th><th style="${XL.th}">No Surat Jalan</th>
+    html += `<div class="table-scroll"><table class="report-table"><thead><tr>
+      <th style="${XL.th}">No</th><th style="${XL.th}">Tgl Kirim</th><th style="${XL.th}">No. Kirim</th>
       <th style="${XL.th}">No PO</th><th style="${XL.th}">Customer</th><th style="${XL.th}">Sopir & Plat</th>
       <th style="${XL.th}">Nama Kayu</th><th style="${XL.th}">Ukuran (T×L×P)</th>
       <th style="${XL.th}text-align:right;">Qty Kirim (Pcs)</th><th style="${XL.th}text-align:right;">Volume (m³)</th></tr></thead><tbody>`;
-    let rowNo = 0;
-    deliveries.forEach(d => {
+    deliveries.forEach((d, di) => {
       const poNums = (d.poNumbers || []).join(', ') || '-';
       const custNames = (d.customerNames || []).join(', ') || '-';
-      const sopir = `${d.driverName || '-'} ${d.vehicleNumber ? '(' + d.vehicleNumber + ')' : ''}`;
-      (d.items || []).forEach((it, ii) => {
-        rowNo++;
-        html += `<tr>
-          <td style="${XL.td}">${rowNo}</td>
-          <td style="${XL.td}">${ii === 0 ? fmtDate(d.deliveryDate) : ''}</td>
-          <td style="${XL.td}">${ii === 0 ? (d.id || '').slice(0, 8) : ''}</td>
-          <td style="${XL.td}">${ii === 0 ? poNums : ''}</td>
-          <td style="${XL.td}">${ii === 0 ? custNames : ''}</td>
-          <td style="${XL.td}">${ii === 0 ? sopir : ''}</td>
-          <td style="${XL.td}">${it.productName || '-'}</td>
+      const sopir = `${d.driverName || '-'}${d.vehicleNumber ? ' · ' + d.vehicleNumber : ''}`;
+      const items = (d.items && d.items.length) ? d.items : [{ productName: '-', quantity: 0, kubikasi: 0 }];
+      const span = items.length;
+      let subQty = 0, subKub = 0;
+      items.forEach((it, ii) => {
+        subQty += (it.quantity || 0); subKub += (it.kubikasi || 0);
+        html += `<tr class="data-row ${di % 2 ? 'group-even' : ''}">`;
+        if (ii === 0) {
+          html += `<td class="grp" rowspan="${span}" style="${XL.tdBold}">${di + 1}</td>
+            <td class="grp" rowspan="${span}" style="${XL.td}">${fmtDate(d.deliveryDate)}</td>
+            <td class="grp" rowspan="${span}" style="${XL.td}"><span title="ID pengiriman: ${d.id}">${(d.id || '').slice(0, 8)}</span></td>
+            <td class="grp" rowspan="${span}" style="${XL.td}">${escHtml(poNums)}</td>
+            <td class="grp" rowspan="${span}" style="${XL.td}">${escHtml(custNames)}</td>
+            <td class="grp" rowspan="${span}" style="${XL.td}">${escHtml(sopir)}</td>`;
+        }
+        html += `<td style="${XL.td}">${escHtml(it.productName || '-')}</td>
           <td style="${XL.td}">${it.thickness || 0} × ${it.width || 0} × ${it.length || 0}</td>
-          <td style="${XL.tdR}">${it.quantity || 0}</td>
+          <td style="${XL.tdR}">${(it.quantity || 0).toLocaleString('id-ID')}</td>
           <td style="${XL.tdR}">${fmtNum(it.kubikasi)}</td></tr>`;
       });
+      html += `<tr class="sub-row"><td colspan="8" style="${XL.sub}text-align:right;">Subtotal ${(d.id || '').slice(0, 8)} · ${span} item</td>
+        <td style="${XL.subR}">${subQty.toLocaleString('id-ID')}</td><td style="${XL.subR}">${fmtNum(subKub)}</td></tr>`;
     });
-    html += `<tr><td colspan="8" style="${XL.grand}text-align:right;">TOTAL</td>
-      <td style="${XL.grandR}">${grandQty}</td><td style="${XL.grandR}">${fmtNum(grandKub)}</td></tr>`;
+    html += `<tr><td colspan="8" style="${XL.grand}text-align:right;">GRAND TOTAL</td>
+      <td style="${XL.grandR}">${grandQty.toLocaleString('id-ID')}</td><td style="${XL.grandR}">${fmtNum(grandKub)}</td></tr>`;
     html += '</tbody></table></div>';
   }
   html += '</div>';
@@ -4360,21 +4580,28 @@ async function exportDeliveryReport(format) {
   if (format === 'pdf' && !window.jspdf) return showToast('Library PDF belum terload. Muat ulang halaman.', 'error');
   let gQ = 0, gK = 0;
   deliveries.forEach(d => { (d.items || []).forEach(it => { gQ += (it.quantity || 0); gK += (it.kubikasi || 0); }); });
-  const pd = new Date().toLocaleDateString('id-ID') + ' ' + new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+  const TITLE = 'Laporan Pengiriman';
+  const stamp = reportStamp();
+
   if (format === 'pdf') {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF('l', 'mm', 'a4');
-    const y = pdfReportHeader(doc, 'LAPORAN PENGIRIMAN', `Total: ${deliveries.length} Pengiriman | Dicetak: ${pd}`);
+    const y = pdfReportHeader(doc, TITLE, `Semua pengiriman  ·  Dicetak: ${stamp}`, [
+      { label: 'Total Pengiriman', value: `${deliveries.length}` },
+      { label: 'Total Qty Kirim', value: `${fmtInt(gQ)} pcs` },
+      { label: 'Total Volume', value: `${fmt4(gK)} m³` },
+    ]);
     const body = [];
-    let rn = 0;
-    deliveries.forEach(d => {
+    deliveries.forEach((d, di) => {
       const po = (d.poNumbers || []).join(', ') || '-';
       const cu = (d.customerNames || []).join(', ') || '-';
-      const sp = `${d.driverName || '-'} ${d.vehicleNumber ? '(' + d.vehicleNumber + ')' : ''}`;
-      (d.items || []).forEach((it, ii) => {
-        rn++;
-        body.push([
-          rn,
+      const sp = `${d.driverName || '-'}${d.vehicleNumber ? ' · ' + d.vehicleNumber : ''}`;
+      const items = (d.items || []);
+      let sq = 0, sk = 0;
+      items.forEach((it, ii) => {
+        sq += (it.quantity || 0); sk += (it.kubikasi || 0);
+        const row = [
+          ii === 0 ? String(di + 1) : '',
           ii === 0 ? fmtDate(d.deliveryDate) : '',
           ii === 0 ? (d.id || '').slice(0, 8) : '',
           ii === 0 ? po : '',
@@ -4382,47 +4609,67 @@ async function exportDeliveryReport(format) {
           ii === 0 ? sp : '',
           it.productName || '-',
           `${it.thickness || 0}×${it.width || 0}×${it.length || 0}`,
-          String(it.quantity || 0),
-          fmtNum(it.kubikasi),
-        ]);
+          { content: fmtInt(it.quantity), styles: { halign: 'right' } },
+          { content: fmt4(it.kubikasi), styles: { halign: 'right' } },
+        ];
+        body.push(di % 2 ? row.map(c => pdfTint(c, RC.soft2)) : row);
       });
+      body.push([
+        { content: `Subtotal ${(d.id || '').slice(0, 8)} · ${items.length} item`, colSpan: 8, styles: { halign: 'right', fontStyle: 'bold', fillColor: RC.soft2, textColor: RC.ink } },
+        { content: fmtInt(sq), styles: { halign: 'right', fontStyle: 'bold', fillColor: RC.soft2, textColor: RC.ink } },
+        { content: fmt4(sk), styles: { halign: 'right', fontStyle: 'bold', fillColor: RC.soft2, textColor: RC.ink } },
+      ]);
     });
     body.push([
-      { content: 'TOTAL', colSpan: 8, styles: { halign: 'center', fontStyle: 'bold', lineWidth: 0.5, lineColor: [0, 0, 0] } },
-      { content: String(gQ), styles: { fontStyle: 'bold', halign: 'center', lineWidth: 0.5, lineColor: [0, 0, 0] } },
-      { content: fmtNum(gK), styles: { fontStyle: 'bold', halign: 'center', lineWidth: 0.5, lineColor: [0, 0, 0] } },
+      { content: 'GRAND TOTAL', colSpan: 8, styles: { halign: 'right', fontStyle: 'bold', fillColor: RC.tealDark, textColor: RC.white } },
+      { content: fmtInt(gQ), styles: { halign: 'right', fontStyle: 'bold', fillColor: RC.tealDark, textColor: RC.white } },
+      { content: fmt4(gK), styles: { halign: 'right', fontStyle: 'bold', fillColor: RC.tealDark, textColor: RC.white } },
     ]);
     doc.autoTable({
       startY: y,
-      head: [['No', 'Tgl Kirim', 'No SJ', 'No PO', 'Customer', 'Sopir & Plat', 'Nama Kayu', 'Ukuran', 'Qty (Pcs)', 'Volume (m³)']],
+      head: [['No', 'Tgl Kirim', 'No. Kirim', 'No PO', 'Customer', 'Sopir & Plat', 'Nama Kayu', 'Ukuran', 'Qty (Pcs)', 'Volume (m³)']],
       body,
-      styles: { fontSize: 7.5, cellPadding: 2, halign: 'center', overflow: 'ellipsize' },
-      headStyles: { fillColor: [243, 244, 246], textColor: [31, 41, 55], fontStyle: 'bold', halign: 'center' },
-      columnStyles: { 0: { cellWidth: 12 }, 1: { cellWidth: 22 }, 2: { cellWidth: 20 }, 3: { cellWidth: 26 }, 4: { cellWidth: 30 }, 5: { cellWidth: 30 }, 6: { cellWidth: 30 }, 7: { cellWidth: 24 }, 8: { cellWidth: 18 }, 9: { cellWidth: 18 } },
-      margin: { top: 10, bottom: 10, left: 10, right: 10 },
+      theme: 'grid',
+      styles: { fontSize: 7.2, cellPadding: 2, textColor: RC.ink, lineColor: RC.line, lineWidth: 0.1, valign: 'middle', overflow: 'ellipsize' },
+      headStyles: { fillColor: RC.tealDark, textColor: RC.white, fontStyle: 'bold', halign: 'center', fontSize: 7.2, lineColor: RC.tealDark },
+      columnStyles: {
+        0: { cellWidth: 10, halign: 'center', fontStyle: 'bold' }, 1: { cellWidth: 20 },
+        2: { cellWidth: 18 }, 3: { cellWidth: 34, overflow: 'linebreak' }, 4: { cellWidth: 36, overflow: 'linebreak' }, 5: { cellWidth: 24, overflow: 'linebreak' },
+        6: { cellWidth: 22, overflow: 'linebreak' }, 7: { cellWidth: 20 },
+        8: { cellWidth: 18, halign: 'right' }, 9: { cellWidth: 22, halign: 'right' },
+      },
+      margin: { top: 12, bottom: 14, left: 10, right: 10 },
       showHead: 'everyPage',
-      didDrawPage: function () { pdfReportFooter(doc); },
+      didDrawPage: pdfPageChrome(doc, TITLE),
     });
+    doc.setFont('helvetica', 'italic'); doc.setFontSize(7); doc.setTextColor(RC.muted[0], RC.muted[1], RC.muted[2]);
+    doc.text('* Subtotal per pengiriman dan grand total dihitung dari seluruh item yang dikirim.', 10, doc.lastAutoTable.finalY + 6);
+    pdfReportFooter(doc, TITLE);
     doc.save('Laporan_Pengiriman.pdf');
   } else {
-    const wsData = [];
-    excelHeader(wsData, 'LAPORAN PENGIRIMAN - PO KANDANG', 'Semua', new Date().toLocaleDateString('id-ID'));
-    wsData.push(['No', 'Tgl Kirim', 'No SJ', 'No PO', 'Customer', 'Sopir & Plat', 'Nama Kayu', 'Ukuran', 'Qty (Pcs)', 'Volume (m³)']);
-    let rn = 0;
-    deliveries.forEach(d => {
+    const rep = excelNewReport({
+      title: TITLE,
+      period: 'Semua',
+      summary: `Pengiriman: ${deliveries.length}   ·   Total Qty: ${fmtInt(gQ)} pcs   ·   Total Volume: ${fmt4(gK)} m³`,
+      headers: ['No', 'Tgl Kirim', 'No. Kirim', 'No PO', 'Customer', 'Sopir & Plat', 'Nama Kayu', 'Ukuran (T×L×P)', 'Qty (Pcs)', 'Volume (m³)'],
+      widths: [6, 14, 12, 26, 30, 18, 17, 15, 10, 13],
+    });
+    deliveries.forEach((d, di) => {
       const po = (d.poNumbers || []).join(', ') || '-';
       const cu = (d.customerNames || []).join(', ') || '-';
-      const sp = `${d.driverName || '-'} ${d.vehicleNumber ? '(' + d.vehicleNumber + ')' : ''}`;
-      (d.items || []).forEach(it => {
-        rn++;
-        wsData.push([rn, fmtDate(d.deliveryDate), (d.id || '').slice(0, 8), po, cu, sp, it.productName || '-', `${it.thickness || 0}×${it.width || 0}×${it.length || 0}`, it.quantity || 0, fmtNum(it.kubikasi)]);
+      const sp = `${d.driverName || '-'}${d.vehicleNumber ? ' · ' + d.vehicleNumber : ''}`;
+      const items = (d.items || []);
+      let sq = 0, sk = 0;
+      items.forEach(it => {
+        sq += (it.quantity || 0); sk += (it.kubikasi || 0);
+        excelRow(rep, [di + 1, fmtDate(d.deliveryDate), (d.id || '').slice(0, 8), po, cu, sp, it.productName || '-', `${it.thickness || 0}×${it.width || 0}×${it.length || 0}`, it.quantity || 0, Number(fmt4(it.kubikasi))], 'data', { fill: di % 2 ? EX.soft : undefined });
       });
+      excelRow(rep, [`Subtotal ${(d.id || '').slice(0, 8)} · ${items.length} item`, '', '', '', '', '', '', '', sq, Number(fmt4(sk))], 'subtotal', { labelCols: 8 });
     });
-    wsData.push(['TOTAL', '', '', '', '', '', '', '', gQ, fmtNum(gK)]);
-    const ws = XLSX.utils.aoa_to_sheet(wsData);
-    ws['!cols'] = [{ wch: 5 }, { wch: 14 }, { wch: 14 }, { wch: 18 }, { wch: 18 }, { wch: 20 }, { wch: 20 }, { wch: 18 }, { wch: 14 }, { wch: 14 }];
-    const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Pengiriman');
-    XLSX.writeFile(wb, 'Laporan_Pengiriman.xlsx');
+    excelRow(rep, ['GRAND TOTAL', '', '', '', '', '', '', '', gQ, Number(fmt4(gK))], 'total', { labelCols: 8 });
+    excelRow(rep, [], 'spacer');
+    excelRow(rep, ['* Subtotal per pengiriman dan grand total dihitung dari seluruh item yang dikirim.'], 'note');
+    excelWrite(rep, { sheetName: 'Pengiriman', fileName: 'Laporan_Pengiriman.xlsx', intCols: [8], decCols: [9] });
   }
   showToast(`${format.toUpperCase()} berhasil diunduh!`, 'success');
 }
