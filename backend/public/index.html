@@ -764,6 +764,7 @@
     .del-card-btn.upload { background: #ecfdf5; color: #059669; border-color: rgba(5,150,105,0.15); }
     .del-card-btn.edit { background: #eff6ff; color: #3b82f6; border-color: rgba(59,130,246,0.15); }
     .del-card-btn.delete { background: #fef2f2; color: #dc2626; border-color: rgba(220,38,38,0.15); }
+    .del-card-btn.print { background: #eef2ff; color: #4f46e5; border-color: rgba(79,70,229,0.15); }
 
     /* === PROOF SECTION === */
     .proof-preview-wrap { border-radius: 14px; overflow: hidden; border: 1.5px solid #e2e8f0; margin-bottom: 14px; }
@@ -2982,6 +2983,7 @@ async function viewPO(id) {
                   <div class="del-card-actions">
                     ${proofs.map(p => `<button onclick="openProofPreview('${p.url}','${p.id}','${d.id}','delivery')" class="del-card-btn proof">📷</button>`).join('')}
                     <button class="del-card-btn upload" onclick="openProofModal('${d.id}')">+ Bukti</button>
+                    <button class="del-card-btn print" onclick="printDeliveryNote('${d.id}')" title="Cetak Surat Jalan">🖨️ SJ</button>
                     <button class="del-card-btn edit" onclick="editDeliveryFromDetail('${d.id}','${po.id}')">✏️</button>
                   </div>
                 </div>
@@ -3562,6 +3564,7 @@ function renderDeliveriesList(deliveries, hasHeaderInfo = false, extraHtml = '',
             <div class="del-card-actions">
               ${proofs.map(p => `<button onclick="openProofPreview('${p.url}','${p.id}','${d.id}','delivery')" class="del-card-btn proof">📷</button>`).join('')}
               <button class="del-card-btn upload" onclick="openProofModal('${d.id}')">+ Bukti</button>
+              <button class="del-card-btn print" onclick="printDeliveryNote('${d.id}')" title="Cetak Surat Jalan">🖨️ SJ</button>
               <button class="del-card-btn edit" onclick="editDelivery('${d.id}')">✏️</button>
               <button class="del-card-btn delete" onclick="deleteDelivery('${d.id}')">🗑️</button>
             </div>
@@ -4831,7 +4834,7 @@ async function printPO(id) {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF('p', 'mm', 'a4');
     doc.setFontSize(16); doc.setFont('helvetica', 'bold');
-    doc.text('SURAT JALAN - PO KANDANG', 105, 15, { align: 'center' });
+    doc.text('PURCHASE ORDER - PO KANDANG', 105, 15, { align: 'center' });
     doc.setFontSize(10); doc.setFont('helvetica', 'normal');
     doc.text(`No: ${po.poNumber}`, 14, 25);
     doc.text(`Customer: ${po.customerName}`, 14, 31);
@@ -4845,9 +4848,135 @@ async function printPO(id) {
     doc.text(`Total Kubikasi: ${fmtNum(po.totalKubikasi)} m³`, 14, finalY);
     doc.setFontSize(9); doc.setFont('helvetica', 'normal');
     doc.text('Dicetak: ' + new Date().toLocaleDateString('id-ID'), 14, finalY + 8);
-    doc.save(`Surat_Jalan_${po.poNumber}.pdf`);
-    showToast('Surat jalan berhasil diunduh!', 'success');
+    doc.save(`PO_${po.poNumber}.pdf`);
+    showToast('Purchase Order berhasil diunduh!', 'success');
   } catch(e) { showToast('Gagal mencetak: ' + e.message, 'error'); }
+}
+
+/* === PRINT SURAT JALAN (per data pengiriman) === */
+async function printDeliveryNote(id) {
+  if (!window.jspdf) return showToast('Library PDF belum terload. Muat ulang halaman.', 'error');
+  try {
+    const res = await fetch(`${API}/api/deliveries/${id}`, { headers: authHeaders() });
+    if (!res.ok) throw new Error('Data pengiriman tidak ditemukan');
+    const d = await res.json();
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF('p', 'mm', 'a4');
+    const pageW = doc.internal.pageSize.getWidth();
+    const pageH = doc.internal.pageSize.getHeight();
+    const mL = 14, mR = 14, rX = pageW - mR, cX = pageW / 2;
+
+    const linkedPOs = (d.deliveryPOs || []).map(dp => dp.po).filter(Boolean);
+    const poById = {}; linkedPOs.forEach(p => { poById[p.id] = p; });
+    const poNumbers = linkedPOs.map(p => p.poNumber).join(', ') || '-';
+    const customers = [...new Set(linkedPOs.map(p => p.customerName).filter(Boolean))].join(', ') || '-';
+    const items = d.items || [];
+
+    const deliveryDate = d.deliveryDate ? new Date(d.deliveryDate) : new Date();
+    const ymd = `${deliveryDate.getFullYear()}${String(deliveryDate.getMonth() + 1).padStart(2, '0')}${String(deliveryDate.getDate()).padStart(2, '0')}`;
+    const sjNo = `SJ/${ymd}/${String(id).slice(0, 6).toUpperCase()}`;
+
+    // --- Kop surat ---
+    doc.setDrawColor(13, 148, 136); doc.setLineWidth(1);
+    doc.line(mL, 12, rX, 12);
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(18); doc.setTextColor(13, 148, 136);
+    doc.text('PO KANDANG', cX, 20, { align: 'center' });
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(100, 116, 139);
+    doc.text('Manajemen Purchase Order & Pengiriman Kayu', cX, 25, { align: 'center' });
+    doc.setDrawColor(13, 148, 136); doc.setLineWidth(0.3);
+    doc.line(mL, 28, rX, 28);
+
+    // --- Judul ---
+    doc.setTextColor(15, 23, 42); doc.setFont('helvetica', 'bold'); doc.setFontSize(15);
+    doc.text('SURAT JALAN', cX, 37, { align: 'center' });
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(71, 85, 105);
+    doc.text(`No. Surat Jalan: ${sjNo}`, mL, 45);
+    doc.text(`Tanggal: ${fmtDate(d.deliveryDate)}`, rX, 45, { align: 'right' });
+
+    // --- Info pengiriman ---
+    const boxY = 50, boxH = 46;
+    doc.setDrawColor(226, 232, 240); doc.setFillColor(248, 250, 252); doc.setLineWidth(0.3);
+    doc.roundedRect(mL, boxY, rX - mL, boxH, 2, 2, 'FD');
+
+    const col2X = cX + 4;
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5); doc.setTextColor(100, 116, 139);
+    doc.text('KEPADA / CUSTOMER', mL + 5, boxY + 7);
+    doc.text('SOPIR', col2X, boxY + 7);
+    doc.text('NO. PO', mL + 5, boxY + 21);
+    doc.text('KENDARAAN', col2X, boxY + 21);
+    doc.text('ALAMAT PENGIRIMAN', mL + 5, boxY + 35);
+
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5); doc.setTextColor(15, 23, 42);
+    doc.text(doc.splitTextToSize(customers, 80), mL + 5, boxY + 12);
+    doc.text(doc.splitTextToSize(d.driverName || '-', 80), col2X, boxY + 12);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(9);
+    doc.text(doc.splitTextToSize(poNumbers, 80), mL + 5, boxY + 26);
+    doc.text(doc.splitTextToSize(d.vehicleNumber || '-', 80), col2X, boxY + 26);
+    doc.text(doc.splitTextToSize(d.deliveryAddress || '-', rX - mL - 10), mL + 5, boxY + 40);
+
+    // --- Tabel item ---
+    const body = items.map((di, i) => {
+      const poNumber = poById[di.poItem?.poId]?.poNumber || '-';
+      return [
+        i + 1,
+        poNumber,
+        di.poItem?.productName || di.productName || '-',
+        `${di.poItem?.thickness || di.thickness || 0}×${di.poItem?.width || di.width || 0}×${di.poItem?.length || di.length || 0}`,
+        String(di.quantity || 0),
+        fmtNum(di.kubikasi),
+      ];
+    });
+    const totalQty = items.reduce((s, di) => s + (di.quantity || 0), 0);
+    const totalKub = items.reduce((s, di) => s + (di.kubikasi || 0), 0);
+
+    doc.autoTable({
+      startY: boxY + boxH + 8,
+      head: [['No', 'No PO', 'Nama Kayu', 'Ukuran (cm)', 'Qty (Pcs)', 'Volume (m³)']],
+      body: body.length ? body : [['-', '-', '-', '-', '0', fmtNum(0)]],
+      foot: [[{ content: 'TOTAL', colSpan: 4, styles: { halign: 'right' } }, String(totalQty), fmtNum(totalKub)]],
+      styles: { fontSize: 8.5, cellPadding: 2.2, halign: 'center', overflow: 'ellipsize', textColor: [31, 41, 55] },
+      headStyles: { fillColor: [240, 253, 250], textColor: [15, 23, 42], fontStyle: 'bold', halign: 'center', lineColor: [13, 148, 136], lineWidth: 0.2 },
+      footStyles: { fillColor: [248, 250, 252], textColor: [15, 23, 42], fontStyle: 'bold', halign: 'center' },
+      columnStyles: { 0: { cellWidth: 10 }, 1: { cellWidth: 30 }, 2: { cellWidth: 48 }, 3: { cellWidth: 36 }, 4: { cellWidth: 24 }, 5: { cellWidth: 34 } },
+      margin: { left: mL, right: mR, top: 14, bottom: 16 },
+      showHead: 'everyPage',
+      didDrawPage: function () {
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(148, 163, 184);
+        doc.text(`Dicetak dari aplikasi PO Kandang • ${new Date().toLocaleString('id-ID')}`, mL, pageH - 9);
+        doc.text(`Halaman ${doc.internal.getNumberOfPages()}`, rX, pageH - 9, { align: 'right' });
+      },
+    });
+
+    // --- Catatan ---
+    let y = doc.lastAutoTable.finalY + 8;
+    if (d.notes) {
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(71, 85, 105);
+      doc.text('Catatan:', mL, y);
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(100, 116, 139);
+      doc.text(doc.splitTextToSize(d.notes, rX - mL), mL, y + 4.5);
+      y += 4.5 + doc.splitTextToSize(d.notes, rX - mL).length * 4;
+    }
+
+    // --- Tanda tangan ---
+    const sigY = Math.min(y + 12, pageH - 52);
+    const colW = (rX - mL) / 3;
+    const labels = ['Pengirim / Sopir', 'Mengetahui', 'Penerima'];
+    const names = [d.driverName || '', '', ''];
+    labels.forEach((label, i) => {
+      const x = mL + colW * i + colW / 2;
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(71, 85, 105);
+      doc.text(label, x, sigY, { align: 'center' });
+      doc.setDrawColor(148, 163, 184); doc.setLineWidth(0.3);
+      doc.line(x - 22, sigY + 22, x + 22, sigY + 22);
+      doc.setFont('helvetica', 'bold'); doc.setTextColor(15, 23, 42);
+      doc.text(names[i] || '(.........................)', x, sigY + 27, { align: 'center' });
+    });
+
+    const safeName = sjNo.replace(/[\\/:*?"<>|]/g, '-');
+    doc.save(`Surat_Jalan_${safeName}.pdf`);
+    showToast('Surat jalan berhasil diunduh!', 'success');
+  } catch (e) { showToast('Gagal mencetak surat jalan: ' + e.message, 'error'); }
 }
 
 /* === FILTER DELIVERIES === */
