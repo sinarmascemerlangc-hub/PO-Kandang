@@ -496,6 +496,7 @@
     .po-card-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
     .po-card-num { font-size: 16px; font-weight: 800; color: #0f172a; letter-spacing: -0.3px; }
     .po-card-customer { font-size: 13px; color: #64748b; margin-top: 2px; font-weight: 500; }
+    .po-card-company { font-size: 10px; color: var(--brand-700); margin-top: 3px; font-weight: 800; letter-spacing: 0.2px; }
     .po-card-meta { margin-top: 10px; display: flex; gap: 12px; flex-wrap: wrap; }
     .po-card-meta .meta { font-size: 12px; color: #94a3b8; display: flex; align-items: center; gap: 4px; }
     .po-card-meta .meta strong { color: var(--slate-700); }
@@ -2220,6 +2221,13 @@
     </div>
     <div class="modal-body">
       <input type="hidden" id="editPOId">
+      <div class="form-group"><label>Perusahaan Penerima PO *</label>
+        <select id="poCompany">
+          <option value="">-- Pilih Perusahaan --</option>
+          <option value="CV Sinarmas Cemerlang">CV Sinarmas Cemerlang</option>
+          <option value="PT Putra Agung Cemerlang">PT Putra Agung Cemerlang</option>
+        </select>
+      </div>
       <div class="form-row">
         <div class="form-group"><label>Nomor PO *</label><input type="text" id="poNumber" placeholder="PO-001"></div>
         <div class="form-group"><label>Customer *</label><input type="text" id="customerName" placeholder="Nama customer"></div>
@@ -2774,6 +2782,7 @@ function renderPOCards(pos, containerId, compact) {
         <div>
           <div class="po-card-num">${p.poNumber}</div>
           <div class="po-card-customer">${p.customerName}</div>
+          <div class="po-card-company">🏢 ${p.company || 'Belum ditentukan'}</div>
         </div>
       </div>
       <div class="po-card-meta">
@@ -2834,6 +2843,7 @@ function renderRecentPO(pos) {
         <div>
           <div class="po-card-num">${p.poNumber}</div>
           <div class="po-card-customer">${p.customerName}</div>
+          <div class="po-card-company">🏢 ${p.company || 'Belum ditentukan'}</div>
         </div>
         <span class="status-pill ${statusClass(p.status)}">${p.status}</span>
       </div>
@@ -2867,6 +2877,7 @@ async function viewPO(id) {
               <h2>${po.poNumber}</h2>
               <span class="po-d-status" style="background:${statusColor};">${po.status}</span>
             </div>
+            <div class="po-d-cust" style="color:var(--brand-700);font-weight:800;">🏢 ${po.company || 'Perusahaan belum ditentukan'}</div>
             <div class="po-d-cust">👤 ${po.customerName}</div>
           </div>
           <div class="po-d-actions">
@@ -2887,8 +2898,18 @@ async function viewPO(id) {
 
         <!-- INFO: Supplier -->
         <div class="po-info-card">
-          <div class="po-info-label">Informasi Supplier</div>
+          <div class="po-info-label">Informasi PO</div>
           <div class="po-info-rows">
+            <div class="po-info-row" style="align-items:center;">
+              <span class="po-info-ico">🏢</span>
+              <span style="flex:1;min-width:0;">
+                <select onchange="updatePOCompany('${po.id}', this.value)" style="width:100%;padding:7px 10px;border:1.5px solid var(--line-strong);border-radius:9px;font-size:12px;font-family:inherit;background:#fff;color:var(--ink);font-weight:700;outline:none;">
+                  <option value="" ${!po.company?'selected':''}>-- Pilih Perusahaan --</option>
+                  <option value="CV Sinarmas Cemerlang" ${po.company==='CV Sinarmas Cemerlang'?'selected':''}>CV Sinarmas Cemerlang</option>
+                  <option value="PT Putra Agung Cemerlang" ${po.company==='PT Putra Agung Cemerlang'?'selected':''}>PT Putra Agung Cemerlang</option>
+                </select>
+              </span>
+            </div>
             <div class="po-info-row"><span class="po-info-ico">👤</span><span><b>${po.customerName}</b></span></div>
             <div class="po-info-row"><span class="po-info-ico">📅</span><span>Tanggal: ${new Date(po.orderDate).toLocaleDateString('id-ID',{day:'2-digit',month:'short',year:'numeric'})}${po.deadline?' • Deadline: '+new Date(po.deadline).toLocaleDateString('id-ID',{day:'2-digit',month:'short',year:'numeric'}):''}</span></div>
             <div class="po-info-row"><span class="po-info-ico">📍</span><span>${po.notes||'-'}</span></div>
@@ -3010,6 +3031,7 @@ function openPOModal(poId) {
   document.getElementById('poModal').classList.remove('hidden');
   document.getElementById('poModalTitle').textContent = poId ? 'Edit PO' : 'Tambah PO Baru';
   document.getElementById('editPOId').value = poId||'';
+  document.getElementById('poCompany').value = 'CV Sinarmas Cemerlang';
   document.getElementById('poNumber').value = '';
   document.getElementById('customerName').value = '';
   document.getElementById('orderDate').value = new Date().toISOString().split('T')[0];
@@ -3060,6 +3082,7 @@ async function savePO() {
   const poId = document.getElementById('editPOId').value;
   const poNumber = document.getElementById('poNumber').value.trim();
   const customerName = document.getElementById('customerName').value.trim();
+  const company = document.getElementById('poCompany').value;
   const items = [];
   document.querySelectorAll('#poItems tr').forEach(r=>{
     items.push({
@@ -3072,12 +3095,14 @@ async function savePO() {
   });
   if (!poNumber) { showToast('Nomor PO wajib diisi', 'error'); return; }
   if (!customerName) { showToast('Nama customer wajib diisi', 'error'); return; }
+  if (!company) { showToast('Pilih perusahaan penerima PO', 'error'); return; }
   if (items.length === 0) { showToast('Tambahkan minimal 1 item', 'error'); return; }
   const btn = document.querySelector('#poModal .btn-primary');
   setLoading(btn, true);
   try {
     const res = await fetch(`${API}/api/po${poId?'/'+poId:''}`, { method:poId?'PUT':'POST', headers:authHeaders(), body:JSON.stringify({
       poNumber:document.getElementById('poNumber').value, customerName:document.getElementById('customerName').value,
+      company:document.getElementById('poCompany').value,
       orderDate:document.getElementById('orderDate').value, deadline:document.getElementById('deadline').value||null,
       notes:document.getElementById('poNotes').value, items
     })});
@@ -3099,6 +3124,7 @@ async function editPO(id) {
     openPOModal(id);
     document.getElementById('poNumber').value=po.poNumber;
     document.getElementById('customerName').value=po.customerName;
+    document.getElementById('poCompany').value=po.company||'';
     document.getElementById('orderDate').value=po.orderDate?.split('T')[0]||'';
     document.getElementById('deadline').value=po.deadline?.split('T')[0]||'';
     document.getElementById('poNotes').value=po.notes||'';
@@ -3111,6 +3137,18 @@ async function editPO(id) {
 async function deletePO(id) {
   if(!await showConfirm('Hapus PO?', 'Semua data item dan pengiriman akan terhapus permanen.', 'danger')) return;
   try { await fetch(`${API}/api/po/${id}`,{method:'DELETE',headers:authHeaders()}); await loadPOs(); await loadDashboard(); showToast('PO berhasil dihapus', 'success'); } catch(e) { showToast('Error: '+e.message, 'error'); }
+}
+
+async function updatePOCompany(id, company) {
+  try {
+    const res = await fetch(`${API}/api/po/${id}`, { method:'PUT', headers:authHeaders(), body: JSON.stringify({ company }) });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Gagal menyimpan perusahaan');
+    await loadPOs();
+    await loadDashboard();
+    await viewPO(id);
+    showToast(company ? 'Perusahaan penerima disimpan' : 'Perusahaan penerima dikosongkan', 'success');
+  } catch(e) { showToast('Error: '+e.message, 'error'); }
 }
 
 async function updatePOStatus(id, status) {
@@ -4837,12 +4875,13 @@ async function printPO(id) {
     doc.text('PURCHASE ORDER - PO KANDANG', 105, 15, { align: 'center' });
     doc.setFontSize(10); doc.setFont('helvetica', 'normal');
     doc.text(`No: ${po.poNumber}`, 14, 25);
-    doc.text(`Customer: ${po.customerName}`, 14, 31);
-    doc.text(`Tanggal: ${fmtDate(po.orderDate)}${po.deadline ? ' | Deadline: ' + fmtDate(po.deadline) : ''}`, 14, 37);
-    doc.text(`Alamat: ${po.notes || '-'}`, 14, 43);
-    doc.line(14, 46, 196, 46);
+    doc.text(`Perusahaan Penerima: ${po.company || '-'}`, 14, 31);
+    doc.text(`Customer: ${po.customerName}`, 14, 37);
+    doc.text(`Tanggal: ${fmtDate(po.orderDate)}${po.deadline ? ' | Deadline: ' + fmtDate(po.deadline) : ''}`, 14, 43);
+    doc.text(`Alamat: ${po.notes || '-'}`, 14, 49);
+    doc.line(14, 52, 196, 52);
     const itemRows = po.items.map((it, i) => [i + 1, it.productName, `${it.thickness}×${it.width}×${it.length} cm`, it.quantity, fmtNum(it.kubikasi)]);
-    doc.autoTable({ startY: 50, head: [['#', 'Produk', 'Ukuran', 'Qty', 'Kubikasi']], body: itemRows, styles: { fontSize: 9 }, headStyles: { fillColor: [16, 185, 129] } });
+    doc.autoTable({ startY: 56, head: [['#', 'Produk', 'Ukuran', 'Qty', 'Kubikasi']], body: itemRows, styles: { fontSize: 9 }, headStyles: { fillColor: [16, 185, 129] } });
     const finalY = doc.lastAutoTable.finalY + 10;
     doc.setFontSize(11); doc.setFont('helvetica', 'bold');
     doc.text(`Total Kubikasi: ${fmtNum(po.totalKubikasi)} m³`, 14, finalY);
@@ -4871,6 +4910,7 @@ async function printDeliveryNote(id) {
     const poById = {}; linkedPOs.forEach(p => { poById[p.id] = p; });
     const poNumbers = linkedPOs.map(p => p.poNumber).join(', ') || '-';
     const customers = [...new Set(linkedPOs.map(p => p.customerName).filter(Boolean))].join(', ') || '-';
+    const companies = [...new Set(linkedPOs.map(p => p.company).filter(Boolean))].join(', ') || 'Belum ditentukan';
     const items = d.items || [];
 
     const deliveryDate = d.deliveryDate ? new Date(d.deliveryDate) : new Date();
@@ -4895,32 +4935,36 @@ async function printDeliveryNote(id) {
     doc.text(`Tanggal: ${fmtDate(d.deliveryDate)}`, rX, 45, { align: 'right' });
 
     // --- Info pengiriman ---
-    const boxY = 50, boxH = 46;
+    const boxY = 50, boxH = 66;
     doc.setDrawColor(226, 232, 240); doc.setFillColor(248, 250, 252); doc.setLineWidth(0.3);
     doc.roundedRect(mL, boxY, rX - mL, boxH, 2, 2, 'FD');
 
     const col2X = cX + 4;
     doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5); doc.setTextColor(100, 116, 139);
-    doc.text('KEPADA / CUSTOMER', mL + 5, boxY + 7);
-    doc.text('SOPIR', col2X, boxY + 7);
-    doc.text('NO. PO', mL + 5, boxY + 21);
-    doc.text('KENDARAAN', col2X, boxY + 21);
-    doc.text('ALAMAT PENGIRIMAN', mL + 5, boxY + 35);
+    doc.text('PERUSAHAAN PENERIMA PO', mL + 5, boxY + 7);
+    doc.text('KEPADA / CUSTOMER', mL + 5, boxY + 21);
+    doc.text('SOPIR', col2X, boxY + 21);
+    doc.text('NO. PO', mL + 5, boxY + 35);
+    doc.text('KENDARAAN', col2X, boxY + 35);
+    doc.text('ALAMAT PENGIRIMAN', mL + 5, boxY + 50);
 
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(13, 148, 136);
+    doc.text(doc.splitTextToSize(companies, rX - mL - 10), mL + 5, boxY + 12);
     doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5); doc.setTextColor(15, 23, 42);
-    doc.text(doc.splitTextToSize(customers, 80), mL + 5, boxY + 12);
-    doc.text(doc.splitTextToSize(d.driverName || '-', 80), col2X, boxY + 12);
+    doc.text(doc.splitTextToSize(customers, 80), mL + 5, boxY + 26);
+    doc.text(doc.splitTextToSize(d.driverName || '-', 80), col2X, boxY + 26);
     doc.setFont('helvetica', 'normal'); doc.setFontSize(9);
-    doc.text(doc.splitTextToSize(poNumbers, 80), mL + 5, boxY + 26);
-    doc.text(doc.splitTextToSize(d.vehicleNumber || '-', 80), col2X, boxY + 26);
-    doc.text(doc.splitTextToSize(d.deliveryAddress || '-', rX - mL - 10), mL + 5, boxY + 40);
+    doc.text(doc.splitTextToSize(poNumbers, 80), mL + 5, boxY + 40);
+    doc.text(doc.splitTextToSize(d.vehicleNumber || '-', 80), col2X, boxY + 40);
+    doc.text(doc.splitTextToSize(d.deliveryAddress || '-', rX - mL - 10), mL + 5, boxY + 55);
 
     // --- Tabel item ---
     const body = items.map((di, i) => {
-      const poNumber = poById[di.poItem?.poId]?.poNumber || '-';
+      const po = poById[di.poItem?.poId];
       return [
         i + 1,
-        poNumber,
+        po?.company || 'Belum ditentukan',
+        po?.poNumber || '-',
         di.poItem?.productName || di.productName || '-',
         `${di.poItem?.thickness || di.thickness || 0}×${di.poItem?.width || di.width || 0}×${di.poItem?.length || di.length || 0}`,
         String(di.quantity || 0),
@@ -4932,13 +4976,13 @@ async function printDeliveryNote(id) {
 
     doc.autoTable({
       startY: boxY + boxH + 8,
-      head: [['No', 'No PO', 'Nama Kayu', 'Ukuran (cm)', 'Qty (Pcs)', 'Volume (m³)']],
-      body: body.length ? body : [['-', '-', '-', '-', '0', fmtNum(0)]],
-      foot: [[{ content: 'TOTAL', colSpan: 4, styles: { halign: 'right' } }, String(totalQty), fmtNum(totalKub)]],
-      styles: { fontSize: 8.5, cellPadding: 2.2, halign: 'center', overflow: 'ellipsize', textColor: [31, 41, 55] },
+      head: [['No', 'Perusahaan', 'No PO', 'Nama Kayu', 'Ukuran (cm)', 'Qty (Pcs)', 'Volume (m³)']],
+      body: body.length ? body : [['-', '-', '-', '-', '-', '0', fmtNum(0)]],
+      foot: [[{ content: 'TOTAL', colSpan: 5, styles: { halign: 'right' } }, String(totalQty), fmtNum(totalKub)]],
+      styles: { fontSize: 8, cellPadding: 2, halign: 'center', overflow: 'ellipsize', textColor: [31, 41, 55] },
       headStyles: { fillColor: [240, 253, 250], textColor: [15, 23, 42], fontStyle: 'bold', halign: 'center', lineColor: [13, 148, 136], lineWidth: 0.2 },
       footStyles: { fillColor: [248, 250, 252], textColor: [15, 23, 42], fontStyle: 'bold', halign: 'center' },
-      columnStyles: { 0: { cellWidth: 10 }, 1: { cellWidth: 30 }, 2: { cellWidth: 48 }, 3: { cellWidth: 36 }, 4: { cellWidth: 24 }, 5: { cellWidth: 34 } },
+      columnStyles: { 0: { cellWidth: 8 }, 1: { cellWidth: 30 }, 2: { cellWidth: 24 }, 3: { cellWidth: 38 }, 4: { cellWidth: 26 }, 5: { cellWidth: 20 }, 6: { cellWidth: 26 } },
       margin: { left: mL, right: mR, top: 14, bottom: 16 },
       showHead: 'everyPage',
       didDrawPage: function () {

@@ -43,6 +43,7 @@ model PurchaseOrder {
   id             String         @id @default(uuid())
   poNumber       String         @unique
   customerName   String
+  company        String?        // CV Sinarmas Cemerlang | PT Putra Agung Cemerlang
   orderDate      DateTime       @default(now())
   deadline       DateTime?
   notes          String?
@@ -61,6 +62,7 @@ model PurchaseOrder {
 
   @@index([status])
   @@index([customerName])
+  @@index([company])
   @@index([createdAt])
 }
 

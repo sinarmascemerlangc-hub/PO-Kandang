@@ -60,7 +60,7 @@ app.get('/api/dashboard', authMiddleware, async (req, res) => {
     `);
 
     const recentPOsRaw = await prisma.$queryRawUnsafe(`
-      SELECT p.id, p."poNumber", p."customerName", p."orderDate", p.status,
+      SELECT p.id, p."poNumber", p."customerName", p.company, p."orderDate", p.status,
         p."totalKubikasi", p."totalQuantity",
         COALESCE(s.ship_qty, 0)::int as "shippedQuantity"
       FROM "PurchaseOrder" p

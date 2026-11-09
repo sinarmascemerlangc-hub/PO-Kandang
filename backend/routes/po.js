@@ -4,6 +4,14 @@ const auth = require('../middleware/auth');
 
 const router = express.Router();
 
+const RECEIVING_COMPANIES = ['CV Sinarmas Cemerlang', 'PT Putra Agung Cemerlang'];
+
+function normalizeCompany(value) {
+  if (value === undefined) return undefined;
+  if (value === null || value === '') return null;
+  return RECEIVING_COMPANIES.includes(value) ? value : undefined;
+}
+
 function calcKubikasi(thickness, width, length) {
   return (thickness / 100) * (width / 100) * (length / 100);
 }
@@ -159,6 +167,7 @@ router.get('/report-items', auth, async (req, res) => {
 
     const enriched = pos.map(po => ({
       id: po.id, poNumber: po.poNumber, customerName: po.customerName,
+      company: po.company,
       orderDate: po.orderDate, deadline: po.deadline, status: po.status,
       totalQuantity: po.totalQuantity, totalKubikasi: po.totalKubikasi,
       shippedKubikasi: po.shippedKubikasi, shippedQuantity: po.shippedQuantity,
@@ -372,6 +381,8 @@ router.post('/', auth, async (req, res) => {
   try {
     const { poNumber, customerName, orderDate, deadline, notes, items } = req.body;
     if (!poNumber || !customerName) return res.status(400).json({ error: 'Nomor PO dan nama customer wajib diisi' });
+    const company = normalizeCompany(req.body.company);
+    if (req.body.company && company === undefined) return res.status(400).json({ error: 'Perusahaan penerima tidak valid' });
     const existing = await prisma.purchaseOrder.findUnique({ where: { poNumber } });
     if (existing) return res.status(400).json({ error: 'Nomor PO sudah ada' });
 
@@ -398,6 +409,7 @@ router.post('/', auth, async (req, res) => {
         data: {
           poNumber,
           customerName,
+          company: company || null,
           orderDate: orderDate ? new Date(orderDate) : new Date(),
           deadline: deadline ? new Date(deadline) : null,
           notes: notes || '',
@@ -422,6 +434,8 @@ router.post('/', auth, async (req, res) => {
 router.put('/:id', auth, async (req, res) => {
   try {
     const { poNumber, customerName, orderDate, deadline, notes, status, items } = req.body;
+    const company = normalizeCompany(req.body.company);
+    if (req.body.company && company === undefined) return res.status(400).json({ error: 'Perusahaan penerima tidak valid' });
     const existing = await prisma.purchaseOrder.findUnique({ where: { id: req.params.id } });
     if (!existing) return res.status(404).json({ error: 'PO tidak ditemukan' });
 
@@ -466,6 +480,7 @@ router.put('/:id', auth, async (req, res) => {
         data: {
           ...(poNumber && { poNumber }),
           ...(customerName && { customerName }),
+          ...(company !== undefined && { company }),
           ...(orderDate && { orderDate: new Date(orderDate) }),
           ...(deadline !== undefined && { deadline: deadline ? new Date(deadline) : null }),
           ...(notes !== undefined && { notes }),
