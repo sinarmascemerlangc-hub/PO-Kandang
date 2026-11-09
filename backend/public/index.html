@@ -5099,7 +5099,7 @@ function buildPACSJDoc(letterhead, d, po, items) {
   const sigLineY = sigLabelY + 15;
   const sigNameY = sigLabelY + 20;
   const signers = [
-    { x: 51.5, label: 'Dibuat Oleh', name: d.createdByName || '' },
+    { x: 51.5, label: 'Dibuat Oleh', name: d.createdByName || 'Admin' },
     { x: 105, label: 'Sopir', name: d.driverName || '' },
     { x: 158.5, label: 'Diterima Oleh', name: '' },
   ];
