@@ -2479,6 +2479,27 @@
   </div>
 </div>
 
+<!-- SURAT JALAN PREVIEW MODAL -->
+<div id="sjPreviewModal" class="preview-overlay hidden">
+  <div class="preview-sheet" style="max-width:920px;height:92vh;max-height:92vh;">
+    <div class="preview-header">
+      <h3 id="sjPreviewTitle">Preview Surat Jalan</h3>
+      <button class="modal-close" onclick="closeSJPreview()">&times;</button>
+    </div>
+    <div id="sjPreviewPOTabs" style="padding:10px 20px;border-bottom:1px solid var(--slate-100);display:flex;gap:8px;flex-wrap:wrap;align-items:center;"></div>
+    <div class="preview-body" style="padding:12px;background:#e6ebf2;overflow:hidden;display:flex;">
+      <iframe id="sjPreviewFrame" title="Preview Surat Jalan" style="flex:1;width:100%;height:100%;min-height:380px;border:none;border-radius:10px;background:#fff;"></iframe>
+    </div>
+    <div class="preview-footer" style="justify-content:space-between;">
+      <span id="sjPreviewInfo" style="font-size:11.5px;color:var(--slate-500);align-self:center;"></span>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-secondary" onclick="closeSJPreview()">Tutup</button>
+        <button class="btn btn-primary" onclick="downloadSJPreview()">⬇️ Download PDF</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
 const API = '';
 let token = localStorage.getItem('token');
@@ -3004,7 +3025,7 @@ async function viewPO(id) {
                   <div class="del-card-actions">
                     ${proofs.map(p => `<button onclick="openProofPreview('${p.url}','${p.id}','${d.id}','delivery')" class="del-card-btn proof">📷</button>`).join('')}
                     <button class="del-card-btn upload" onclick="openProofModal('${d.id}')">+ Bukti</button>
-                    <button class="del-card-btn print" onclick="printDeliveryNote('${d.id}')" title="Cetak Surat Jalan">🖨️ SJ</button>
+                    <button class="del-card-btn print" onclick="openSJPreview('${d.id}')" title="Preview Surat Jalan">🖨️ SJ</button>
                     <button class="del-card-btn edit" onclick="editDeliveryFromDetail('${d.id}','${po.id}')">✏️</button>
                   </div>
                 </div>
@@ -3602,7 +3623,7 @@ function renderDeliveriesList(deliveries, hasHeaderInfo = false, extraHtml = '',
             <div class="del-card-actions">
               ${proofs.map(p => `<button onclick="openProofPreview('${p.url}','${p.id}','${d.id}','delivery')" class="del-card-btn proof">📷</button>`).join('')}
               <button class="del-card-btn upload" onclick="openProofModal('${d.id}')">+ Bukti</button>
-              <button class="del-card-btn print" onclick="printDeliveryNote('${d.id}')" title="Cetak Surat Jalan">🖨️ SJ</button>
+              <button class="del-card-btn print" onclick="openSJPreview('${d.id}')" title="Preview Surat Jalan">🖨️ SJ</button>
               <button class="del-card-btn edit" onclick="editDelivery('${d.id}')">✏️</button>
               <button class="del-card-btn delete" onclick="deleteDelivery('${d.id}')">🗑️</button>
             </div>
@@ -4893,134 +4914,413 @@ async function printPO(id) {
 }
 
 /* === PRINT SURAT JALAN (per data pengiriman) === */
-async function printDeliveryNote(id) {
+/* === SURAT JALAN: PREVIEW PER PO === */
+let sjPreviewState = null;
+let pacLetterheadCache = null;
+
+function sjNumberFor(d) {
+  if (d.deliveryNumber) return d.deliveryNumber;
+  const dt = d.deliveryDate ? new Date(d.deliveryDate) : new Date();
+  const ymd = `${dt.getFullYear()}${String(dt.getMonth() + 1).padStart(2, '0')}${String(dt.getDate()).padStart(2, '0')}`;
+  return `SJ-${ymd}-${String(d.id || '').slice(0, 6).toUpperCase()}`;
+}
+
+function getSJDeliveryPOs(d) {
+  const pos = (d.deliveryPOs || []).map(x => x.po).filter(Boolean);
+  if (pos.length) return pos;
+  return d.po ? [d.po] : [];
+}
+
+function getSJItemsForPO(d, po) {
+  return (d.items || []).filter(di => di.poItem?.poId === po.id);
+}
+
+function fmtDimNumber(v) {
+  const n = Number(v || 0);
+  return Number.isInteger(n) ? String(n) : n.toFixed(2);
+}
+
+function fmtDimension(di) {
+  const it = di.poItem || di;
+  return `${fmtDimNumber(it.thickness)}x${fmtDimNumber(it.width)}x${fmtDimNumber(it.length)}`;
+}
+
+function safeFilePart(s) {
+  return String(s || '').replace(/[\\/:*?"<>|]+/g, '-').replace(/\s+/g, '_');
+}
+
+async function getPacLetterheadDataUrl() {
+  if (pacLetterheadCache) return pacLetterheadCache;
+  const res = await fetch('pac-letterhead.png');
+  if (!res.ok) throw new Error('Kop PAC tidak ditemukan');
+  const blob = await res.blob();
+  pacLetterheadCache = await new Promise((resolve, reject) => {
+    const fr = new FileReader();
+    fr.onload = () => resolve(fr.result);
+    fr.onerror = () => reject(new Error('Gagal memuat kop PAC'));
+    fr.readAsDataURL(blob);
+  });
+  return pacLetterheadCache;
+}
+
+/* Template PAC — mengikuti contoh Delivery Order PT. Putera Agung Cemerlang */
+function buildPACSJDoc(letterhead, d, po, items) {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF('p', 'mm', 'a4');
+  const pageW = doc.internal.pageSize.getWidth();
+  const pageH = doc.internal.pageSize.getHeight();
+  const mL = 14, mR = 14, rX = pageW - mR;
+  const navy = [30, 60, 150];
+  const headerFill = [32, 59, 130];
+  const ink = [31, 41, 55];
+  const gray = [100, 116, 139];
+  const lineColor = [203, 213, 225];
+
+  const sjNo = sjNumberFor(d);
+  const customer = po.customerName || '-';
+  const address = po.notes || d.deliveryAddress || '-';
+  const driver = d.driverName || '-';
+  const noteText = d.vehicleNumber || d.notes || '-';
+
+  // Kop surat (logo + nama + alamat PT. Putera Agung Cemerlang)
+  doc.addImage(letterhead, 'PNG', 16.6, 19.2, 81.6, 17.2);
+
+  // Judul
+  doc.setFont('times', 'bold');
+  doc.setFontSize(22);
+  doc.setTextColor(...navy);
+  doc.text('DELIVERY ORDER', rX, 18.5, { align: 'right' });
+
+  // Kotak info pengiriman
+  doc.setDrawColor(...navy);
+  doc.setLineWidth(0.6);
+  doc.roundedRect(118, 22, 78, 21.5, 2.5, 2.5, 'S');
+  const rowY = [28.5, 33.2, 37.9, 42.6];
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  doc.setTextColor(...gray);
+  doc.text('No. Surat Jalan', 122, rowY[0]);
+  doc.text('Tanggal', 122, rowY[1]);
+  doc.text('No. PO', 122, rowY[2]);
+  doc.text('Sopir', 122, rowY[3]);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(...ink);
+  doc.text(sjNo, 192, rowY[0], { align: 'right' });
+  doc.text(fmtDate(d.deliveryDate), 192, rowY[1], { align: 'right' });
+  doc.text(po.poNumber || '-', 192, rowY[2], { align: 'right' });
+  doc.text(driver, 192, rowY[3], { align: 'right' });
+
+  // Garis navy
+  doc.setDrawColor(...navy);
+  doc.setLineWidth(1.1);
+  doc.line(mL, 52, rX, 52);
+
+  // Label customer & alamat
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8);
+  doc.setTextColor(...navy);
+  doc.text("CUSTOMER'S NAME", 57, 58.5, { align: 'center' });
+  doc.text('DELIVERY ADDRESS', 149.5, 58.5, { align: 'center' });
+
+  // Kotak customer & alamat
+  doc.setLineWidth(0.6);
+  doc.roundedRect(mL, 62, 86, 15, 3, 3, 'S');
+  doc.roundedRect(103, 62, 93, 15, 3, 3, 'S');
+  doc.setTextColor(...ink);
+  doc.setFontSize(10);
+  let custLines = doc.splitTextToSize(customer, 78);
+  if (custLines.length > 2) {
+    doc.setFontSize(8.5);
+    custLines = doc.splitTextToSize(customer, 78);
+  }
+  doc.text(custLines.slice(0, 3), mL + 4, 69);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  const addrLines = doc.splitTextToSize(address, 85);
+  doc.text(addrLines.slice(0, 3), 107, 69);
+
+  // Tabel item
+  const body = items.length
+    ? items.map((di, i) => [
+        String(i + 1),
+        di.poItem?.productName || di.productName || '-',
+        fmtDimension(di),
+        String(di.quantity || 0),
+      ])
+    : [['-', '-', '-', '0']];
+  const totalQty = items.reduce((s, di) => s + (di.quantity || 0), 0);
+
+  doc.autoTable({
+    startY: 83.5,
+    head: [['NO.', 'NAMA BARANG', 'DIMENSI (CM)', 'QTY\n(PCS)']],
+    body,
+    foot: [[{ content: 'TOTAL', colSpan: 3, styles: { halign: 'left' } }, String(totalQty)]],
+    theme: 'grid',
+    styles: {
+      font: 'helvetica', fontSize: 9, cellPadding: 2.4,
+      textColor: ink, lineColor, lineWidth: 0.25, valign: 'middle',
+    },
+    headStyles: {
+      fillColor: headerFill, textColor: [255, 255, 255], fontStyle: 'bold',
+      fontSize: 9, halign: 'center', valign: 'middle', lineWidth: 0,
+    },
+    footStyles: {
+      fillColor: [238, 242, 247], textColor: ink, fontStyle: 'bold',
+      lineWidth: 0.25, lineColor,
+    },
+    bodyStyles: { minCellHeight: 8.5 },
+    columnStyles: {
+      0: { cellWidth: 14, halign: 'center' },
+      1: { cellWidth: 88, halign: 'left' },
+      2: { cellWidth: 56, halign: 'center' },
+      3: { cellWidth: 24, halign: 'center', fontStyle: 'bold' },
+    },
+    margin: { left: mL, right: mR, top: 14, bottom: 12 },
+  });
+
+  // Catatan (nomor kendaraan)
+  let cursorY = doc.lastAutoTable.finalY + 5;
+  if (cursorY + 58 > pageH - 10) { doc.addPage(); cursorY = 20; }
+  doc.setLineDashPattern([1.4, 1.2], 0);
+  doc.setDrawColor(...lineColor);
+  doc.setLineWidth(0.4);
+  doc.roundedRect(mL, cursorY, 182, 10, 2.5, 2.5, 'S');
+  doc.setLineDashPattern([], 0);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8.5);
+  doc.setTextColor(...ink);
+  doc.text('Catatan:', mL + 4, cursorY + 6.2);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(...gray);
+  doc.text(doc.splitTextToSize(noteText, 145), mL + 21, cursorY + 6.2);
+
+  // Tanda tangan
+  const sigLabelY = cursorY + 18;
+  const sigLineY = sigLabelY + 15;
+  const sigNameY = sigLabelY + 20;
+  const signers = [
+    { x: 51.5, label: 'Dibuat Oleh', name: d.createdByName || '' },
+    { x: 105, label: 'Sopir', name: d.driverName || '' },
+    { x: 158.5, label: 'Diterima Oleh', name: '' },
+  ];
+  signers.forEach(s => {
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8.5);
+    doc.setTextColor(...gray);
+    doc.text(s.label, s.x, sigLabelY, { align: 'center' });
+    doc.setDrawColor(148, 163, 184);
+    doc.setLineWidth(0.3);
+    doc.line(s.x - 15, sigLineY, s.x + 15, sigLineY);
+    if (s.name) {
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9);
+      doc.setTextColor(...ink);
+      doc.text(s.name, s.x, sigNameY, { align: 'center' });
+    }
+  });
+
+  // Footer
+  const footY = Math.min(sigNameY + 10, pageH - 10);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7.5);
+  doc.setTextColor(120, 132, 150);
+  doc.text(
+    `Delivery Order ini dicetak otomatis dari Aplikasi Sinarmas • ${new Date().toLocaleString('id-ID')}`,
+    pageW / 2, footY, { align: 'center' }
+  );
+
+  return doc;
+}
+
+/* Template lama (CV Sinarmas / perusahaan lain) — tetap, tetapi per PO */
+function buildStandardSJDoc(d, po, items) {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF('p', 'mm', 'a4');
+  const pageW = doc.internal.pageSize.getWidth();
+  const pageH = doc.internal.pageSize.getHeight();
+  const mL = 14, mR = 14, rX = pageW - mR, cX = pageW / 2;
+
+  const sjNo = sjNumberFor(d);
+  const poNumbers = po.poNumber || '-';
+  const customers = po.customerName || '-';
+  const companies = po.company || 'Belum ditentukan';
+  const address = po.notes || d.deliveryAddress || '-';
+
+  // --- Kop surat ---
+  doc.setDrawColor(13, 148, 136); doc.setLineWidth(1);
+  doc.line(mL, 12, rX, 12);
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(18); doc.setTextColor(13, 148, 136);
+  doc.text('PO KANDANG', cX, 20, { align: 'center' });
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(100, 116, 139);
+  doc.text('Manajemen Purchase Order & Pengiriman Kayu', cX, 25, { align: 'center' });
+  doc.setDrawColor(13, 148, 136); doc.setLineWidth(0.3);
+  doc.line(mL, 28, rX, 28);
+
+  // --- Judul ---
+  doc.setTextColor(15, 23, 42); doc.setFont('helvetica', 'bold'); doc.setFontSize(15);
+  doc.text('SURAT JALAN', cX, 37, { align: 'center' });
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(71, 85, 105);
+  doc.text(`No. Surat Jalan: ${sjNo}`, mL, 45);
+  doc.text(`Tanggal: ${fmtDate(d.deliveryDate)}`, rX, 45, { align: 'right' });
+
+  // --- Info pengiriman ---
+  const boxY = 50, boxH = 66;
+  doc.setDrawColor(226, 232, 240); doc.setFillColor(248, 250, 252); doc.setLineWidth(0.3);
+  doc.roundedRect(mL, boxY, rX - mL, boxH, 2, 2, 'FD');
+
+  const col2X = cX + 4;
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5); doc.setTextColor(100, 116, 139);
+  doc.text('PERUSAHAAN PENERIMA PO', mL + 5, boxY + 7);
+  doc.text('KEPADA / CUSTOMER', mL + 5, boxY + 21);
+  doc.text('SOPIR', col2X, boxY + 21);
+  doc.text('NO. PO', mL + 5, boxY + 35);
+  doc.text('KENDARAAN', col2X, boxY + 35);
+  doc.text('ALAMAT PENGIRIMAN', mL + 5, boxY + 50);
+
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(13, 148, 136);
+  doc.text(doc.splitTextToSize(companies, rX - mL - 10), mL + 5, boxY + 12);
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5); doc.setTextColor(15, 23, 42);
+  doc.text(doc.splitTextToSize(customers, 80), mL + 5, boxY + 26);
+  doc.text(doc.splitTextToSize(d.driverName || '-', 80), col2X, boxY + 26);
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(9);
+  doc.text(doc.splitTextToSize(poNumbers, 80), mL + 5, boxY + 40);
+  doc.text(doc.splitTextToSize(d.vehicleNumber || '-', 80), col2X, boxY + 40);
+  doc.text(doc.splitTextToSize(address, rX - mL - 10), mL + 5, boxY + 55);
+
+  // --- Tabel item (hanya PO ini) ---
+  const body = items.map((di, i) => [
+    i + 1,
+    po.company || 'Belum ditentukan',
+    poNumbers,
+    di.poItem?.productName || di.productName || '-',
+    `${di.poItem?.thickness || di.thickness || 0}×${di.poItem?.width || di.width || 0}×${di.poItem?.length || di.length || 0}`,
+    String(di.quantity || 0),
+    fmtNum(di.kubikasi),
+  ]);
+  const totalQty = items.reduce((s, di) => s + (di.quantity || 0), 0);
+  const totalKub = items.reduce((s, di) => s + (di.kubikasi || 0), 0);
+
+  doc.autoTable({
+    startY: boxY + boxH + 8,
+    head: [['No', 'Perusahaan', 'No PO', 'Nama Kayu', 'Ukuran (cm)', 'Qty (Pcs)', 'Volume (m³)']],
+    body: body.length ? body : [['-', '-', '-', '-', '-', '0', fmtNum(0)]],
+    foot: [[{ content: 'TOTAL', colSpan: 5, styles: { halign: 'right' } }, String(totalQty), fmtNum(totalKub)]],
+    styles: { fontSize: 8, cellPadding: 2, halign: 'center', overflow: 'ellipsize', textColor: [31, 41, 55] },
+    headStyles: { fillColor: [240, 253, 250], textColor: [15, 23, 42], fontStyle: 'bold', halign: 'center', lineColor: [13, 148, 136], lineWidth: 0.2 },
+    footStyles: { fillColor: [248, 250, 252], textColor: [15, 23, 42], fontStyle: 'bold', halign: 'center' },
+    columnStyles: { 0: { cellWidth: 8 }, 1: { cellWidth: 30 }, 2: { cellWidth: 24 }, 3: { cellWidth: 38 }, 4: { cellWidth: 26 }, 5: { cellWidth: 20 }, 6: { cellWidth: 26 } },
+    margin: { left: mL, right: mR, top: 14, bottom: 16 },
+    showHead: 'everyPage',
+    didDrawPage: function () {
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(148, 163, 184);
+      doc.text(`Dicetak dari aplikasi PO Kandang • ${new Date().toLocaleString('id-ID')}`, mL, pageH - 9);
+      doc.text(`Halaman ${doc.internal.getNumberOfPages()}`, rX, pageH - 9, { align: 'right' });
+    },
+  });
+
+  // --- Catatan ---
+  let y = doc.lastAutoTable.finalY + 8;
+  if (d.notes) {
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(71, 85, 105);
+    doc.text('Catatan:', mL, y);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(100, 116, 139);
+    doc.text(doc.splitTextToSize(d.notes, rX - mL), mL, y + 4.5);
+    y += 4.5 + doc.splitTextToSize(d.notes, rX - mL).length * 4;
+  }
+
+  // --- Tanda tangan ---
+  const sigY = Math.min(y + 12, pageH - 52);
+  const colW = (rX - mL) / 3;
+  const labels = ['Pengirim / Sopir', 'Mengetahui', 'Penerima'];
+  const names = [d.driverName || '', '', ''];
+  labels.forEach((label, i) => {
+    const x = mL + colW * i + colW / 2;
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(71, 85, 105);
+    doc.text(label, x, sigY, { align: 'center' });
+    doc.setDrawColor(148, 163, 184); doc.setLineWidth(0.3);
+    doc.line(x - 22, sigY + 22, x + 22, sigY + 22);
+    doc.setFont('helvetica', 'bold'); doc.setTextColor(15, 23, 42);
+    doc.text(names[i] || '(.........................)', x, sigY + 27, { align: 'center' });
+  });
+
+  return doc;
+}
+
+function renderSJPreviewTabs() {
+  const wrap = document.getElementById('sjPreviewPOTabs');
+  const st = sjPreviewState;
+  if (!wrap || !st) return;
+  if (st.pos.length <= 1) {
+    wrap.innerHTML = `<span style="font-size:12px;color:var(--slate-500);font-weight:700;">PO: ${escHtml(st.pos[0]?.poNumber || '-')}</span>`;
+    return;
+  }
+  wrap.innerHTML = `<span style="font-size:12px;color:var(--slate-500);font-weight:700;margin-right:4px;">Pilih PO:</span>` +
+    st.pos.map(p => {
+      const active = p.id === st.poId;
+      return `<button type="button" onclick="renderSJPreview('${p.id}')" style="padding:7px 12px;border-radius:999px;border:1.5px solid ${active ? 'var(--brand-600)' : 'var(--line-strong)'};background:${active ? 'var(--brand-600)' : '#fff'};color:${active ? '#fff' : 'var(--slate-700)'};font-size:12px;font-weight:800;cursor:pointer;">${escHtml(p.poNumber)}</button>`;
+    }).join('');
+}
+
+async function renderSJPreview(poId) {
+  const st = sjPreviewState;
+  if (!st) return;
+  const po = st.pos.find(p => p.id === poId);
+  if (!po) return;
+  st.poId = poId;
+  renderSJPreviewTabs();
+  const items = getSJItemsForPO(st.delivery, po);
+  try {
+    let doc;
+    if (po.company === 'PT Putra Agung Cemerlang') {
+      const letterhead = await getPacLetterheadDataUrl();
+      doc = buildPACSJDoc(letterhead, st.delivery, po, items);
+    } else {
+      doc = buildStandardSJDoc(st.delivery, po, items);
+    }
+    st.doc = doc;
+    st.fileName = `Surat_Jalan_${safeFilePart(sjNumberFor(st.delivery))}_${safeFilePart(po.poNumber)}.pdf`;
+    if (st.url) URL.revokeObjectURL(st.url);
+    st.url = doc.output('bloburl');
+    document.getElementById('sjPreviewFrame').src = st.url;
+    document.getElementById('sjPreviewTitle').textContent = `Preview Surat Jalan • ${sjNumberFor(st.delivery)}`;
+    const template = po.company === 'PT Putra Agung Cemerlang' ? 'PAC' : (po.company || 'Tanpa perusahaan');
+    document.getElementById('sjPreviewInfo').textContent = `PO ${po.poNumber} • ${template} • ${items.length} item`;
+  } catch (e) {
+    showToast('Gagal membuat surat jalan: ' + e.message, 'error');
+  }
+}
+
+async function openSJPreview(id) {
   if (!window.jspdf) return showToast('Library PDF belum terload. Muat ulang halaman.', 'error');
   try {
     const res = await fetch(`${API}/api/deliveries/${id}`, { headers: authHeaders() });
-    if (!res.ok) throw new Error('Data pengiriman tidak ditemukan');
     const d = await res.json();
+    if (!res.ok) throw new Error(d.error || 'Data pengiriman tidak ditemukan');
+    const pos = getSJDeliveryPOs(d);
+    if (!pos.length) return showToast('Pengiriman ini belum terhubung ke PO', 'error');
+    if (sjPreviewState?.url) URL.revokeObjectURL(sjPreviewState.url);
+    sjPreviewState = { delivery: d, pos, poId: pos[0].id, doc: null, url: null, fileName: '' };
+    document.getElementById('sjPreviewModal').classList.remove('hidden');
+    document.getElementById('sjPreviewFrame').src = 'about:blank';
+    await renderSJPreview(pos[0].id);
+  } catch (e) {
+    showToast('Gagal membuka preview: ' + e.message, 'error');
+  }
+}
 
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF('p', 'mm', 'a4');
-    const pageW = doc.internal.pageSize.getWidth();
-    const pageH = doc.internal.pageSize.getHeight();
-    const mL = 14, mR = 14, rX = pageW - mR, cX = pageW / 2;
+function downloadSJPreview() {
+  if (!sjPreviewState?.doc) return showToast('Preview belum siap', 'error');
+  sjPreviewState.doc.save(sjPreviewState.fileName);
+  showToast('Surat jalan berhasil diunduh', 'success');
+}
 
-    const linkedPOs = (d.deliveryPOs || []).map(dp => dp.po).filter(Boolean);
-    const poById = {}; linkedPOs.forEach(p => { poById[p.id] = p; });
-    const poNumbers = linkedPOs.map(p => p.poNumber).join(', ') || '-';
-    const customers = [...new Set(linkedPOs.map(p => p.customerName).filter(Boolean))].join(', ') || '-';
-    const companies = [...new Set(linkedPOs.map(p => p.company).filter(Boolean))].join(', ') || 'Belum ditentukan';
-    const items = d.items || [];
-
-    const deliveryDate = d.deliveryDate ? new Date(d.deliveryDate) : new Date();
-    const ymd = `${deliveryDate.getFullYear()}${String(deliveryDate.getMonth() + 1).padStart(2, '0')}${String(deliveryDate.getDate()).padStart(2, '0')}`;
-    const sjNo = `SJ/${ymd}/${String(id).slice(0, 6).toUpperCase()}`;
-
-    // --- Kop surat ---
-    doc.setDrawColor(13, 148, 136); doc.setLineWidth(1);
-    doc.line(mL, 12, rX, 12);
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(18); doc.setTextColor(13, 148, 136);
-    doc.text('PO KANDANG', cX, 20, { align: 'center' });
-    doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(100, 116, 139);
-    doc.text('Manajemen Purchase Order & Pengiriman Kayu', cX, 25, { align: 'center' });
-    doc.setDrawColor(13, 148, 136); doc.setLineWidth(0.3);
-    doc.line(mL, 28, rX, 28);
-
-    // --- Judul ---
-    doc.setTextColor(15, 23, 42); doc.setFont('helvetica', 'bold'); doc.setFontSize(15);
-    doc.text('SURAT JALAN', cX, 37, { align: 'center' });
-    doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(71, 85, 105);
-    doc.text(`No. Surat Jalan: ${sjNo}`, mL, 45);
-    doc.text(`Tanggal: ${fmtDate(d.deliveryDate)}`, rX, 45, { align: 'right' });
-
-    // --- Info pengiriman ---
-    const boxY = 50, boxH = 66;
-    doc.setDrawColor(226, 232, 240); doc.setFillColor(248, 250, 252); doc.setLineWidth(0.3);
-    doc.roundedRect(mL, boxY, rX - mL, boxH, 2, 2, 'FD');
-
-    const col2X = cX + 4;
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5); doc.setTextColor(100, 116, 139);
-    doc.text('PERUSAHAAN PENERIMA PO', mL + 5, boxY + 7);
-    doc.text('KEPADA / CUSTOMER', mL + 5, boxY + 21);
-    doc.text('SOPIR', col2X, boxY + 21);
-    doc.text('NO. PO', mL + 5, boxY + 35);
-    doc.text('KENDARAAN', col2X, boxY + 35);
-    doc.text('ALAMAT PENGIRIMAN', mL + 5, boxY + 50);
-
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(13, 148, 136);
-    doc.text(doc.splitTextToSize(companies, rX - mL - 10), mL + 5, boxY + 12);
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5); doc.setTextColor(15, 23, 42);
-    doc.text(doc.splitTextToSize(customers, 80), mL + 5, boxY + 26);
-    doc.text(doc.splitTextToSize(d.driverName || '-', 80), col2X, boxY + 26);
-    doc.setFont('helvetica', 'normal'); doc.setFontSize(9);
-    doc.text(doc.splitTextToSize(poNumbers, 80), mL + 5, boxY + 40);
-    doc.text(doc.splitTextToSize(d.vehicleNumber || '-', 80), col2X, boxY + 40);
-    doc.text(doc.splitTextToSize(d.deliveryAddress || '-', rX - mL - 10), mL + 5, boxY + 55);
-
-    // --- Tabel item ---
-    const body = items.map((di, i) => {
-      const po = poById[di.poItem?.poId];
-      return [
-        i + 1,
-        po?.company || 'Belum ditentukan',
-        po?.poNumber || '-',
-        di.poItem?.productName || di.productName || '-',
-        `${di.poItem?.thickness || di.thickness || 0}×${di.poItem?.width || di.width || 0}×${di.poItem?.length || di.length || 0}`,
-        String(di.quantity || 0),
-        fmtNum(di.kubikasi),
-      ];
-    });
-    const totalQty = items.reduce((s, di) => s + (di.quantity || 0), 0);
-    const totalKub = items.reduce((s, di) => s + (di.kubikasi || 0), 0);
-
-    doc.autoTable({
-      startY: boxY + boxH + 8,
-      head: [['No', 'Perusahaan', 'No PO', 'Nama Kayu', 'Ukuran (cm)', 'Qty (Pcs)', 'Volume (m³)']],
-      body: body.length ? body : [['-', '-', '-', '-', '-', '0', fmtNum(0)]],
-      foot: [[{ content: 'TOTAL', colSpan: 5, styles: { halign: 'right' } }, String(totalQty), fmtNum(totalKub)]],
-      styles: { fontSize: 8, cellPadding: 2, halign: 'center', overflow: 'ellipsize', textColor: [31, 41, 55] },
-      headStyles: { fillColor: [240, 253, 250], textColor: [15, 23, 42], fontStyle: 'bold', halign: 'center', lineColor: [13, 148, 136], lineWidth: 0.2 },
-      footStyles: { fillColor: [248, 250, 252], textColor: [15, 23, 42], fontStyle: 'bold', halign: 'center' },
-      columnStyles: { 0: { cellWidth: 8 }, 1: { cellWidth: 30 }, 2: { cellWidth: 24 }, 3: { cellWidth: 38 }, 4: { cellWidth: 26 }, 5: { cellWidth: 20 }, 6: { cellWidth: 26 } },
-      margin: { left: mL, right: mR, top: 14, bottom: 16 },
-      showHead: 'everyPage',
-      didDrawPage: function () {
-        doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(148, 163, 184);
-        doc.text(`Dicetak dari aplikasi PO Kandang • ${new Date().toLocaleString('id-ID')}`, mL, pageH - 9);
-        doc.text(`Halaman ${doc.internal.getNumberOfPages()}`, rX, pageH - 9, { align: 'right' });
-      },
-    });
-
-    // --- Catatan ---
-    let y = doc.lastAutoTable.finalY + 8;
-    if (d.notes) {
-      doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(71, 85, 105);
-      doc.text('Catatan:', mL, y);
-      doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(100, 116, 139);
-      doc.text(doc.splitTextToSize(d.notes, rX - mL), mL, y + 4.5);
-      y += 4.5 + doc.splitTextToSize(d.notes, rX - mL).length * 4;
-    }
-
-    // --- Tanda tangan ---
-    const sigY = Math.min(y + 12, pageH - 52);
-    const colW = (rX - mL) / 3;
-    const labels = ['Pengirim / Sopir', 'Mengetahui', 'Penerima'];
-    const names = [d.driverName || '', '', ''];
-    labels.forEach((label, i) => {
-      const x = mL + colW * i + colW / 2;
-      doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(71, 85, 105);
-      doc.text(label, x, sigY, { align: 'center' });
-      doc.setDrawColor(148, 163, 184); doc.setLineWidth(0.3);
-      doc.line(x - 22, sigY + 22, x + 22, sigY + 22);
-      doc.setFont('helvetica', 'bold'); doc.setTextColor(15, 23, 42);
-      doc.text(names[i] || '(.........................)', x, sigY + 27, { align: 'center' });
-    });
-
-    const safeName = sjNo.replace(/[\\/:*?"<>|]/g, '-');
-    doc.save(`Surat_Jalan_${safeName}.pdf`);
-    showToast('Surat jalan berhasil diunduh!', 'success');
-  } catch (e) { showToast('Gagal mencetak surat jalan: ' + e.message, 'error'); }
+function closeSJPreview() {
+  const st = sjPreviewState;
+  if (st?.url) URL.revokeObjectURL(st.url);
+  const frame = document.getElementById('sjPreviewFrame');
+  if (frame) frame.src = 'about:blank';
+  document.getElementById('sjPreviewModal').classList.add('hidden');
+  sjPreviewState = null;
 }
 
 /* === FILTER DELIVERIES === */

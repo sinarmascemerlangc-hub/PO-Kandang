@@ -86,6 +86,8 @@ model POItem {
 
 model Delivery {
   id             String         @id @default(uuid())
+  deliveryNumber String?        @unique // SJ-YYYYMMDD-NN
+  createdByName  String?
   poId           String?
   po             PurchaseOrder? @relation(fields: [poId], references: [id], onDelete: Cascade)
   deliveryDate   DateTime       @default(now())

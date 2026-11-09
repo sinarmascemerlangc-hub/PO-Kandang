@@ -4,6 +4,27 @@ const auth = require('../middleware/auth');
 
 const router = express.Router();
 
+// Nomor Surat Jalan: SJ-YYYYMMDD-NN (berurutan per tanggal kirim)
+function sjDatePart(date) {
+  const d = date ? new Date(date) : new Date();
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Jakarta', year: 'numeric', month: '2-digit', day: '2-digit',
+  }).formatToParts(d);
+  const get = (t) => parts.find(p => p.type === t)?.value;
+  return `${get('year')}${get('month')}${get('day')}`;
+}
+
+async function nextDeliveryNumber(tx, date) {
+  const prefix = `SJ-${sjDatePart(date)}-`;
+  const rows = await tx.$queryRawUnsafe(
+    `SELECT COALESCE(MAX(NULLIF(regexp_replace("deliveryNumber", '^SJ-[0-9]{8}-', ''), '')::int), 0)::int AS max
+     FROM "Delivery" WHERE "deliveryNumber" LIKE $1`,
+    `${prefix}%`
+  );
+  return `${prefix}${String((rows[0]?.max || 0) + 1).padStart(2, '0')}`;
+}
+
+
 // GET /api/deliveries/proxy-image?url=... (MUST be before /:id routes)
 router.get('/proxy-image', async (req, res) => {
   try {
@@ -49,58 +70,72 @@ router.post('/', auth, async (req, res) => {
       }
     }
 
-    const delivery = await prisma.$transaction(async (tx) => {
-      const newDelivery = await tx.delivery.create({
-        data: {
-          deliveryDate: deliveryDate ? new Date(deliveryDate) : new Date(),
-          driverName: driverName || '',
-          vehicleNumber: vehicleNumber || '',
-          deliveryAddress: deliveryAddress || '',
-          notes: notes || '',
-          poId: allPoIds[0] || null,
-        },
-      });
+    let delivery;
+    for (let attempt = 0; attempt < 5; attempt++) {
+      try {
+        delivery = await prisma.$transaction(async (tx) => {
+          const deliveryNumber = await nextDeliveryNumber(tx, deliveryDate);
+          const newDelivery = await tx.delivery.create({
+            data: {
+              deliveryNumber,
+              createdByName: req.user?.name || '',
+              deliveryDate: deliveryDate ? new Date(deliveryDate) : new Date(),
+              driverName: driverName || '',
+              vehicleNumber: vehicleNumber || '',
+              deliveryAddress: deliveryAddress || '',
+              notes: notes || '',
+              poId: allPoIds[0] || null,
+            },
+          });
 
-      // Link delivery to POs
-      if (allPoIds.length > 0) {
-        await tx.deliveryPO.createMany({
-          data: allPoIds.map(poId => ({ deliveryId: newDelivery.id, poId })),
+          // Link delivery to POs
+          if (allPoIds.length > 0) {
+            await tx.deliveryPO.createMany({
+              data: allPoIds.map(poId => ({ deliveryId: newDelivery.id, poId })),
+            });
+          }
+
+          // Create delivery items with kubikasi calculation
+          const poItemMap = {};
+          pos.forEach(p => p.items.forEach(i => { poItemMap[i.id] = i; }));
+
+          const deliveryItems = items.map((i) => {
+            const poItem = poItemMap[i.poItemId];
+            const kubPerPcs = poItem.kubikasi / poItem.quantity;
+            return {
+              deliveryId: newDelivery.id,
+              poItemId: i.poItemId,
+              quantity: i.quantity,
+              kubikasi: kubPerPcs * i.quantity,
+              notes: i.notes || '',
+            };
+          });
+
+          await tx.deliveryItem.createMany({ data: deliveryItems });
+
+          // Update all linked PO statuses
+          await tx.purchaseOrder.updateMany({
+            where: { id: { in: allPoIds } },
+            data: { status: 'dikirim' },
+          });
+
+          return tx.delivery.findUnique({
+            where: { id: newDelivery.id },
+            include: {
+              items: { include: { poItem: true } },
+              proofs: true,
+              deliveryPOs: { include: { po: true } },
+            },
+          });
         });
+        break;
+      } catch (error) {
+        const isDuplicate = error?.code === 'P2002' && String(error?.meta?.target || '').includes('deliveryNumber');
+        if (isDuplicate && attempt < 4) continue;
+        throw error;
       }
-
-      // Create delivery items with kubikasi calculation
-      const poItemMap = {};
-      pos.forEach(p => p.items.forEach(i => { poItemMap[i.id] = i; }));
-
-      const deliveryItems = items.map((i) => {
-        const poItem = poItemMap[i.poItemId];
-        const kubPerPcs = poItem.kubikasi / poItem.quantity;
-        return {
-          deliveryId: newDelivery.id,
-          poItemId: i.poItemId,
-          quantity: i.quantity,
-          kubikasi: kubPerPcs * i.quantity,
-          notes: i.notes || '',
-        };
-      });
-
-      await tx.deliveryItem.createMany({ data: deliveryItems });
-
-      // Update all linked PO statuses
-      await tx.purchaseOrder.updateMany({
-        where: { id: { in: allPoIds } },
-        data: { status: 'dikirim' },
-      });
-
-      return tx.delivery.findUnique({
-        where: { id: newDelivery.id },
-        include: {
-          items: { include: { poItem: true } },
-          proofs: true,
-          deliveryPOs: { include: { po: true } },
-        },
-      });
-    });
+    }
+    if (!delivery) throw new Error('Gagal membuat nomor surat jalan');
 
     res.status(201).json(delivery);
   } catch (error) {
@@ -215,10 +250,12 @@ router.put('/:id', auth, async (req, res) => {
     const allPoIds = poIds && poIds.length > 0 ? poIds : (req.body.poId ? [req.body.poId] : []);
 
     const delivery = await prisma.$transaction(async (tx) => {
+      const deliveryNumber = existing.deliveryNumber || await nextDeliveryNumber(tx, deliveryDate || existing.deliveryDate);
       // Update delivery info
       await tx.delivery.update({
         where: { id: req.params.id },
         data: {
+          deliveryNumber,
           deliveryDate: deliveryDate ? new Date(deliveryDate) : existing.deliveryDate,
           driverName: driverName ?? existing.driverName,
           vehicleNumber: vehicleNumber ?? existing.vehicleNumber,
@@ -337,6 +374,7 @@ router.get('/:id', auth, async (req, res) => {
       include: {
         items: { include: { poItem: true } },
         proofs: true,
+        po: true,
         deliveryPOs: { include: { po: true } },
       },
     });
