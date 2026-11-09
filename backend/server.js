@@ -22,6 +22,16 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
   maxAge: '7d',
 }));
 
+// Pastikan kolom/tabel baru sudah ada sebelum API dipakai (idempotent).
+app.use('/api', async (req, res, next) => {
+  try {
+    if (typeof prisma.ensureSchema === 'function') await prisma.ensureSchema();
+  } catch (e) {
+    console.error('ensureSchema error:', e.message);
+  }
+  next();
+});
+
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/po', require('./routes/po'));
 app.use('/api/deliveries', require('./routes/deliveries'));
