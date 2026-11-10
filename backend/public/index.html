@@ -3169,6 +3169,11 @@ function closePOModal() { document.getElementById('poModal').classList.add('hidd
 function addItemRow(data) {
   const tbody = document.getElementById('poItems');
   const row = document.createElement('tr');
+  // Simpan id item lama supaya saat edit PO, item di-update (bukan dihapus lalu
+  // dibuat ulang) dan riwayat pengiriman tetap terhubung.
+  row.dataset.itemId = data?.id || '';
+  row.dataset.unit = data?.unit || 'pcs';
+  row.dataset.notes = data?.notes || '';
   row.innerHTML = `
     <td class="item-cell-name"><span class="item-field-label">Nama Produk</span><input type="text" class="item-name" value="${data?.productName||''}" placeholder="Nama"></td>
     <td class="item-cell-num"><span class="item-field-label">Tebal</span><input type="number" class="item-thickness" value="${data?.thickness||''}" step="0.1" oninput="calcRow(this)" placeholder="0"></td>
@@ -3210,16 +3215,21 @@ async function savePO() {
   const items = [];
   document.querySelectorAll('#poItems tr').forEach(r=>{
     items.push({
+      id: r.dataset.itemId || undefined,
       productName:r.querySelector('.item-name').value,
       thickness:parseFloat(r.querySelector('.item-thickness').value)||0,
       width:parseFloat(r.querySelector('.item-width').value)||0,
       length:parseFloat(r.querySelector('.item-length').value)||0,
       quantity:parseInt(r.querySelector('.item-qty').value)||1,
+      unit:r.dataset.unit||'pcs',
+      notes:r.dataset.notes||'',
     });
   });
   if (!poNumber) { showToast('Nomor PO wajib diisi', 'error'); return; }
   if (!customerName) { showToast('Nama customer wajib diisi', 'error'); return; }
-  if (!company) { showToast('Pilih perusahaan penerima PO', 'error'); return; }
+  // Perusahaan wajib untuk PO baru. Saat edit, PO lama yang belum punya
+  // perusahaan tetap boleh disimpan tanpa memilih ulang.
+  if (!company && !poId) { showToast('Pilih perusahaan penerima PO', 'error'); return; }
   if (items.length === 0) { showToast('Tambahkan minimal 1 item', 'error'); return; }
   const btn = document.querySelector('#poModal .btn-primary');
   setLoading(btn, true);
@@ -3245,6 +3255,7 @@ async function editPO(id) {
   try {
     const res = await fetch(`${API}/api/po/${id}`, { headers:authHeaders() });
     const po = await res.json();
+    if (!res.ok) throw new Error(po.error || 'Gagal memuat data PO');
     openPOModal(id);
     document.getElementById('poNumber').value=po.poNumber;
     document.getElementById('customerName').value=po.customerName;
@@ -3253,7 +3264,7 @@ async function editPO(id) {
     document.getElementById('deadline').value=po.deadline?.split('T')[0]||'';
     document.getElementById('poNotes').value=po.notes||'';
     document.getElementById('poItems').innerHTML='';
-    po.items.forEach(i=>addItemRow(i));
+    (po.items||[]).forEach(i=>addItemRow(i));
     updateTotal();
   } catch(e) { showToast('Error: '+e.message, 'error'); }
 }

@@ -446,27 +446,77 @@ router.put('/:id', auth, async (req, res) => {
 
     let totalKubikasi = 0;
     let totalQuantity = 0;
+    const badRequest = (message) => Object.assign(new Error(message), { httpStatus: 400 });
 
     const po = await prisma.$transaction(async (tx) => {
-      if (items) {
-        await tx.pOItem.deleteMany({ where: { poId: req.params.id } });
-        const itemsData = items.map((i) => {
-          const kubikasi = calcKubikasi(i.thickness || 0, i.width || 0, i.length || 0) * (i.quantity || 1);
+      if (Array.isArray(items)) {
+        const oldItems = await tx.pOItem.findMany({ where: { poId: req.params.id } });
+        const oldById = new Map(oldItems.map((i) => [i.id, i]));
+
+        // Item lama yang tidak dikirim lagi = dihapus. Item yang sudah dipakai
+        // pengiriman/gesek tidak boleh dihapus supaya riwayat tetap utuh.
+        const keptIds = new Set(items.filter((i) => i.id && oldById.has(i.id)).map((i) => i.id));
+        const removed = oldItems.filter((i) => !keptIds.has(i.id));
+        if (removed.length > 0) {
+          const removedIds = removed.map((i) => i.id);
+          const usedDelivery = await tx.deliveryItem.findMany({
+            where: { poItemId: { in: removedIds } },
+            select: { poItemId: true },
+          });
+          const usedGesek = await tx.woodGesek.findMany({
+            where: { poItemId: { in: removedIds } },
+            select: { poItemId: true },
+          });
+          const blocked = new Set([...usedDelivery, ...usedGesek].map((r) => r.poItemId));
+          if (blocked.size > 0) {
+            const item = removed.find((i) => blocked.has(i.id));
+            throw badRequest(`Item "${item.productName}" sudah dipakai di pengiriman/gesek, jadi tidak bisa dihapus. Ubah qty-nya saja atau hapus dulu data pengiriman terkait.`);
+          }
+          await tx.pOItem.deleteMany({ where: { id: { in: removedIds } } });
+        }
+
+        // Qty tidak boleh lebih kecil dari jumlah yang sudah dikirim.
+        const keptItemIds = items.filter((i) => i.id && oldById.has(i.id)).map((i) => i.id);
+        const shipped = keptItemIds.length
+          ? await tx.deliveryItem.groupBy({
+            by: ['poItemId'],
+            where: { poItemId: { in: keptItemIds } },
+            _sum: { quantity: true },
+          })
+          : [];
+        const shippedBy = new Map(shipped.map((r) => [r.poItemId, r._sum.quantity || 0]));
+
+        for (const i of items) {
+          const existingItem = i.id ? oldById.get(i.id) : null;
+          const thickness = Number(i.thickness) || 0;
+          const width = Number(i.width) || 0;
+          const length = Number(i.length) || 0;
+          const quantity = Math.max(1, parseInt(i.quantity, 10) || 1);
+          if (existingItem) {
+            const alreadyShipped = shippedBy.get(existingItem.id) || 0;
+            if (quantity < alreadyShipped) {
+              throw badRequest(`Qty "${existingItem.productName}" tidak boleh kurang dari yang sudah dikirim (${alreadyShipped} pcs).`);
+            }
+          }
+          const kubikasi = calcKubikasi(thickness, width, length) * quantity;
           totalKubikasi += kubikasi;
-          totalQuantity += i.quantity || 1;
-          return {
-            poId: req.params.id,
-            productName: i.productName || 'Unknown',
-            thickness: i.thickness || 0,
-            width: i.width || 0,
-            length: i.length || 0,
-            quantity: i.quantity || 1,
-            unit: i.unit || 'pcs',
+          totalQuantity += quantity;
+          const data = {
+            productName: i.productName || existingItem?.productName || 'Unknown',
+            thickness,
+            width,
+            length,
+            quantity,
+            unit: i.unit || existingItem?.unit || 'pcs',
             kubikasi,
-            notes: i.notes || '',
+            notes: i.notes !== undefined ? (i.notes || '') : (existingItem?.notes || ''),
           };
-        });
-        if (itemsData.length > 0) await tx.pOItem.createMany({ data: itemsData });
+          if (existingItem) {
+            await tx.pOItem.update({ where: { id: existingItem.id }, data });
+          } else {
+            await tx.pOItem.create({ data: { ...data, poId: req.params.id } });
+          }
+        }
       } else {
         const oldItems = await tx.pOItem.findMany({ where: { poId: req.params.id } });
         oldItems.forEach((i) => {
@@ -494,7 +544,7 @@ router.put('/:id', auth, async (req, res) => {
 
     res.json(po);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(error.httpStatus || 500).json({ error: error.message });
   }
 });
 
@@ -563,6 +613,17 @@ router.put('/:poId/items/:itemId', auth, async (req, res) => {
     const existing = await prisma.pOItem.findUnique({ where: { id: req.params.itemId } });
     if (!existing) return res.status(404).json({ error: 'Item tidak ditemukan' });
 
+    if (quantity !== undefined && quantity !== null) {
+      const shipped = await prisma.deliveryItem.aggregate({
+        where: { poItemId: req.params.itemId },
+        _sum: { quantity: true },
+      });
+      const sudahKirim = shipped._sum.quantity || 0;
+      if (Number(quantity) < sudahKirim) {
+        return res.status(400).json({ error: `Qty tidak boleh kurang dari yang sudah dikirim (${sudahKirim} pcs).` });
+      }
+    }
+
     const kubikasi = calcKubikasi(thickness || existing.thickness, width || existing.width, length || existing.length) * (quantity || existing.quantity);
     const item = await prisma.pOItem.update({
       where: { id: req.params.itemId },
@@ -595,6 +656,11 @@ router.delete('/:poId/items/:itemId', auth, async (req, res) => {
   try {
     const existing = await prisma.pOItem.findUnique({ where: { id: req.params.itemId } });
     if (!existing) return res.status(404).json({ error: 'Item tidak ditemukan' });
+
+    const used = await prisma.deliveryItem.count({ where: { poItemId: req.params.itemId } });
+    if (used > 0) {
+      return res.status(400).json({ error: `Item "${existing.productName}" sudah dipakai di pengiriman, jadi tidak bisa dihapus.` });
+    }
 
     await prisma.pOItem.delete({ where: { id: req.params.itemId } });
 
