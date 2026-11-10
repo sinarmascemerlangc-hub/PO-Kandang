@@ -113,7 +113,7 @@
     .toast.removing { animation: toastOut 0.3s ease-in forwards; }
 
     /* === CONFIRM DIALOG === */
-    .confirm-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); z-index: 9000; display: flex; justify-content: center; align-items: center; animation: fadeIn 0.2s; }
+    .confirm-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); z-index: 10050; display: flex; justify-content: center; align-items: center; animation: fadeIn 0.2s; }
     .confirm-box { background: white; border-radius: 20px; padding: 28px 24px; width: 85%; max-width: 340px; text-align: center; animation: scaleIn 0.3s cubic-bezier(0.16,1,0.3,1); box-shadow: var(--shadow-lg); }
     .confirm-box .confirm-icon { font-size: 40px; margin-bottom: 12px; }
     .confirm-box h3 { font-size: 16px; font-weight: 700; margin-bottom: 6px; }
@@ -1760,7 +1760,95 @@
       .po-items-table tbody tr { padding: 10px 11px; }
       .po-items-table td:nth-child(1), .po-items-table td:nth-child(3) { font-size: 12.5px; }
     }
-  </style>
+  /* === PENAMPIL BUKTI (foto surat jalan / pengiriman) === */
+.proof-viewer {
+  position: fixed; inset: 0; z-index: 9999;
+  display: flex; align-items: center; justify-content: center;
+  padding: 16px; background: rgba(9, 15, 25, 0.82);
+  backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px);
+  animation: fadeIn .16s ease-out; cursor: pointer;
+}
+.proof-viewer-card {
+  width: min(780px, 100%); max-height: 92vh;
+  display: flex; flex-direction: column;
+  background: #fff; border-radius: 18px; overflow: hidden;
+  box-shadow: 0 24px 70px rgba(2, 8, 20, 0.5);
+  animation: scaleIn .18s ease-out; cursor: default;
+}
+.proof-viewer-head {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 12px; padding: 14px 16px; border-bottom: 1px solid #eef2f7; flex: 0 0 auto;
+}
+.proof-viewer-titlewrap { display: flex; align-items: center; gap: 11px; min-width: 0; }
+.proof-viewer-badge {
+  width: 38px; height: 38px; border-radius: 11px; flex: 0 0 auto;
+  display: flex; align-items: center; justify-content: center; font-size: 18px;
+  background: linear-gradient(135deg, #ccfbf1, #f0fdfa); border: 1px solid #99f6e4;
+}
+.proof-viewer-title { font-size: 13.5px; font-weight: 800; color: #0f172a; letter-spacing: .1px; }
+.proof-viewer-sub {
+  font-size: 11.5px; color: #64748b; margin-top: 2px; font-weight: 600;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 52vw;
+}
+.proof-viewer-close {
+  width: 34px; height: 34px; flex: 0 0 auto; border-radius: 10px;
+  border: 1px solid #e2e8f0; background: #fff; color: #475569;
+  font-size: 20px; line-height: 1; cursor: pointer; transition: all .15s;
+}
+.proof-viewer-close:hover { background: #f8fafc; border-color: #cbd5e1; color: #0f172a; }
+.proof-viewer-body {
+  position: relative; flex: 1 1 auto; min-height: 200px;
+  background: #f1f5f9; display: flex; align-items: center; justify-content: center;
+  overflow: auto; padding: 12px;
+}
+.proof-viewer-body img {
+  max-width: 100%; max-height: min(66vh, 620px);
+  object-fit: contain; border-radius: 10px; display: block;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.14);
+}
+.proof-viewer-loading {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  gap: 10px; background: #f1f5f9; color: #64748b; font-size: 12.5px; font-weight: 700;
+}
+.proof-viewer-loading i {
+  width: 16px; height: 16px; border-radius: 50%;
+  border: 2px solid #cbd5e1; border-top-color: #0d9488; animation: spin .7s linear infinite;
+}
+.proof-viewer-error {
+  position: absolute; inset: 0; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 8px;
+  background: #f1f5f9; color: #64748b; font-size: 12.5px; font-weight: 700;
+  text-align: center; padding: 20px;
+}
+.proof-viewer-error span { font-size: 34px; }
+.proof-viewer-foot {
+  display: flex; gap: 8px; flex-wrap: wrap;
+  padding: 12px 16px; border-top: 1px solid #eef2f7; background: #fff; flex: 0 0 auto;
+}
+.pv-btn {
+  flex: 1 1 auto; min-width: 118px; padding: 10px 14px; border-radius: 10px;
+  font-size: 12.5px; font-weight: 800; font-family: inherit; cursor: pointer;
+  border: 1.5px solid #e2e8f0; background: #fff; color: #334155;
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+  transition: all .15s;
+}
+.pv-btn:hover { background: #f8fafc; border-color: #cbd5e1; }
+.pv-btn:active { transform: scale(.985); }
+.pv-btn:disabled { opacity: .65; cursor: default; }
+.pv-download { background: #0d9488; border-color: #0d9488; color: #fff; }
+.pv-download:hover { background: #0f766e; border-color: #0f766e; }
+.pv-delete { flex: 0 0 auto; min-width: 92px; border-color: #fecaca; color: #dc2626; }
+.pv-delete:hover { background: #fef2f2; border-color: #fca5a5; }
+@media (max-width: 520px) {
+  .proof-viewer { padding: 0; align-items: flex-end; }
+  .proof-viewer-card { width: 100%; max-height: 94vh; border-radius: 18px 18px 0 0; }
+  .proof-viewer-sub { max-width: 62vw; }
+  .proof-viewer-body img { max-height: 58vh; }
+  .proof-viewer-foot { padding-bottom: max(12px, env(safe-area-inset-bottom)); }
+  .pv-btn { min-width: calc(50% - 4px); }
+  .pv-delete { min-width: calc(50% - 4px); }
+}
+</style>
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
   <!-- Library PDF/Excel/grafik: di-defer agar layar login tampil lebih dulu -->
   <script defer src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
@@ -2452,11 +2540,29 @@
 </div>
 
 <!-- PROOF IMAGE PREVIEW MODAL -->
-<div id="proofPreviewModal" class="hidden" onclick="closeProofPreview()" style="position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;">
-  <button onclick="event.stopPropagation();closeProofPreview()" style="position:fixed;top:16px;right:16px;z-index:10000;background:white;border:none;width:40px;height:40px;border-radius:50%;font-size:20px;cursor:pointer;box-shadow:0 2px 12px rgba(0,0,0,0.3);">&times;</button>
-  <img id="proofPreviewImg" src="" onclick="event.stopPropagation()" style="max-width:90vw;max-height:80vh;border-radius:8px;object-fit:contain;cursor:default;">
-  <div id="proofPreviewActions" style="margin-top:16px;display:flex;gap:10px;">
-    <button id="proofDeleteBtn" onclick="event.stopPropagation();deleteDeliveryProof()" style="background:#ef4444;color:#fff;border:none;padding:8px 18px;border-radius:8px;font-size:14px;cursor:pointer;display:none;">🗑️ Hapus</button>
+<div id="proofPreviewModal" class="proof-viewer hidden" onclick="closeProofPreview()">
+  <div class="proof-viewer-card" onclick="event.stopPropagation()">
+    <div class="proof-viewer-head">
+      <div class="proof-viewer-titlewrap">
+        <div class="proof-viewer-badge" id="proofViewerBadge">🧾</div>
+        <div style="min-width:0;">
+          <div class="proof-viewer-title" id="proofViewerTitle">Bukti</div>
+          <div class="proof-viewer-sub" id="proofViewerSub">-</div>
+        </div>
+      </div>
+      <button class="proof-viewer-close" onclick="closeProofPreview()" aria-label="Tutup">&times;</button>
+    </div>
+    <div class="proof-viewer-body" id="proofViewerBody">
+      <div class="proof-viewer-loading" id="proofViewerLoading"><i></i> Memuat gambar…</div>
+      <div class="proof-viewer-error hidden" id="proofViewerError"><span>🖼️</span>Gambar tidak bisa dimuat.<br>Periksa koneksi lalu coba lagi.</div>
+      <img id="proofPreviewImg" src="" alt="Bukti" onload="proofImgLoaded()" onerror="proofImgError()">
+    </div>
+    <div class="proof-viewer-foot">
+      <button class="pv-btn pv-download" id="proofDownloadBtn" onclick="downloadProof()">⬇ Unduh</button>
+      <button class="pv-btn" id="proofOpenBtn" onclick="openProofInNewTab()">↗ Buka Tab Baru</button>
+      <button class="pv-btn pv-delete" id="proofDeleteBtn" onclick="deleteDeliveryProof()" style="display:none;">🗑 Hapus</button>
+      <button class="pv-btn" onclick="closeProofPreview()">Tutup</button>
+    </div>
   </div>
 </div>
 
@@ -3020,7 +3126,7 @@ async function viewPO(id) {
                 <div class="del-card-footer">
                   <div class="del-card-addr">📍 ${d.deliveryAddress||'-'}</div>
                   <div class="del-card-actions">
-                    ${proofs.map(p => `<button onclick="openProofPreview('${p.url}','${p.id}','${d.id}','delivery')" class="del-card-btn proof">📷</button>`).join('')}
+                    ${proofs.map(p => `<button onclick="openProofPreview('${p.url}','${p.id}','${d.id}','delivery','${encodeURIComponent(p.fileName || '')}')" class="del-card-btn proof">📷</button>`).join('')}
                     <button class="del-card-btn upload" onclick="openProofModal('${d.id}')">+ Bukti</button>
                     <button class="del-card-btn print" onclick="openSJPreview('${d.id}')" title="Preview Surat Jalan">🖨️ SJ</button>
                     <button class="del-card-btn edit" onclick="editDeliveryFromDetail('${d.id}','${po.id}')">✏️</button>
@@ -3280,19 +3386,107 @@ function closeProofModal() { document.getElementById('proofModal').classList.add
 let _currentProofId = null;
 let _currentProofTargetId = null;   // id delivery ATAU id intake kayu masuk
 let _currentProofType = 'delivery';
+let _currentProofFileName = '';
+let _currentProofProxyUrl = '';
 
-function openProofPreview(url, proofId, targetId, type = 'delivery') {
-  const proxyUrl = API + '/api/deliveries/proxy-image?url=' + encodeURIComponent(url);
-  document.getElementById('proofPreviewImg').src = proxyUrl;
+function openProofPreview(url, proofId, targetId, type = 'delivery', fileName = '') {
+  if (!url) return showToast('Bukti tidak tersedia', 'error');
+  _currentProofProxyUrl = API + '/api/deliveries/proxy-image?url=' + encodeURIComponent(url);
+  _currentProofFileName = fileName ? decodeURIComponent(fileName) : '';
   _currentProofId = proofId || null;
   _currentProofTargetId = targetId || null;
   _currentProofType = (type === 'intake') ? 'intake' : 'delivery';
-  const delBtn = document.getElementById('proofDeleteBtn');
-  delBtn.style.display = (proofId && targetId) ? 'inline-flex' : 'none';
-  delBtn.textContent = '🗑️ Hapus';
+
+  const isIntake = _currentProofType === 'intake';
+  document.getElementById('proofViewerBadge').textContent = isIntake ? '🧾' : '📷';
+  document.getElementById('proofViewerTitle').textContent = isIntake ? 'Bukti Surat Jalan / Faktur' : 'Bukti Pengiriman';
+  document.getElementById('proofViewerSub').textContent = _currentProofFileName || (isIntake ? 'Foto surat jalan / faktur' : 'Foto bukti pengiriman');
+
+  document.getElementById('proofDeleteBtn').style.display = (proofId && targetId) ? 'inline-flex' : 'none';
+
+  const img = document.getElementById('proofPreviewImg');
+  document.getElementById('proofViewerError').classList.add('hidden');
+  document.getElementById('proofViewerLoading').style.display = 'flex';
+  img.style.visibility = 'hidden';
+  img.removeAttribute('src');
+  img.src = _currentProofProxyUrl;
+
   document.getElementById('proofPreviewModal').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
 }
-function closeProofPreview() { document.getElementById('proofPreviewModal').classList.add('hidden'); }
+
+function proofImgLoaded() {
+  document.getElementById('proofPreviewImg').style.visibility = 'visible';
+  document.getElementById('proofViewerLoading').style.display = 'none';
+}
+
+function proofImgError() {
+  document.getElementById('proofViewerLoading').style.display = 'none';
+  document.getElementById('proofViewerError').classList.remove('hidden');
+}
+
+function closeProofPreview() {
+  const modal = document.getElementById('proofPreviewModal');
+  if (!modal || modal.classList.contains('hidden')) return;
+  modal.classList.add('hidden');
+  const img = document.getElementById('proofPreviewImg');
+  img.removeAttribute('src');
+  img.style.visibility = 'hidden';
+  document.getElementById('proofViewerLoading').style.display = 'flex';
+  document.getElementById('proofViewerError').classList.add('hidden');
+  document.body.style.overflow = '';
+  _currentProofProxyUrl = '';
+  _currentProofFileName = '';
+}
+
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeProofPreview(); });
+
+function openProofInNewTab() {
+  if (!_currentProofProxyUrl) return;
+  window.open(_currentProofProxyUrl, '_blank', 'noopener');
+}
+
+function proofFileExt(mime) {
+  const m = String(mime || '').toLowerCase();
+  if (m.includes('pdf')) return 'pdf';
+  if (m.includes('png')) return 'png';
+  if (m.includes('webp')) return 'webp';
+  if (m.includes('gif')) return 'gif';
+  if (m.includes('heic') || m.includes('heif')) return 'heic';
+  return 'jpg';
+}
+
+async function downloadProof() {
+  if (!_currentProofProxyUrl) return showToast('Belum ada gambar untuk diunduh', 'error');
+  const btn = document.getElementById('proofDownloadBtn');
+  const label = btn.innerHTML;
+  btn.disabled = true;
+  btn.textContent = 'Menyiapkan…';
+  try {
+    const res = await fetch(_currentProofProxyUrl);
+    if (!res.ok) throw new Error('Gagal mengambil gambar');
+    const blob = await res.blob();
+    const kind = _currentProofType === 'intake' ? 'SuratJalan' : 'Pengiriman';
+    let name = _currentProofFileName || `Bukti_${kind}_${new Date().toISOString().slice(0, 10)}`;
+    if (!/\.[a-z0-9]{2,5}$/i.test(name)) name += '.' + proofFileExt(blob.type || res.headers.get('content-type'));
+    name = name.replace(/[\\/:*?"<>|]+/g, '-');
+    const href = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = href;
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(href), 5000);
+    showToast('Bukti berhasil diunduh', 'success');
+  } catch (e) {
+    showToast('Unduhan gagal, gambar dibuka di tab baru', 'error');
+    openProofInNewTab();
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = label;
+  }
+}
 
 async function deleteDeliveryProof() {
   if (!_currentProofId || !_currentProofTargetId) return;
@@ -3618,7 +3812,7 @@ function renderDeliveriesList(deliveries, hasHeaderInfo = false, extraHtml = '',
           <div class="del-card-footer">
             <div class="del-card-addr">📍 ${d.deliveryAddress||'-'}</div>
             <div class="del-card-actions">
-              ${proofs.map(p => `<button onclick="openProofPreview('${p.url}','${p.id}','${d.id}','delivery')" class="del-card-btn proof">📷</button>`).join('')}
+              ${proofs.map(p => `<button onclick="openProofPreview('${p.url}','${p.id}','${d.id}','delivery','${encodeURIComponent(p.fileName || '')}')" class="del-card-btn proof">📷</button>`).join('')}
               <button class="del-card-btn upload" onclick="openProofModal('${d.id}')">+ Bukti</button>
               <button class="del-card-btn print" onclick="openSJPreview('${d.id}')" title="Preview Surat Jalan">🖨️ SJ</button>
               <button class="del-card-btn edit" onclick="editDelivery('${d.id}')">✏️</button>
@@ -5646,7 +5840,7 @@ function renderWoodIntakes(intakes) {
         <div style="font-size:11px;font-weight:700;color:#64748b;margin-bottom:6px;">📄 Surat Jalan / Faktur</div>
         <div class="wood-proof-row">
           ${it.proofs.map(p => `
-            <button onclick="openProofPreview('${p.url}','${p.id}','${it.id}','intake')" class="del-card-btn proof wood-proof-chip" title="${p.fileName ? escHtml(p.fileName) : 'Lihat bukti'}">📄 <span class="wp-name">${p.fileName ? escHtml(p.fileName) : 'Lihat bukti'}</span></button>
+            <button onclick="openProofPreview('${p.url}','${p.id}','${it.id}','intake','${encodeURIComponent(p.fileName || '')}')" class="del-card-btn proof wood-proof-chip" title="${p.fileName ? escHtml(p.fileName) : 'Lihat bukti'}">📄 <span class="wp-name">${p.fileName ? escHtml(p.fileName) : 'Lihat bukti'}</span></button>
             <button class="wood-proof-del" onclick="deleteIntakeProof('${it.id}','${p.id}')" title="Hapus bukti ini">🗑 Hapus</button>`).join('')}
         </div>
       </div>` : ''}
