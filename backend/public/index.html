@@ -2785,14 +2785,14 @@ async function loadDashboard() {
   } catch (e) { console.error('Dashboard error:', e); }
 
   document.getElementById('badgeTotalPO').textContent = s.totalPO || 0;
-  document.getElementById('badgeTerkirim').innerHTML = (s.shippedQuantity || 0) + '<span class="kpi-unit"> pcs</span>';
-  document.getElementById('badgeSisa').textContent = Math.max(0, s.remainingKubikasi || 0).toFixed(2);
+  document.getElementById('badgeTerkirim').innerHTML = Number(s.shippedQuantity || 0).toLocaleString('id-ID') + '<span class="kpi-unit"> pcs</span>';
+  document.getElementById('badgeSisa').textContent = Math.max(0, s.remainingKubikasi || 0).toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-  document.getElementById('widgetSisa').innerHTML = Math.max(0, s.remainingKubikasi || 0).toFixed(2) + '<span class="kpi-unit"> m³</span>';
-  document.getElementById('widgetSisaSub').textContent = Math.max(0, s.remainingQuantity || 0) + ' pcs tersisa';
+  document.getElementById('widgetSisa').innerHTML = Math.max(0, s.remainingKubikasi || 0).toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '<span class="kpi-unit"> m³</span>';
+  document.getElementById('widgetSisaSub').textContent = Number(Math.max(0, s.remainingQuantity || 0)).toLocaleString('id-ID') + ' pcs tersisa';
 
-  document.getElementById('widgetHariIni').innerHTML = todayDelivery.pcs + '<span class="kpi-unit"> pcs</span>';
-  document.getElementById('widgetHariIniSub').textContent = todayDelivery.kubikasi.toFixed(2) + ' m³ • ' + todayDelivery.count + ' pengiriman';
+  document.getElementById('widgetHariIni').innerHTML = Number(todayDelivery.pcs || 0).toLocaleString('id-ID') + '<span class="kpi-unit"> pcs</span>';
+  document.getElementById('widgetHariIniSub').textContent = todayDelivery.kubikasi.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' m³ • ' + todayDelivery.count + ' pengiriman';
 
   renderShipProgress(s);
   renderStatusRows(s);
