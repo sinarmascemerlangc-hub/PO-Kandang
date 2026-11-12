@@ -25,7 +25,28 @@ router.get('/', auth, async (req, res) => {
     const searchParams = [];
     const conditions = ['1=1'];
 
-    if (status) { searchParams.push(status); conditions.push(`p.status = $${searchParams.length}`); }
+    // Total qty terkirim per PO (hanya item PO, bukan barang tambahan)
+    const shippedQtyExpr = `(SELECT COALESCE(SUM(di.quantity), 0)::int
+      FROM "DeliveryItem" di
+      JOIN "POItem" poi ON poi.id = di."poItemId"
+      WHERE poi."poId" = p.id)`;
+    const isCompleteExpr = `(p."totalQuantity" > 0 AND ${shippedQtyExpr} >= p."totalQuantity")`;
+
+    // Tab status memakai status efektif: PO yang semua itemnya sudah terkirim = selesai,
+    // walaupun kolom status di database masih 'dikirim'/'diterima'.
+    if (status === 'selesai') {
+      conditions.push(`p.status <> 'dibatalkan' AND (p.status = 'selesai' OR ${isCompleteExpr})`);
+    } else if (status === 'dikirim') {
+      conditions.push(`p.status NOT IN ('dibatalkan','selesai') AND NOT ${isCompleteExpr} AND (p.status = 'dikirim' OR ${shippedQtyExpr} > 0)`);
+    } else if (status === 'diterima' || status === 'diproses') {
+      searchParams.push(status);
+      conditions.push(`p.status = $${searchParams.length} AND NOT ${isCompleteExpr}`);
+    } else if (status === 'dibatalkan') {
+      conditions.push(`p.status = 'dibatalkan'`);
+    } else if (status) {
+      searchParams.push(status);
+      conditions.push(`p.status = $${searchParams.length}`);
+    }
     if (search) { searchParams.push(`%${search}%`); conditions.push(`(p."poNumber" ILIKE $${searchParams.length} OR p."customerName" ILIKE $${searchParams.length})`); }
 
     const whereClause = conditions.join(' AND ');
@@ -84,11 +105,11 @@ router.get('/', auth, async (req, res) => {
       const shippedQty = Number(po.shippedQuantity) || 0;
       const totalQ = Number(po.totalQuantity) || 0;
       let status = po.status;
-      if (status !== 'selesai' && status !== 'dibatalkan') {
-        if (shippedQty > 0 && shippedQty < totalQ) {
+      if (status !== 'dibatalkan') {
+        if (status === 'selesai' || (totalQ > 0 && shippedQty >= totalQ)) {
+          status = 'selesai';
+        } else if (shippedQty > 0) {
           status = 'dikirim sebagian';
-        } else if (shippedQty >= totalQ && totalQ > 0 && status === 'diproses') {
-          status = 'dikirim';
         }
       }
       return {
@@ -254,14 +275,25 @@ router.get('/stats', auth, async (req, res) => {
     const [totals] = await prisma.$queryRawUnsafe(`
       SELECT
         COUNT(*)::int as "totalPO",
-        COUNT(*) FILTER (WHERE status = 'diterima')::int as diterima,
-        COUNT(*) FILTER (WHERE status = 'diproses')::int as diproses,
-        COUNT(*) FILTER (WHERE status = 'dikirim')::int as dikirim,
-        COUNT(*) FILTER (WHERE status = 'selesai')::int as selesai,
-        COUNT(*) FILTER (WHERE status = 'dibatalkan')::int as dibatalkan,
-        COALESCE(SUM("totalKubikasi")::float, 0) as "totalKubikasi",
-        COALESCE(SUM("totalQuantity")::int, 0) as "totalQuantity"
-      FROM "PurchaseOrder"
+        COUNT(*) FILTER (WHERE p.status = 'diterima'
+          AND NOT (p."totalQuantity" > 0 AND COALESCE(s.ship_qty, 0) >= p."totalQuantity"))::int as diterima,
+        COUNT(*) FILTER (WHERE p.status = 'diproses'
+          AND NOT (p."totalQuantity" > 0 AND COALESCE(s.ship_qty, 0) >= p."totalQuantity"))::int as diproses,
+        COUNT(*) FILTER (WHERE p.status NOT IN ('dibatalkan', 'selesai')
+          AND NOT (p."totalQuantity" > 0 AND COALESCE(s.ship_qty, 0) >= p."totalQuantity")
+          AND (p.status = 'dikirim' OR COALESCE(s.ship_qty, 0) > 0))::int as dikirim,
+        COUNT(*) FILTER (WHERE p.status <> 'dibatalkan'
+          AND (p.status = 'selesai' OR (p."totalQuantity" > 0 AND COALESCE(s.ship_qty, 0) >= p."totalQuantity")))::int as selesai,
+        COUNT(*) FILTER (WHERE p.status = 'dibatalkan')::int as dibatalkan,
+        COALESCE(SUM(p."totalKubikasi")::float, 0) as "totalKubikasi",
+        COALESCE(SUM(p."totalQuantity")::int, 0) as "totalQuantity"
+      FROM "PurchaseOrder" p
+      LEFT JOIN (
+        SELECT poi."poId" as po_id, SUM(di.quantity)::int as ship_qty
+        FROM "DeliveryItem" di
+        JOIN "POItem" poi ON poi.id = di."poItemId"
+        GROUP BY poi."poId"
+      ) s ON s.po_id = p.id
     `);
     const [shipped] = await prisma.$queryRawUnsafe(`
       SELECT COALESCE(SUM(kubikasi)::float, 0) as "shippedKubikasi", COALESCE(SUM(quantity)::int, 0) as "shippedQuantity"
@@ -353,11 +385,11 @@ router.get('/:id', auth, async (req, res) => {
     });
 
     let status = po.status;
-    if (status !== 'selesai' && status !== 'dibatalkan') {
-      if (shippedQuantity > 0 && shippedQuantity < po.totalQuantity) {
+    if (status !== 'dibatalkan') {
+      if (status === 'selesai' || (po.totalQuantity > 0 && shippedQuantity >= po.totalQuantity)) {
+        status = 'selesai';
+      } else if (shippedQuantity > 0) {
         status = 'dikirim sebagian';
-      } else if (shippedQuantity >= po.totalQuantity && po.totalQuantity > 0 && status === 'diproses') {
-        status = 'dikirim';
       }
     }
 
