@@ -54,14 +54,25 @@ app.get('/api/dashboard', authMiddleware, async (req, res) => {
     const [statsRow] = await prisma.$queryRawUnsafe(`
       SELECT
         COUNT(*)::int as "totalPO",
-        COUNT(*) FILTER (WHERE status = 'diterima')::int as diterima,
-        COUNT(*) FILTER (WHERE status = 'diproses')::int as diproses,
-        COUNT(*) FILTER (WHERE status = 'dikirim')::int as dikirim,
-        COUNT(*) FILTER (WHERE status = 'selesai')::int as selesai,
-        COUNT(*) FILTER (WHERE status = 'dibatalkan')::int as dibatalkan,
-        COALESCE(SUM("totalKubikasi")::float, 0) as "totalKubikasi",
-        COALESCE(SUM("totalQuantity")::int, 0) as "totalQuantity"
-      FROM "PurchaseOrder"
+        COUNT(*) FILTER (WHERE p.status = 'diterima'
+          AND NOT (p."totalQuantity" > 0 AND COALESCE(s.ship_qty, 0) >= p."totalQuantity"))::int as diterima,
+        COUNT(*) FILTER (WHERE p.status = 'diproses'
+          AND NOT (p."totalQuantity" > 0 AND COALESCE(s.ship_qty, 0) >= p."totalQuantity"))::int as diproses,
+        COUNT(*) FILTER (WHERE p.status NOT IN ('dibatalkan', 'selesai')
+          AND NOT (p."totalQuantity" > 0 AND COALESCE(s.ship_qty, 0) >= p."totalQuantity")
+          AND (p.status = 'dikirim' OR COALESCE(s.ship_qty, 0) > 0))::int as dikirim,
+        COUNT(*) FILTER (WHERE p.status <> 'dibatalkan'
+          AND (p.status = 'selesai' OR (p."totalQuantity" > 0 AND COALESCE(s.ship_qty, 0) >= p."totalQuantity")))::int as selesai,
+        COUNT(*) FILTER (WHERE p.status = 'dibatalkan')::int as dibatalkan,
+        COALESCE(SUM(p."totalKubikasi")::float, 0) as "totalKubikasi",
+        COALESCE(SUM(p."totalQuantity")::int, 0) as "totalQuantity"
+      FROM "PurchaseOrder" p
+      LEFT JOIN (
+        SELECT poi."poId" as po_id, SUM(di.quantity)::int as ship_qty
+        FROM "DeliveryItem" di
+        JOIN "POItem" poi ON poi.id = di."poItemId"
+        GROUP BY poi."poId"
+      ) s ON s.po_id = p.id
     `);
 
     const [shippedRow] = await prisma.$queryRawUnsafe(`
@@ -87,11 +98,11 @@ app.get('/api/dashboard', authMiddleware, async (req, res) => {
       let status = p.status;
       const shippedQ = Number(p.shippedQuantity) || 0;
       const totalQ = Number(p.totalQuantity) || 0;
-      if (status !== 'selesai' && status !== 'dibatalkan') {
-        if (shippedQ > 0 && shippedQ < totalQ) {
+      if (status !== 'dibatalkan') {
+        if (status === 'selesai' || (totalQ > 0 && shippedQ >= totalQ)) {
+          status = 'selesai';
+        } else if (shippedQ > 0) {
           status = 'dikirim sebagian';
-        } else if (shippedQ >= totalQ && totalQ > 0 && status === 'diproses') {
-          status = 'dikirim';
         }
       }
       return { ...p, status };
