@@ -739,7 +739,14 @@
       white-space: nowrap;
     }
     .del-card-btn:active { transform: scale(0.95); }
-    .del-card-btn.proof { background: #f3f6fc; color: #14387f; border-color: rgba(20,56,127,0.15); }
+    .del-card-btn.proof { background: #f3f6fc; color: #14387f; border-color: rgba(20,56,127,0.15); position: relative; }
+    .proof-btn-count {
+      display: inline-flex; align-items: center; justify-content: center;
+      min-width: 15px; height: 15px; padding: 0 4px; margin-left: 3px;
+      border-radius: 999px; background: var(--brand-600); color: #fff;
+      font-size: 9.5px; font-weight: 800; line-height: 1; vertical-align: middle;
+      font-variant-numeric: tabular-nums;
+    }
     .del-card-btn.upload { background: #ecfdf5; color: #059669; border-color: rgba(5,150,105,0.15); }
     .del-card-btn.edit { background: #eff6ff; color: #3b82f6; border-color: rgba(59,130,246,0.15); }
     .del-card-btn.delete { background: #fef2f2; color: #dc2626; border-color: rgba(220,38,38,0.15); }
@@ -1797,6 +1804,30 @@
   position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
   gap: 10px; background: #f1f5f9; color: #64748b; font-size: 12.5px; font-weight: 700;
 }
+.proof-viewer-nav {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 14px; border-top: 1px solid #eef2f7; background: #f8fafc; flex: 0 0 auto;
+}
+.proof-viewer-nav.hidden { display: none; }
+.pv-arrow {
+  width: 34px; height: 34px; flex: 0 0 auto; border-radius: 999px;
+  border: 1px solid #e2e8f0; background: #fff; color: #334155;
+  font-size: 20px; line-height: 1; display: flex; align-items: center; justify-content: center;
+  cursor: pointer; transition: all .15s; font-family: inherit;
+}
+.pv-arrow:hover { background: var(--brand-50); border-color: var(--brand-200); color: var(--brand-700); }
+.pv-arrow:active { transform: scale(.94); }
+.pv-nav-mid { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 5px; }
+.pv-dots { display: flex; align-items: center; gap: 5px; }
+.pv-dot {
+  width: 6px; height: 6px; border-radius: 999px; background: #cbd5e1;
+  transition: all .2s; cursor: pointer;
+}
+.pv-dot:hover { background: #94a3b8; }
+.pv-dot.on { width: 16px; background: var(--brand-600); }
+.pv-count { font-size: 10.5px; font-weight: 700; color: #64748b; letter-spacing: .1px; }
+.pv-progress { width: 100%; max-width: 180px; height: 2px; border-radius: 999px; background: #e2e8f0; overflow: hidden; }
+.pv-progress-fill { width: 0; height: 100%; border-radius: 999px; background: var(--brand-500); transition: width .12s linear; }
 .proof-viewer-loading i {
   width: 16px; height: 16px; border-radius: 50%;
   border: 2px solid #cbd5e1; border-top-color: #14387f; animation: spin .7s linear infinite;
@@ -2549,6 +2580,15 @@
       <div class="proof-viewer-error hidden" id="proofViewerError"><span>🖼️</span>Gambar tidak bisa dimuat.<br>Periksa koneksi lalu coba lagi.</div>
       <img id="proofPreviewImg" alt="Bukti" onload="proofImgLoaded()" onerror="proofImgError()">
     </div>
+    <div class="proof-viewer-nav hidden" id="proofViewerNav">
+      <button class="pv-arrow" id="proofPrevBtn" onclick="proofStep(-1)" aria-label="Bukti sebelumnya">‹</button>
+      <div class="pv-nav-mid">
+        <div class="pv-dots" id="proofDots"></div>
+        <div class="pv-count"><span id="proofCounter">1 / 1</span> · otomatis 5 detik</div>
+        <div class="pv-progress"><div class="pv-progress-fill" id="proofProgress"></div></div>
+      </div>
+      <button class="pv-arrow" id="proofNextBtn" onclick="proofStep(1)" aria-label="Bukti berikutnya">›</button>
+    </div>
     <div class="proof-viewer-foot">
       <button class="pv-btn pv-download" id="proofDownloadBtn" onclick="downloadProof()">⬇ Unduh</button>
       <button class="pv-btn" id="proofOpenBtn" onclick="openProofInNewTab()">↗ Buka Tab Baru</button>
@@ -3081,6 +3121,7 @@ async function viewPO(id) {
           <div class="po-section-body">
             ${po.deliveries&&po.deliveries.length>0?po.deliveries.map(d=>{
               const proofs = d.proofs || (d.proofUrl ? [{ id: null, url: d.proofUrl }] : []);
+              registerProofGallery('delivery', d.id, proofs);
               const totalQty = d.items.reduce((s,di)=>s+di.quantity,0);
               const totalKub = d.items.reduce((s,di)=>s+(di.kubikasi||0),0);
               const initial = (d.driverName||'?').trim().charAt(0).toUpperCase() || '?';
@@ -3116,7 +3157,7 @@ async function viewPO(id) {
                 <div class="del-card-footer">
                   <div class="del-card-addr">📍 ${d.deliveryAddress||'-'}</div>
                   <div class="del-card-actions">
-                    ${proofs.map(p => `<button onclick="openProofPreview('${p.url}','${p.id}','${d.id}','delivery','${encodeURIComponent(p.fileName || '')}')" class="del-card-btn proof">📷</button>`).join('')}
+                    ${proofs.map((p,i) => `<button onclick="openProofGallery('${d.id}','delivery',${i})" class="del-card-btn proof" title="Lihat bukti${proofs.length > 1 ? ' (' + (i+1) + '/' + proofs.length + ')' : ''}">📷${proofs.length > 1 ? `<span class="proof-btn-count">${proofs.length}</span>` : ''}</button>`).join('')}
                     <button class="del-card-btn upload" onclick="openProofModal('${d.id}')">+ Bukti</button>
                     <button class="del-card-btn print" onclick="openSJPreview('${d.id}')" title="Preview Surat Jalan">🖨️ SJ</button>
                     <button class="del-card-btn edit" onclick="editDeliveryFromDetail('${d.id}','${po.id}')">✏️</button>
@@ -3390,6 +3431,88 @@ let _currentProofType = 'delivery';
 let _currentProofFileName = '';
 let _currentProofProxyUrl = '';
 
+/* === GALERI BUKTI (auto-slide 5 detik + geser manual) === */
+const _proofGalleries = {};        // "type:targetId" -> [{url,id,fileName}]
+let _proofGallery = [];
+let _proofGalleryIndex = 0;
+let _proofGalleryTargetId = null;
+let _proofGalleryType = 'delivery';
+let _proofTimer = null;
+const PROOF_AUTO_MS = 5000;
+
+function registerProofGallery(type, targetId, proofs) {
+  if (!targetId) return;
+  _proofGalleries[(type || 'delivery') + ':' + targetId] = (proofs || [])
+    .filter(p => p && p.url)
+    .map(p => ({ url: p.url, id: p.id || null, fileName: p.fileName || '' }));
+}
+
+function openProofGallery(targetId, type, index) {
+  const key = (type || 'delivery') + ':' + targetId;
+  const list = _proofGalleries[key] || [];
+  if (!list.length) return showToast('Bukti tidak tersedia', 'error');
+  _proofGallery = list;
+  _proofGalleryTargetId = targetId;
+  _proofGalleryType = (type === 'intake') ? 'intake' : 'delivery';
+  proofGoTo(index || 0);
+  document.getElementById('proofPreviewModal').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+  startProofAuto();
+}
+
+function proofGoTo(i) {
+  const n = _proofGallery.length;
+  if (!n) return;
+  _proofGalleryIndex = ((i % n) + n) % n;
+  const p = _proofGallery[_proofGalleryIndex];
+  openProofPreview(p.url, p.id, _proofGalleryTargetId, _proofGalleryType, p.fileName ? encodeURIComponent(p.fileName) : '');
+  renderProofNav();
+}
+
+function proofStep(dir) {
+  if (_proofGallery.length < 2) return;
+  proofGoTo(_proofGalleryIndex + dir);
+  startProofAuto();
+}
+
+function renderProofNav() {
+  const nav = document.getElementById('proofViewerNav');
+  if (!nav) return;
+  const n = _proofGallery.length;
+  const counter = document.getElementById('proofCounter');
+  if (n < 2) {
+    nav.classList.add('hidden');
+    if (counter) counter.textContent = n ? '1 / 1' : '0 / 0';
+    return;
+  }
+  nav.classList.remove('hidden');
+  counter.textContent = (_proofGalleryIndex + 1) + ' / ' + n;
+  document.getElementById('proofDots').innerHTML = _proofGallery
+    .map((_, i) => `<span class="pv-dot${i === _proofGalleryIndex ? ' on' : ''}" onclick="proofGoTo(${i});startProofAuto()"></span>`)
+    .join('');
+}
+
+function startProofAuto() {
+  stopProofAuto();
+  const fill = document.getElementById('proofProgress');
+  if (!fill || _proofGallery.length < 2) return;
+  fill.style.transition = 'none';
+  fill.style.width = '0%';
+  void fill.offsetWidth;
+  fill.style.transition = 'width ' + PROOF_AUTO_MS + 'ms linear';
+  fill.style.width = '100%';
+  _proofTimer = setTimeout(() => {
+    proofGoTo(_proofGalleryIndex + 1);
+    startProofAuto();
+  }, PROOF_AUTO_MS);
+}
+
+function stopProofAuto() {
+  if (_proofTimer) { clearTimeout(_proofTimer); _proofTimer = null; }
+  const fill = document.getElementById('proofProgress');
+  if (fill) { fill.style.transition = 'none'; fill.style.width = '0%'; }
+}
+
 function openProofPreview(url, proofId, targetId, type = 'delivery', fileName = '') {
   if (!url) return showToast('Bukti tidak tersedia', 'error');
   _currentProofProxyUrl = API + '/api/deliveries/proxy-image?url=' + encodeURIComponent(url);
@@ -3429,18 +3552,45 @@ function proofImgError() {
 function closeProofPreview() {
   const modal = document.getElementById('proofPreviewModal');
   if (!modal || modal.classList.contains('hidden')) return;
+  stopProofAuto();
+  _proofGallery = [];
+  _proofGalleryIndex = 0;
   modal.classList.add('hidden');
   const img = document.getElementById('proofPreviewImg');
   img.removeAttribute('src');
   img.style.visibility = 'hidden';
   document.getElementById('proofViewerLoading').style.display = 'flex';
   document.getElementById('proofViewerError').classList.add('hidden');
+  document.getElementById('proofViewerNav').classList.add('hidden');
   document.body.style.overflow = '';
   _currentProofProxyUrl = '';
   _currentProofFileName = '';
 }
 
-document.addEventListener('keydown', e => { if (e.key === 'Escape') closeProofPreview(); });
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') return closeProofPreview();
+  const modal = document.getElementById('proofPreviewModal');
+  if (!modal || modal.classList.contains('hidden')) return;
+  if (e.key === 'ArrowLeft') proofStep(-1);
+  if (e.key === 'ArrowRight') proofStep(1);
+});
+
+/* geser manual (swipe) di area gambar */
+(function initProofSwipe() {
+  const body = document.getElementById('proofViewerBody');
+  if (!body) return;
+  let sx = null, sy = null;
+  body.addEventListener('touchstart', e => {
+    const t = e.changedTouches[0]; sx = t.clientX; sy = t.clientY;
+  }, { passive: true });
+  body.addEventListener('touchend', e => {
+    if (sx === null) return;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - sx, dy = t.clientY - sy;
+    sx = null; sy = null;
+    if (Math.abs(dx) > 45 && Math.abs(dx) > Math.abs(dy)) proofStep(dx < 0 ? 1 : -1);
+  }, { passive: true });
+})();
 
 function openProofInNewTab() {
   if (!_currentProofProxyUrl) return;
@@ -3774,6 +3924,7 @@ function renderDeliveriesList(deliveries, hasHeaderInfo = false, extraHtml = '',
       const otherPOs = isPOView ? poNames.filter(n => n !== currentPoNumber) : [];
       const ownPOs = isPOView ? poNames.filter(n => n === currentPoNumber) : poNames;
       const proofs = d.proofs || (d.proofUrl ? [{ id: null, url: d.proofUrl }] : []);
+      registerProofGallery('delivery', d.id, proofs);
       const totalQty = d.items.reduce((s,di)=>s+di.quantity,0);
       const totalKub = d.items.reduce((s,di)=>s+(di.kubikasi||0),0);
       const initial = (d.driverName||'?').trim().charAt(0).toUpperCase() || '?';
@@ -3813,7 +3964,7 @@ function renderDeliveriesList(deliveries, hasHeaderInfo = false, extraHtml = '',
           <div class="del-card-footer">
             <div class="del-card-addr">📍 ${d.deliveryAddress||'-'}</div>
             <div class="del-card-actions">
-              ${proofs.map(p => `<button onclick="openProofPreview('${p.url}','${p.id}','${d.id}','delivery','${encodeURIComponent(p.fileName || '')}')" class="del-card-btn proof">📷</button>`).join('')}
+              ${proofs.map((p,i) => `<button onclick="openProofGallery('${d.id}','delivery',${i})" class="del-card-btn proof" title="Lihat bukti${proofs.length > 1 ? ' (' + (i+1) + '/' + proofs.length + ')' : ''}">📷${proofs.length > 1 ? `<span class="proof-btn-count">${proofs.length}</span>` : ''}</button>`).join('')}
               <button class="del-card-btn upload" onclick="openProofModal('${d.id}')">+ Bukti</button>
               <button class="del-card-btn print" onclick="openSJPreview('${d.id}')" title="Preview Surat Jalan">🖨️ SJ</button>
               <button class="del-card-btn edit" onclick="editDelivery('${d.id}')">✏️</button>
@@ -5816,6 +5967,7 @@ function renderWoodIntakes(intakes) {
           </td>
         </tr>`;
     }).join('');
+    registerProofGallery('intake', it.id, it.proofs || []);
     return `<div class="wood-intake-card fade-in" style="animation-delay:${idx*0.05}s">
       <div class="wood-intake-head">
         <div>
@@ -5840,8 +5992,8 @@ function renderWoodIntakes(intakes) {
       ${(it.proofs && it.proofs.length > 0) ? `<div style="padding:10px 16px;border-top:1px solid #f8fafc;">
         <div style="font-size:11px;font-weight:700;color:#64748b;margin-bottom:6px;">📄 Surat Jalan / Faktur</div>
         <div class="wood-proof-row">
-          ${it.proofs.map(p => `
-            <button onclick="openProofPreview('${p.url}','${p.id}','${it.id}','intake','${encodeURIComponent(p.fileName || '')}')" class="del-card-btn proof wood-proof-chip" title="${p.fileName ? escHtml(p.fileName) : 'Lihat bukti'}">📄 <span class="wp-name">${p.fileName ? escHtml(p.fileName) : 'Lihat bukti'}</span></button>
+          ${it.proofs.map((p,i) => `
+            <button onclick="openProofGallery('${it.id}','intake',${i})" class="del-card-btn proof wood-proof-chip" title="${p.fileName ? escHtml(p.fileName) : 'Lihat bukti'}">📄 <span class="wp-name">${p.fileName ? escHtml(p.fileName) : 'Lihat bukti'}</span></button>
             <button class="wood-proof-del" onclick="deleteIntakeProof('${it.id}','${p.id}')" title="Hapus bukti ini">🗑 Hapus</button>`).join('')}
         </div>
       </div>` : ''}
