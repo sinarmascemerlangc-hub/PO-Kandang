@@ -1202,114 +1202,224 @@
       }
     }
 
-    /* === WOOD (KAYU MASUK & GESEK) === */
-    .wood-stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 14px; }
-    .wood-stat-card {
-      background: white; border: 1px solid var(--slate-100); border-radius: var(--radius);
-      padding: 12px 10px; text-align: center; box-shadow: 0 1px 4px rgba(2, 6, 23, 0.04);
+    /* === WOOD PAGES — Sinarmas Ops Console === */
+    .page-hero { display: flex; align-items: flex-end; justify-content: space-between; gap: 14px; flex-wrap: wrap; margin: 0 0 16px; }
+    .page-hero-main { flex: 1 1 220px; min-width: 0; }
+    .page-eyebrow {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.9px; color: var(--brand-600);
     }
-    .wood-stat-card .wood-stat-value { font-size: 17px; font-weight: 800; color: var(--teal-700); letter-spacing: -0.3px; }
-    .wood-stat-card .wood-stat-label { font-size: 10px; color: var(--slate-500); font-weight: 600; margin-top: 2px; }
-    .wood-section-title { font-size: 13px; font-weight: 800; color: var(--slate-700); margin: 18px 2px 10px; letter-spacing: -0.2px; }
+    .page-eyebrow svg { width: 13px; height: 13px; }
+    .page-title { margin: 4px 0 0; font-size: 24px; font-weight: 800; letter-spacing: -0.7px; line-height: 1.15; color: var(--ink); }
+    .page-sub { margin: 5px 0 0; font-size: 12px; font-weight: 500; color: var(--slate-500); line-height: 1.5; max-width: 54ch; }
+    .page-hero-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; flex: 0 0 auto; }
+
+    .kpi-grid.cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-bottom: 16px; }
+    .kpi-grid.cols-3 .kpi-card { padding: 12px 12px 11px; }
+    .kpi-grid.cols-3 .kpi-ico { width: 30px; height: 30px; border-radius: 9px; }
+    .kpi-grid.cols-3 .kpi-label { font-size: 9.5px; letter-spacing: 0.5px; }
+    .kpi-grid.cols-3 .kpi-value { margin-top: 10px; font-size: 20px; letter-spacing: -0.7px; }
+    .kpi-grid.cols-3 .kpi-sub { margin-top: 6px; font-size: 10px; line-height: 1.35; }
+    @media (max-width: 360px) {
+      .kpi-grid.cols-3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .kpi-grid.cols-3 .kpi-card:last-child { grid-column: 1 / -1; }
+    }
+
+    .wood-panel { margin-bottom: 16px; }
+    .wood-panel > .panel-head { padding: 13px 16px; }
+    .panel-count {
+      display: inline-flex; align-items: center; flex-shrink: 0;
+      font-size: 10.5px; font-weight: 800; color: var(--slate-500);
+      background: var(--slate-50); border: 1px solid var(--line);
+      border-radius: 999px; padding: 3px 9px; white-space: nowrap;
+    }
+    .panel-toolbar { padding: 11px 16px; border-bottom: 1px solid var(--line); background: #fbfcfe; }
+    .panel-body { padding: 14px 16px; }
+    .panel-body-flush { padding: 0 8px 4px; overflow-x: auto; }
+    .wood-panel > .pagination { padding: 12px 16px 14px; margin: 0; }
+    .wood-panel > .pagination:empty { display: none; }
+
+    .search-inline { position: relative; }
+    .search-inline svg {
+      position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
+      width: 15px; height: 15px; color: var(--slate-400); pointer-events: none;
+      fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round;
+    }
+    .search-inline input {
+      width: 100%; padding: 9px 12px 9px 35px; border: 1.5px solid var(--line-strong);
+      border-radius: 10px; font-size: 12.5px; font-family: inherit; outline: none;
+      background: #fff; color: var(--ink); transition: all .18s;
+    }
+    .search-inline input::placeholder { color: var(--slate-400); }
+    .search-inline input:focus { border-color: var(--brand-500); box-shadow: var(--ring); }
+
+    .chip-btn {
+      display: inline-flex; align-items: center; gap: 5px; height: 28px; padding: 0 10px;
+      border-radius: 8px; border: 1px solid var(--line-strong); background: #fff;
+      color: var(--slate-600); font-family: inherit; font-size: 11px; font-weight: 700;
+      cursor: pointer; transition: all .15s; white-space: nowrap;
+    }
+    .chip-btn svg { width: 13px; height: 13px; }
+    .chip-btn:hover { border-color: var(--brand-300); color: var(--brand-700); background: var(--brand-50); }
+    .chip-btn:active { transform: scale(.97); }
+    .chip-btn.primary { background: var(--brand-50); border-color: var(--brand-100); color: var(--brand-700); }
+    .chip-btn.primary:hover { background: var(--brand-100); border-color: var(--brand-200); }
+    .chip-btn.danger { border-color: #fecaca; color: #dc2626; }
+    .chip-btn.danger:hover { background: #fef2f2; border-color: #fca5a5; color: #b91c1c; }
 
     .wood-intake-card {
-      background: white; border: 1px solid var(--slate-100); border-radius: var(--radius);
-      margin-bottom: 12px; overflow: hidden; box-shadow: 0 1px 4px rgba(2, 6, 23, 0.04);
+      background: #fff; border: 1px solid var(--line); border-radius: 12px;
+      margin: 10px 0; overflow: hidden; box-shadow: none;
+      transition: border-color .18s, box-shadow .18s;
     }
+    .wood-intake-card:hover { border-color: var(--brand-200); box-shadow: var(--shadow-sm); }
     .wood-intake-head {
-      display: flex; justify-content: space-between; align-items: flex-start;
-      padding: 14px 16px; border-bottom: 1px solid var(--slate-100);
+      display: flex; justify-content: space-between; align-items: flex-start; gap: 10px;
+      padding: 12px 14px; border-bottom: 1px solid var(--line);
+      background: linear-gradient(180deg, #fcfdff, #f8fafc);
     }
-    .wood-intake-num { font-size: 15px; font-weight: 800; color: #0f172a; letter-spacing: -0.3px; }
-    .wood-intake-badge { display: inline-block; margin-top: 3px; font-size: 10px; font-weight: 700; color: #14387f; background: #f3f6fc; border: 1px solid rgba(20,56,127,0.2); padding: 2px 8px; border-radius: 20px; }
-    .wood-intake-meta { margin-top: 4px; font-size: 12px; color: #64748b; display: flex; flex-wrap: wrap; gap: 8px; }
-    .wood-intake-body { padding: 10px 16px 14px; }
-    .wood-stock-table { width: 100%; border-collapse: collapse; }
+    .wood-intake-num { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; font-size: 13.5px; font-weight: 800; letter-spacing: -0.2px; color: var(--ink); }
+    .wood-intake-badge {
+      display: inline-flex; align-items: center; white-space: nowrap;
+      font-size: 10.5px; font-weight: 800; color: var(--brand-700);
+      background: var(--brand-50); border: 1px solid var(--brand-100);
+      padding: 3px 9px; border-radius: 999px;
+    }
+    .wood-intake-meta { margin-top: 5px; display: flex; flex-wrap: wrap; gap: 6px; font-size: 11px; color: var(--slate-500); }
+    .wood-intake-meta span {
+      display: inline-flex; align-items: center; gap: 4px; white-space: nowrap;
+      background: #fff; border: 1px solid var(--line); border-radius: 7px;
+      padding: 2px 7px; font-size: 10.5px; font-weight: 600; color: var(--slate-600);
+    }
+    .wood-intake-meta svg { width: 12px; height: 12px; color: var(--slate-400); }
+    .wood-intake-vol { margin-top: 4px; text-align: right; white-space: nowrap; font-size: 10.5px; font-weight: 700; color: var(--slate-400); }
+    .wood-intake-body { padding: 2px 14px 8px; overflow-x: auto; }
+    .wood-intake-footer {
+      display: flex; justify-content: flex-end; gap: 6px; flex-wrap: wrap;
+      padding: 10px 14px; border-top: 1px solid var(--line); background: #fbfcfe;
+    }
+    .wood-intake-footer .chip-btn { flex: 0 0 auto; }
+
+    .wood-stock-table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
     .wood-stock-table th {
-      text-align: left; font-size: 10px; text-transform: uppercase; letter-spacing: 0.4px;
-      color: #94a3b8; font-weight: 700; padding: 6px 4px; border-bottom: 1px solid var(--slate-100); white-space: nowrap;
+      text-align: left; white-space: nowrap; padding: 9px 8px;
+      font-size: 9.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;
+      color: var(--slate-400); border-bottom: 1px solid var(--line); background: #fbfcfe;
     }
-    .wood-stock-table td { padding: 8px 4px; font-size: 12px; color: #334155; border-bottom: 1px solid #f8fafc; vertical-align: middle; }
-    .wood-stock-table tr:last-child td { border-bottom: none; }
-    .wood-stock-table .w-name { font-weight: 700; color: #0f172a; }
-    .wood-stock-table .w-size { color: #94a3b8; font-size: 11px; white-space: nowrap; }
+    .wood-stock-table td { padding: 9px 8px; font-size: 12px; color: var(--slate-700); border-bottom: 1px solid var(--line); vertical-align: middle; }
+    .wood-stock-table tbody tr:last-child td { border-bottom: none; }
+    .wood-stock-table tbody tr:hover { background: #fcfdff; }
+    .wood-stock-table th:not(:first-child), .wood-stock-table td:not(:first-child) { text-align: right; }
+    .wood-stock-table .w-name { font-weight: 700; color: var(--ink); }
+    .wood-stock-table .w-size { color: var(--slate-400); font-size: 10.5px; white-space: nowrap; }
     .wood-stock-table .w-num { font-weight: 700; white-space: nowrap; }
-    .wood-stock-table .w-hi { color: #059669; font-weight: 800; white-space: nowrap; }
-    .wood-stock-table .w-lo { color: #d97706; font-weight: 800; white-space: nowrap; }
-    .wood-stock-table .w-del { color: #f43f5e; font-weight: 800; white-space: nowrap; }
-    .wood-chip { display: inline-flex; align-items: center; gap: 4px; background: #f1f5f9; border-radius: 8px; padding: 2px 8px; font-size: 11px; font-weight: 600; color: #475569; white-space: nowrap; }
+    .wood-stock-table .w-hi { color: #0e7c5a; font-weight: 800; white-space: nowrap; }
+    .wood-stock-table .w-lo { color: #b45309; font-weight: 800; white-space: nowrap; }
+    .wood-stock-table .w-del { color: #dc2626; font-weight: 800; white-space: nowrap; }
+    .wood-stock-table .w-muted { color: var(--slate-400); font-size: 11px; white-space: nowrap; }
+    .wood-chip { display: inline-flex; align-items: center; gap: 4px; background: var(--slate-100); border-radius: 8px; padding: 2px 8px; font-size: 11px; font-weight: 600; color: var(--slate-600); white-space: nowrap; }
 
     /* Chip bukti (surat jalan/faktur) di kartu Kayu Masuk */
-    .wood-proof-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .wood-proof-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 10px 14px; border-top: 1px solid var(--line); }
+    .wood-proof-label { width: 100%; font-size: 9.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; color: var(--slate-400); }
     .wood-proof-chip { max-width: 100%; min-width: 0; }
     .wood-proof-chip .wp-name {
-      display: inline-block; max-width: 210px; overflow: hidden;
+      display: inline-block; max-width: 190px; overflow: hidden;
       text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom;
     }
     .wood-proof-del {
-      display: inline-flex; align-items: center; gap: 4px;
-      height: 26px; padding: 0 10px; border-radius: 8px; cursor: pointer;
-      background: #fff; border: 1px solid rgba(239, 68, 68, .28); color: #ef4444;
-      font-family: inherit; font-size: 11px; font-weight: 700; transition: all .15s;
+      display: inline-flex; align-items: center; gap: 4px; height: 26px; padding: 0 9px;
+      border-radius: 8px; cursor: pointer; background: #fff;
+      border: 1px solid #fecaca; color: #dc2626;
+      font-family: inherit; font-size: 10.5px; font-weight: 700; transition: all .15s;
     }
-    .wood-proof-del:hover { background: #fef2f2; border-color: #ef4444; }
-    .wood-proof-del:active { transform: scale(0.96); }
-    .wood-intake-footer { display: flex; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
-    .wood-intake-footer .del-card-btn { flex: 0 0 auto; }
-    /* Header halaman: judul sebaris dengan tombol aksi */
-    .wood-page-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
-    .wood-page-head .section-title { margin: 0 !important; }
-    /* Nomor di tabel rata kanan & angka selalu lebar sama (presisi) */
-    .wood-stock-table { font-variant-numeric: tabular-nums; }
-    .wood-stock-table th:not(:first-child), .wood-stock-table td:not(:first-child) { text-align: right; }
-    /* Metadata kartu (tanggal/supplier/kendaraan) jadi chip kecil yang rapi */
-    .wood-intake-meta span {
-      display: inline-flex; align-items: center; gap: 4px;
-      background: #f8fafc; border: 1px solid var(--slate-100); border-radius: 7px;
-      padding: 2px 7px; font-size: 11px; font-weight: 600; color: #475569; white-space: nowrap;
-    }
+    .wood-proof-del:hover { background: #fef2f2; border-color: #fca5a5; }
+    .wood-proof-del:active { transform: scale(.96); }
 
-    .wood-po-card { background: white; border: 1px solid var(--slate-100); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 12px; }
-    .wood-po-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-    .wood-po-num { font-size: 14px; font-weight: 800; color: #0f172a; }
-    .wood-po-cust { font-size: 12px; color: #64748b; }
-    .wood-po-row { display: flex; align-items: center; gap: 8px; padding: 7px 0; border-bottom: 1px dashed #eef2f7; font-size: 12px; }
-    .wood-po-row:last-child { border-bottom: none; }
-    .wood-po-row .w-name { flex: 1; font-weight: 700; color: #334155; min-width: 0; }
-    .wood-po-row .w-size { color: #94a3b8; font-size: 11px; white-space: nowrap; }
-    .wood-po-meters { display: flex; gap: 8px; color: #64748b; font-size: 11px; font-weight: 700; white-space: nowrap; }
-    .wood-po-meters span { display: inline-block; min-width: 44px; text-align: right; font-variant-numeric: tabular-nums; }
-    .wood-po-meters .needed { color: #0284c7; }
-    .wood-po-meters .shipped { color: #8b5cf6; }
-    .wood-po-meters .ready { color: #059669; }
-    .wood-po-meters .miss { color: #d97706; }
-    /* Legenda warna angka "Kebutuhan per PO" */
-    .wood-po-legend { display: flex; flex-wrap: wrap; gap: 6px 14px; padding: 0 4px 10px; font-size: 11px; font-weight: 700; }
-    .wood-po-legend span { display: inline-flex; align-items: center; gap: 5px; color: #64748b; }
-    .wood-po-legend i { font-style: normal; font-size: 13px; line-height: 1; }
-    .wood-po-legend .needed i, .wood-po-legend .needed b { color: #0284c7; }
-    .wood-po-legend .shipped i, .wood-po-legend .shipped b { color: #8b5cf6; }
-    .wood-po-legend .ready i, .wood-po-legend .ready b { color: #059669; }
-    .wood-po-legend .miss i, .wood-po-legend .miss b { color: #d97706; }
-    .wood-po-legend b { color: #475569; font-weight: 700; }
-    .wood-progress-track { height: 6px; background: #eef2f7; border-radius: 99px; overflow: hidden; margin-top: 8px; }
-    .wood-progress-fill { height: 100%; background: linear-gradient(90deg, #14387f, #2e5bb8); border-radius: 99px; transition: width 0.4s; }
-    .wood-progress-fill.done { background: #059669; }
-
-    .wood-gesek-log {
-      display: flex; justify-content: space-between; align-items: center; gap: 10px;
-      background: white; border: 1px solid var(--slate-100); border-radius: var(--radius);
-      padding: 12px 14px; margin-bottom: 10px;
+    /* Kebutuhan per PO */
+    .wood-po-legend {
+      display: flex; flex-wrap: wrap; gap: 6px 14px;
+      padding: 9px 16px; border-bottom: 1px solid var(--line); background: #fbfcfe;
+      font-size: 10.5px; font-weight: 700;
     }
+    .wood-po-legend span { display: inline-flex; align-items: center; gap: 5px; color: var(--slate-500); }
+    .wood-po-legend i { font-style: normal; font-size: 12px; line-height: 1; }
+    .wood-po-legend .needed i, .wood-po-legend .needed b { color: #0369a1; }
+    .wood-po-legend .shipped i, .wood-po-legend .shipped b { color: #6d28d9; }
+    .wood-po-legend .ready i, .wood-po-legend .ready b { color: #0e7c5a; }
+    .wood-po-legend .miss i, .wood-po-legend .miss b { color: #b45309; }
+    .wood-po-legend b { color: var(--slate-600); font-weight: 700; }
+
+    .wood-po-card { padding: 12px 16px; border-bottom: 1px solid var(--line); }
+    .wood-po-card:last-child { border-bottom: none; }
+    .wood-po-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 8px; }
+    .wood-po-num { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; font-size: 12.5px; font-weight: 800; letter-spacing: -0.1px; color: var(--ink); }
+    .wood-po-cust { display: block; margin-top: 2px; font-size: 11px; color: var(--slate-500); }
+    .wood-po-sisa { font-size: 11px; font-weight: 800; color: #b45309; white-space: nowrap; flex: 0 0 auto; }
+    .wood-po-sisa.done { color: #0e7c5a; }
+    .wood-po-grid {
+      display: grid; grid-template-columns: minmax(0,1.7fr) repeat(4, minmax(36px,0.55fr));
+      gap: 6px; align-items: center; padding: 6px 0;
+      border-bottom: 1px dashed var(--line); font-size: 11.5px;
+    }
+    .wood-po-grid:last-of-type { border-bottom: none; }
+    .wood-po-grid.head {
+      padding: 0 0 4px; border-bottom: none;
+      font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; color: var(--slate-400);
+    }
+    .wood-po-grid.head span:not(:first-child), .wood-po-grid > span { text-align: right; font-variant-numeric: tabular-nums; }
+    .wood-po-name { min-width: 0; }
+    .wood-po-grid .w-name { font-size: 11.5px; font-weight: 700; color: var(--slate-700); }
+    .wood-po-grid .w-size { font-size: 10px; color: var(--slate-400); white-space: nowrap; }
+    .wood-po-grid .needed { color: #0369a1; font-weight: 700; }
+    .wood-po-grid .shipped { color: #6d28d9; font-weight: 700; }
+    .wood-po-grid .ready { color: #0e7c5a; font-weight: 700; }
+    .wood-po-grid .miss { color: #b45309; font-weight: 800; }
+    .wood-progress-track { height: 6px; background: var(--slate-100); border-radius: 99px; overflow: hidden; margin-top: 9px; }
+    .wood-progress-fill { height: 100%; background: linear-gradient(90deg, var(--brand-400), var(--brand-600)); border-radius: 99px; transition: width .4s; }
+    .wood-progress-fill.done { background: linear-gradient(90deg, #10b981, #059669); }
+    .wood-po-foot { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 7px; font-size: 10px; font-weight: 700; color: var(--slate-400); }
+
+    /* Riwayat gesek */
+    .wood-gesek-log { display: flex; align-items: center; gap: 10px; padding: 11px 16px; border-bottom: 1px solid var(--line); }
+    .wood-gesek-log:last-child { border-bottom: none; }
+    .wood-gesek-log-icon {
+      width: 32px; height: 32px; border-radius: 9px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      background: var(--brand-50); color: var(--brand-600);
+    }
+    .wood-gesek-log-icon svg { width: 15px; height: 15px; }
     .wood-gesek-log-main { flex: 1; min-width: 0; }
-    .wood-gesek-log-title { font-size: 13px; font-weight: 700; color: #0f172a; }
-    .wood-gesek-log-sub { font-size: 11px; color: #64748b; margin-top: 2px; }
-    .wood-gesek-log-meta { text-align: right; font-size: 11px; color: #14387f; font-weight: 700; white-space: nowrap; }
-    .gesek-source-info {
-      margin-top: 12px; padding: 12px 14px; border-radius: var(--radius);
-      background: linear-gradient(135deg, var(--teal-50), #ecfdf5);
-      border: 1px solid rgba(20,56,127,0.15); font-size: 12px; color: #0e2a63; line-height: 1.6;
+    .wood-gesek-log-title { font-size: 12px; font-weight: 700; color: var(--ink); }
+    .wood-gesek-log-sub { margin-top: 2px; font-size: 10.5px; color: var(--slate-500); }
+    .wood-gesek-log-aside { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+    .wood-gesek-log-meta { text-align: right; white-space: nowrap; font-size: 11px; font-weight: 800; color: var(--brand-700); }
+    .wood-gesek-note { color: #b45309; font-weight: 700; }
+
+    /* Form alokasi */
+    .alloc-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    .alloc-grid .form-group { margin-bottom: 0; }
+    .alloc-grid .span-2 { grid-column: 1 / -1; }
+    @media (max-width: 420px) { .alloc-grid { grid-template-columns: minmax(0, 1fr); } .alloc-grid .span-2 { grid-column: auto; } }
+    .alloc-info {
+      margin-top: 12px; padding: 10px 12px; border-radius: 10px;
+      background: var(--brand-50); border: 1px solid var(--brand-100);
+      font-size: 11.5px; font-weight: 600; color: var(--brand-700);
     }
+    .alloc-submit { width: 100%; margin-top: 14px; justify-content: center; }
+    .gesek-source-info {
+      margin-top: 12px; padding: 10px 12px; border-radius: 10px;
+      background: var(--brand-50); border: 1px solid var(--brand-100);
+      font-size: 11.5px; font-weight: 600; color: var(--brand-700); line-height: 1.6;
+    }
+
+    /* Empty state di dalam panel */
+    .wood-panel .empty-state { padding: 30px 18px; }
+    .empty-state .empty-svg {
+      width: 34px; height: 34px; margin: 0 auto 10px; display: block;
+      fill: none; stroke: var(--slate-300); stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round;
+    }
+    .wood-panel .empty-state p { font-size: 12px; font-weight: 600; color: var(--slate-400); }
 
     /* ============================================================
        === UI REFRESH v2 — fresh / profesional / user-friendly ===
@@ -1504,7 +1614,7 @@
       .report-card:hover { box-shadow: var(--shadow); }
       .btn-secondary:hover, .report-tab:hover, .report-btn:hover { transform: translateY(-1px); }
       .pagination button:hover:not(:disabled) { transform: translateY(-1px); }
-      .wood-intake-card:hover, .wood-po-card:hover, .wood-gesek-log:hover { box-shadow: var(--shadow); }
+      .wood-intake-card:hover { box-shadow: var(--shadow); }
       .profile-card:hover { box-shadow: var(--shadow-md); }
     }
 
@@ -1894,6 +2004,16 @@
     <symbol id="i-chev" viewBox="0 0 24 24"><path d="m9 5 7 7-7 7"/></symbol>
     <symbol id="i-bell" viewBox="0 0 24 24"><path d="M18 8a6 6 0 1 0-12 0c0 5-2 6-2 6h16s-2-1-2-6"/><path d="M10.5 20a2 2 0 0 0 3 0"/></symbol>
     <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></symbol>
+    <symbol id="i-calendar" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 11h18"/></symbol>
+    <symbol id="i-factory" viewBox="0 0 24 24"><path d="M3 21V9l6 3.5V9l6 3.5V9l6 3.5V21z"/><path d="M3 21h18M7 17h2M13 17h2M19 17h1"/></symbol>
+    <symbol id="i-tools" viewBox="0 0 24 24"><path d="M14.5 6.5a4.5 4.5 0 0 1 5.9 5.9l-8.4 8.4a2 2 0 0 1-2.8 0l-2-2a2 2 0 0 1 0-2.8z"/><circle cx="8.6" cy="15.4" r="1.2"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M10 4h4M6 7l1 13h10l1-13"/><path d="M10 11v6M14 11v6"/></symbol>
+    <symbol id="i-edit" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></symbol>
+    <symbol id="i-layers" viewBox="0 0 24 24"><path d="m12 3 9 5-9 5-9-5z"/><path d="m3 13 9 5 9-5"/><path d="m3 17 9 5 9-5"/></symbol>
+    <symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="1"/></symbol>
+    <symbol id="i-list" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13"/><path d="M3 6h.01M3 12h.01M3 18h.01"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 13 4 4L19 7"/></symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 2.4 18a2 2 0 0 0 1.7 3h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></symbol>
   </defs>
 </svg>
 
@@ -2221,65 +2341,137 @@
 
     <!-- KAYU MASUK -->
     <div id="page-wood-intake" class="page">
-      <div class="wood-page-head">
-        <div class="section-title">🪵 Kayu Masuk</div>
-        <button class="btn btn-primary btn-sm" onclick="openWoodIntakeModal()">+ Kayu Masuk</button>
+      <div class="page-hero">
+        <div class="page-hero-main">
+          <div class="page-eyebrow"><svg class="ic" style="width:13px;height:13px"><use href="#i-layers"/></svg>Operasional Kayu</div>
+          <h1 class="page-title">Kayu Masuk</h1>
+          <p class="page-sub">Catat penerimaan kayu dari supplier dan pantau sisa stok yang siap digesek.</p>
+        </div>
+        <div class="page-hero-actions">
+          <button class="btn btn-primary btn-sm" onclick="openWoodIntakeModal()"><svg class="ic" style="width:14px;height:14px;stroke:#fff"><use href="#i-plus"/></svg> Kayu Masuk</button>
+        </div>
       </div>
-      <div class="wood-stats-row">
-        <div class="wood-stat-card"><div class="wood-stat-value" id="woodStatTotalIn">-</div><div class="wood-stat-label">Volume Masuk</div></div>
-        <div class="wood-stat-card"><div class="wood-stat-value" id="woodStatRemaining">-</div><div class="wood-stat-label">Sisa Stok</div></div>
-        <div class="wood-stat-card"><div class="wood-stat-value" id="woodStatGesek">-</div><div class="wood-stat-label">Pcs Digesek</div></div>
+
+      <div class="kpi-grid cols-3">
+        <div class="kpi-card teal">
+          <div class="kpi-head"><span class="kpi-ico"><svg class="ic" style="width:16px;height:16px"><use href="#i-layers"/></svg></span><span class="kpi-label">Volume Masuk</span></div>
+          <div class="kpi-value" id="woodStatTotalIn">-</div>
+          <div class="kpi-sub">Total kubikasi diterima</div>
+        </div>
+        <div class="kpi-card blue">
+          <div class="kpi-head"><span class="kpi-ico"><svg class="ic" style="width:16px;height:16px"><use href="#i-box"/></svg></span><span class="kpi-label">Sisa Stok</span></div>
+          <div class="kpi-value" id="woodStatRemaining">-</div>
+          <div class="kpi-sub" id="woodStatRemainingSub">Belum digesek</div>
+        </div>
+        <div class="kpi-card amber">
+          <div class="kpi-head"><span class="kpi-ico"><svg class="ic" style="width:16px;height:16px"><use href="#i-tools"/></svg></span><span class="kpi-label">Pcs Digesek</span></div>
+          <div class="kpi-value" id="woodStatGesek">-</div>
+          <div class="kpi-sub">Sudah diproses</div>
+        </div>
       </div>
-      <div class="search-box">
-        <input type="text" id="searchWoodIntake" placeholder="Cari supplier / nomor KM..." oninput="woodIntakeSearch()">
-        <span class="search-icon">🔍</span>
-      </div>
-      <div id="woodIntakeList"></div>
-      <div id="woodIntakePagination" class="pagination"></div>
+
+      <section class="panel wood-panel">
+        <div class="panel-head">
+          <h2 class="panel-title"><span class="pt-ico"><svg class="ic" style="width:16px;height:16px"><use href="#i-list"/></svg></span>Riwayat Penerimaan</h2>
+          <span class="panel-count" id="woodIntakeCount">-</span>
+        </div>
+        <div class="panel-toolbar">
+          <div class="search-inline">
+            <svg><use href="#i-search"/></svg>
+            <input type="text" id="searchWoodIntake" placeholder="Cari supplier, nomor KM, atau kendaraan..." oninput="woodIntakeSearch()">
+          </div>
+        </div>
+        <div id="woodIntakeList"></div>
+        <div id="woodIntakePagination" class="pagination"></div>
+      </section>
     </div>
 
     <!-- GESEK KAYU -->
     <div id="page-wood-gesek" class="page">
-      <div class="wood-page-head">
-        <div class="section-title">⚒️ Gesek Kayu</div>
-        <button class="btn btn-primary btn-sm" onclick="openGesekModal()">+ Gesek Kayu</button>
-      </div>
-      <div class="wood-stats-row">
-        <div class="wood-stat-card"><div class="wood-stat-value" id="woodGesekStatStock">-</div><div class="wood-stat-label">Sisa Stok</div></div>
-        <div class="wood-stat-card"><div class="wood-stat-value" id="woodGesekStatRemaining">-</div><div class="wood-stat-label">Perlu Digesek</div></div>
-        <div class="wood-stat-card"><div class="wood-stat-value" id="woodGesekStatReady">-</div><div class="wood-stat-label">Stok Gesek</div></div>
-      </div>
-      <div class="wood-section-title">📋 Kebutuhan per PO</div>
-      <div class="wood-po-legend">
-        <span class="needed"><i>●</i> <b>Dibutuhkan</b></span>
-        <span class="shipped"><i>●</i> <b>Terkirim</b></span>
-        <span class="ready"><i>●</i> <b>Digesek</b></span>
-        <span class="miss"><i>●</i> <b>Perlu digesek</b></span>
-      </div>
-      <div id="woodPOProgress"></div>
-      <div class="wood-section-title">🪵 Stok Kayu Sisa</div>
-      <div id="woodStockList"></div>
-      <div class="wood-section-title">⚙️ Stok Gesek (Belum Alokasi)</div>
-      <div id="woodGesekStock"></div>
-      <div class="wood-section-title">🎯 Alokasi ke PO</div>
-      <div id="woodAllocSection">
-        <div class="wood-intake-card" style="margin:0;">
-          <div style="padding:14px;">
-            <div class="form-row">
-              <div class="form-group" style="flex:2;"><label>Stok Gesek</label><select id="allocGesekSelect" onchange="allocGesekChanged()" style="width:100%;padding:10px;border:1.5px solid #e2e8f0;border-radius:var(--radius-sm);font-size:13px;"></select></div>
-              <div class="form-group" style="flex:2;"><label>Item PO Tujuan</label><select id="allocPOSelect" onchange="allocPOChanged()" style="width:100%;padding:10px;border:1.5px solid #e2e8f0;border-radius:var(--radius-sm);font-size:13px;"></select></div>
-            </div>
-            <div class="form-row">
-              <div class="form-group"><label>Jumlah Alokasi (pcs)</label><input type="number" id="allocQty" min="1" value="1" style="width:100%;padding:10px;border:1.5px solid #e2e8f0;border-radius:var(--radius-sm);font-size:13px;"></div>
-              <div class="form-group"><label>Sisa Stok Gesek</label><input type="text" id="allocRemaining" readonly style="width:100%;padding:10px;border:1.5px solid #e2e8f0;border-radius:var(--radius-sm);font-size:13px;background:#f8fafc;"></div>
-            </div>
-            <div id="allocInfo" class="gesek-source-info hidden" style="margin-top:8px;"></div>
-            <button class="btn btn-primary btn-sm" onclick="saveAllocation()" style="margin-top:12px;width:100%;">🎯 Alokasikan</button>
-          </div>
+      <div class="page-hero">
+        <div class="page-hero-main">
+          <div class="page-eyebrow"><svg class="ic" style="width:13px;height:13px"><use href="#i-tools"/></svg>Produksi Kayu</div>
+          <h1 class="page-title">Gesek Kayu</h1>
+          <p class="page-sub">Proses gesek, pantau kebutuhan per PO, lalu alokasikan stok hasil gesek.</p>
+        </div>
+        <div class="page-hero-actions">
+          <button class="btn btn-primary btn-sm" onclick="openGesekModal()"><svg class="ic" style="width:14px;height:14px;stroke:#fff"><use href="#i-plus"/></svg> Gesek Kayu</button>
         </div>
       </div>
-      <div class="wood-section-title">📜 Riwayat Gesek</div>
-      <div id="woodGesekLogs"></div>
+
+      <div class="kpi-grid cols-3">
+        <div class="kpi-card teal">
+          <div class="kpi-head"><span class="kpi-ico"><svg class="ic" style="width:16px;height:16px"><use href="#i-box"/></svg></span><span class="kpi-label">Sisa Stok</span></div>
+          <div class="kpi-value" id="woodGesekStatStock">-</div>
+          <div class="kpi-sub">Stok kayu belum digesek</div>
+        </div>
+        <div class="kpi-card amber">
+          <div class="kpi-head"><span class="kpi-ico"><svg class="ic" style="width:16px;height:16px"><use href="#i-target"/></svg></span><span class="kpi-label">Perlu Digesek</span></div>
+          <div class="kpi-value" id="woodGesekStatRemaining">-</div>
+          <div class="kpi-sub">Kekurangan untuk PO</div>
+        </div>
+        <div class="kpi-card blue">
+          <div class="kpi-head"><span class="kpi-ico"><svg class="ic" style="width:16px;height:16px"><use href="#i-check"/></svg></span><span class="kpi-label">Stok Gesek</span></div>
+          <div class="kpi-value" id="woodGesekStatReady">-</div>
+          <div class="kpi-sub">Siap dialokasikan</div>
+        </div>
+      </div>
+
+      <section class="panel wood-panel">
+        <div class="panel-head">
+          <h2 class="panel-title"><span class="pt-ico"><svg class="ic" style="width:16px;height:16px"><use href="#i-target"/></svg></span>Kebutuhan per PO</h2>
+          <span class="panel-count" id="woodPOProgressCount">-</span>
+        </div>
+        <div class="wood-po-legend">
+          <span class="needed"><i>●</i> <b>Dibutuhkan</b></span>
+          <span class="shipped"><i>●</i> <b>Terkirim</b></span>
+          <span class="ready"><i>●</i> <b>Digesek</b></span>
+          <span class="miss"><i>●</i> <b>Perlu digesek</b></span>
+        </div>
+        <div id="woodPOProgress"></div>
+      </section>
+
+      <section class="panel wood-panel">
+        <div class="panel-head">
+          <h2 class="panel-title"><span class="pt-ico"><svg class="ic" style="width:16px;height:16px"><use href="#i-box"/></svg></span>Stok Kayu Sisa</h2>
+          <span class="panel-count" id="woodStockCount">-</span>
+        </div>
+        <div id="woodStockList"></div>
+      </section>
+
+      <section class="panel wood-panel">
+        <div class="panel-head">
+          <h2 class="panel-title"><span class="pt-ico"><svg class="ic" style="width:16px;height:16px"><use href="#i-tools"/></svg></span>Stok Gesek (Belum Alokasi)</h2>
+          <span class="panel-count" id="woodGesekStockCount">-</span>
+        </div>
+        <div id="woodGesekStock"></div>
+      </section>
+
+      <section class="panel wood-panel">
+        <div class="panel-head">
+          <h2 class="panel-title"><span class="pt-ico"><svg class="ic" style="width:16px;height:16px"><use href="#i-target"/></svg></span>Alokasi ke PO</h2>
+        </div>
+        <div id="woodAllocSection">
+          <div class="panel-body">
+            <div class="alloc-grid">
+              <div class="form-group span-2"><label>Stok Gesek</label><select id="allocGesekSelect" onchange="allocGesekChanged()"></select></div>
+              <div class="form-group span-2"><label>Item PO Tujuan</label><select id="allocPOSelect" onchange="allocPOChanged()"></select></div>
+              <div class="form-group"><label>Jumlah Alokasi (pcs)</label><input type="number" id="allocQty" min="1" value="1"></div>
+              <div class="form-group"><label>Sisa Stok Gesek</label><input type="text" id="allocRemaining" readonly></div>
+            </div>
+            <div id="allocInfo" class="alloc-info hidden"></div>
+            <button class="btn btn-primary btn-sm alloc-submit" onclick="saveAllocation()"><svg class="ic" style="width:14px;height:14px;stroke:#fff"><use href="#i-send"/></svg> Alokasikan ke PO</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel wood-panel">
+        <div class="panel-head">
+          <h2 class="panel-title"><span class="pt-ico"><svg class="ic" style="width:16px;height:16px"><use href="#i-clock"/></svg></span>Riwayat Gesek</h2>
+          <span class="panel-count" id="woodGesekLogCount">-</span>
+        </div>
+        <div id="woodGesekLogs"></div>
+      </section>
     </div>
 
     <!-- PROFIL -->
@@ -2396,7 +2588,7 @@
   <div class="modal-sheet">
     <div class="modal-handle"></div>
     <div class="modal-header">
-      <h3 id="woodIntakeModalTitle">🪵 Tambah Kayu Masuk</h3>
+      <h3 id="woodIntakeModalTitle">Tambah Kayu Masuk</h3>
       <button class="modal-close" onclick="closeWoodIntakeModal()">&times;</button>
     </div>
     <div class="modal-body">
@@ -2406,7 +2598,7 @@
       </div>
       <div class="form-group"><label>Supplier</label><input type="text" id="woodIntakeSupplier" placeholder="Nama supplier"></div>
       <div class="form-group"><label>Catatan</label><input type="text" id="woodIntakeNotes" placeholder="Opsional"></div>
-      <div style="font-size:14px;font-weight:800;margin:16px 0 8px;color:var(--slate-900);">🎋 Item Kayu Masuk</div>
+      <div style="font-size:14px;font-weight:800;margin:16px 0 8px;color:var(--slate-900);">Item Kayu Masuk</div>
       <div style="overflow-x:auto;">
         <table class="items-table">
           <thead><tr><th>Produk</th><th>Tebal</th><th>Lebar</th><th>Pjg</th><th>Qty</th><th>KUB</th><th></th></tr></thead>
@@ -2428,15 +2620,15 @@
   <div class="modal-sheet">
     <div class="modal-handle"></div>
     <div class="modal-header">
-      <h3>⚒️ Gesek Kayu</h3>
+      <h3>Gesek Kayu</h3>
       <button class="modal-close" onclick="closeGesekModal()">&times;</button>
     </div>
     <div class="modal-body">
       <div class="form-group">
         <label>Mode Gesek</label>
         <div style="display:flex;gap:8px;margin-top:4px;">
-          <button type="button" id="gesekModeBatch" class="btn btn-sm" style="flex:1;background:#14387f;color:#fff;border:2px solid #14387f;" onclick="setGesekMode('batch')">📦 Per Kayu Masuk</button>
-          <button type="button" id="gesekModeItem" class="btn btn-sm" style="flex:1;background:#fff;color:#64748b;border:2px solid #e2e8f0;" onclick="setGesekMode('item')">🧩 Per Item</button>
+          <button type="button" id="gesekModeBatch" class="btn btn-sm" style="flex:1;background:#14387f;color:#fff;border:2px solid #14387f;" onclick="setGesekMode('batch')"><svg class="ic" style="width:13px;height:13px"><use href="#i-layers"/></svg> Per Kayu Masuk</button>
+          <button type="button" id="gesekModeItem" class="btn btn-sm" style="flex:1;background:#fff;color:#64748b;border:2px solid #e2e8f0;" onclick="setGesekMode('item')"><svg class="ic" style="width:13px;height:13px"><use href="#i-box"/></svg> Per Item</button>
         </div>
       </div>
 
@@ -5900,17 +6092,18 @@ async function loadWoodStats() {
   try {
     const res = await fetch(`${API}/api/wood/stats`, { headers: authHeaders() });
     const s = await res.json();
-    if (res.ok) {
-      const fill = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
-      fill('woodStatTotalIn', s.totalIn.toFixed(2) + ' m³');
-      fill('woodStatRemaining', s.remainingQty + ' pcs');
-      const remEl = document.getElementById('woodStatRemaining');
-      if (remEl) remEl.insertAdjacentHTML('beforeend',
-        `<span style="display:block;font-size:11px;font-weight:700;color:#94a3b8;margin-top:1px;">${s.remainingKubikasi.toFixed(2)} m³</span>`);
-      fill('woodStatGesek', s.gesekQty + ' pcs');
-      fill('woodGesekStatStock', s.remainingQty + ' pcs');
-      fill('woodGesekStatReady', s.gesekQty + ' pcs');
-    }
+    if (!res.ok) return;
+    const num2 = v => (Number(v) || 0).toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const setStat = (id, value, unit) => {
+      const el = document.getElementById(id);
+      if (el) el.innerHTML = `${value}<span class="kpi-unit">${unit}</span>`;
+    };
+    setStat('woodStatTotalIn', num2(s.totalIn), 'm³');
+    setStat('woodStatRemaining', fmtInt(s.remainingQty), 'pcs');
+    const remSub = document.getElementById('woodStatRemainingSub');
+    if (remSub) remSub.textContent = `${num2(s.remainingKubikasi)} m³ tersedia`;
+    setStat('woodStatGesek', fmtInt(s.gesekQty), 'pcs');
+    setStat('woodGesekStatStock', fmtInt(s.remainingQty), 'pcs');
   } catch (e) { console.error(e); }
 }
 
@@ -5921,20 +6114,22 @@ async function loadWoodIntakes() {
   try {
     const res = await fetch(`${API}/api/wood/intake?page=${woodIntakePage}&limit=10`, { headers: authHeaders() });
     const data = await res.json();
-    renderWoodIntakes((data.data || []).filter(i =>
+    const rows = (data.data || []).filter(i =>
       !search || (i.intakeNumber + ' ' + (i.supplier || '') + ' ' + (i.vehicleNumber || '')).toLowerCase().includes(search.toLowerCase())
-    ));
+    );
+    renderWoodIntakes(rows);
     loadWoodStats(); // dipanggil di sini supaya statistik tetap terisi walau hanya 1 halaman
     const p = data.pagination;
+    const cnt = document.getElementById('woodIntakeCount');
+    if (cnt) cnt.textContent = `${rows.length} data`;
     const el = document.getElementById('woodIntakePagination');
     if (!p || p.totalPages <= 1) { el.innerHTML = ''; return; }
     let h = `<button ${p.page<=1?'disabled':''} onclick="woodIntakePage=${p.page-1};loadWoodIntakes()">‹</button>`;
     for (let i = 1; i <= p.totalPages; i++) h += `<button class="${i===p.page?'active':''}" onclick="woodIntakePage=${i};loadWoodIntakes()">${i}</button>`;
     h += `<button ${p.page>=p.totalPages?'disabled':''} onclick="woodIntakePage=${p.page+1};loadWoodIntakes()">›</button>`;
     el.innerHTML = h;
-    loadWoodStats();
   } catch (e) {
-    document.getElementById('woodIntakeList').innerHTML = '<div class="empty-state"><span class="empty-icon">⚠️</span><p>Gagal memuat data. Coba lagi.</p></div>';
+    document.getElementById('woodIntakeList').innerHTML = '<div class="empty-state"><svg class="empty-svg"><use href="#i-alert"/></svg><p>Gagal memuat data. Coba lagi.</p></div>';
     console.error(e);
   }
 }
@@ -5947,7 +6142,7 @@ function woodIntakeSearch() {
 function renderWoodIntakes(intakes) {
   const container = document.getElementById('woodIntakeList');
   if (!intakes || intakes.length === 0) {
-    container.innerHTML = '<div class="empty-state"><span class="empty-icon">🪵</span><p>Belum ada kayu masuk</p></div>';
+    container.innerHTML = '<div class="empty-state"><svg class="empty-svg"><use href="#i-box"/></svg><p>Belum ada kayu masuk</p></div>';
     return;
   }
   container.innerHTML = intakes.map((it, idx) => {
@@ -5957,30 +6152,28 @@ function renderWoodIntakes(intakes) {
       const sisa = item.remaining || 0;
       return `
         <tr>
-          <td><div class="w-name">${escHtml(item.productName)}</div><div class="w-size">${item.thickness}×${item.width}×${item.length}cm</div></td>
-          <td style="white-space:nowrap;">${item.quantity} pcs</td>
-          <td style="white-space:nowrap;">${(perPcs * item.quantity).toFixed(4)} m³</td>
-          <td class="${used > 0 ? 'w-lo' : 'w-del'}">${used} pcs</td>
-          <td class="w-hi">${sisa} pcs</td>
-          <td style="text-align:right;">
-            <button class="del-card-btn upload" style="padding:4px 10px;font-size:11px;" onclick="openGesekModal('${item.id}')">⚒️ Gesek</button>
-          </td>
+          <td><div class="w-name">${escHtml(item.productName)}</div><div class="w-size">${item.thickness}×${item.width}×${item.length} cm</div></td>
+          <td class="w-num">${fmtInt(item.quantity)}</td>
+          <td class="w-muted">${fmt4(perPcs * item.quantity)}</td>
+          <td class="${used > 0 ? 'w-lo' : 'w-muted'}">${fmtInt(used)}</td>
+          <td class="w-hi">${fmtInt(sisa)}</td>
+          <td><button class="chip-btn primary" onclick="openGesekModal('${item.id}')"><svg class="ic"><use href="#i-tools"/></svg>Gesek</button></td>
         </tr>`;
     }).join('');
     registerProofGallery('intake', it.id, it.proofs || []);
     return `<div class="wood-intake-card fade-in" style="animation-delay:${idx*0.05}s">
       <div class="wood-intake-head">
-        <div>
+        <div style="min-width:0;">
           <div class="wood-intake-num">${escHtml(it.intakeNumber)}</div>
           <div class="wood-intake-meta">
-            <span>📅 ${fmtDateShort(it.intakeDate)}</span>
-            ${it.supplier ? `<span>🏭 ${escHtml(it.supplier)}</span>` : ''}
-            ${it.vehicleNumber ? `<span>🚚 ${escHtml(it.vehicleNumber)}</span>` : ''}
+            <span><svg class="ic"><use href="#i-calendar"/></svg>${fmtDateShort(it.intakeDate)}</span>
+            ${it.supplier ? `<span><svg class="ic"><use href="#i-factory"/></svg>${escHtml(it.supplier)}</span>` : ''}
+            ${it.vehicleNumber ? `<span><svg class="ic"><use href="#i-truck"/></svg>${escHtml(it.vehicleNumber)}</span>` : ''}
           </div>
         </div>
-        <div style="text-align:right;">
-          <div class="wood-intake-badge">${it.totalQuantity} pcs</div>
-          <div style="font-size:11px;color:#94a3b8;margin-top:3px;">${Number(it.totalKubikasi).toFixed(4)} m³</div>
+        <div style="text-align:right;flex:0 0 auto;">
+          <div class="wood-intake-badge">${fmtInt(it.totalQuantity)} pcs</div>
+          <div class="wood-intake-vol">${fmt4(it.totalKubikasi)} m³</div>
         </div>
       </div>
       ${it.items && it.items.length ? `<div class="wood-intake-body">
@@ -5989,18 +6182,16 @@ function renderWoodIntakes(intakes) {
           <tbody>${items}</tbody>
         </table>
       </div>` : ''}
-      ${(it.proofs && it.proofs.length > 0) ? `<div style="padding:10px 16px;border-top:1px solid #f8fafc;">
-        <div style="font-size:11px;font-weight:700;color:#64748b;margin-bottom:6px;">📄 Surat Jalan / Faktur</div>
-        <div class="wood-proof-row">
-          ${it.proofs.map((p,i) => `
-            <button onclick="openProofGallery('${it.id}','intake',${i})" class="del-card-btn proof wood-proof-chip" title="${p.fileName ? escHtml(p.fileName) : 'Lihat bukti'}">📄 <span class="wp-name">${p.fileName ? escHtml(p.fileName) : 'Lihat bukti'}</span></button>
-            <button class="wood-proof-del" onclick="deleteIntakeProof('${it.id}','${p.id}')" title="Hapus bukti ini">🗑 Hapus</button>`).join('')}
-        </div>
+      ${(it.proofs && it.proofs.length > 0) ? `<div class="wood-proof-row">
+        <div class="wood-proof-label">Bukti Surat Jalan / Faktur</div>
+        ${it.proofs.map((p,i) => `
+          <button onclick="openProofGallery('${it.id}','intake',${i})" class="chip-btn wood-proof-chip" title="${p.fileName ? escHtml(p.fileName) : 'Lihat bukti'}"><svg class="ic"><use href="#i-file"/></svg><span class="wp-name">${p.fileName ? escHtml(p.fileName) : 'Lihat bukti'}</span></button>
+          <button class="wood-proof-del" onclick="deleteIntakeProof('${it.id}','${p.id}')" title="Hapus bukti ini">Hapus</button>`).join('')}
       </div>` : ''}
-      <div class="wood-intake-footer" style="padding:10px 16px;border-top:1px solid #f8fafc;">
-        <button class="del-card-btn proof" style="padding:4px 10px;font-size:11px;" onclick="openProofModal('${it.id}','intake')">📄 Upload Surat Jalan</button>
-        <button class="del-card-btn upload" style="padding:4px 10px;font-size:11px;" onclick="editWoodIntake('${it.id}')">✏️ Edit</button>
-        <button class="del-card-btn delete" onclick="deleteWoodIntake('${it.id}')">🗑️ Hapus</button>
+      <div class="wood-intake-footer">
+        <button class="chip-btn" onclick="openProofModal('${it.id}','intake')"><svg class="ic"><use href="#i-file"/></svg>Surat Jalan</button>
+        <button class="chip-btn" onclick="editWoodIntake('${it.id}')"><svg class="ic"><use href="#i-edit"/></svg>Edit</button>
+        <button class="chip-btn danger" onclick="deleteWoodIntake('${it.id}')"><svg class="ic"><use href="#i-trash"/></svg>Hapus</button>
       </div>
     </div>`;
   }).join('');
@@ -6023,7 +6214,7 @@ async function deleteWoodIntake(id) {
 /* --- KAYU MASUK: MODAL --- */
 function openWoodIntakeModal(data) {
   editingIntakeId = data ? data.id : null;
-  document.getElementById('woodIntakeModalTitle').textContent = data ? '✏️ Edit Kayu Masuk' : '🪵 Tambah Kayu Masuk';
+  document.getElementById('woodIntakeModalTitle').textContent = data ? 'Edit Kayu Masuk' : 'Tambah Kayu Masuk';
   document.getElementById('woodIntakeSaveBtn').textContent = data ? 'Update' : 'Simpan';
   document.getElementById('woodIntakeModal').classList.remove('hidden');
   document.getElementById('woodIntakeDate').value = data ? data.intakeDate.slice(0, 10) : new Date().toISOString().slice(0, 10);
@@ -6152,9 +6343,12 @@ async function loadWoodGesekPage() {
   const allocated = gesekLogs.filter(g => g.poNumber);
 
   const gs = (poRes && poRes.stats) || {};
-  const e = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
-  e('woodGesekStatRemaining', (gs.totalRemainingNeed ?? 0) + ' pcs');
-  e('woodGesekStatReady', unallocated.reduce((s, g) => s + g.remainingQty, 0) + ' pcs');
+  const setStat = (id, value) => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = `${fmtInt(value)}<span class="kpi-unit">pcs</span>`;
+  };
+  setStat('woodGesekStatRemaining', gs.totalRemainingNeed ?? 0);
+  setStat('woodGesekStatReady', unallocated.reduce((s, g) => s + g.remainingQty, 0));
 
   renderWoodPOProgress(poGroups);
   renderWoodStock(woodStockCache);
@@ -6165,72 +6359,79 @@ async function loadWoodGesekPage() {
 
 function renderWoodPOProgress(groups) {
   const c = document.getElementById('woodPOProgress');
+  const cnt = document.getElementById('woodPOProgressCount');
+  if (cnt) cnt.textContent = `${groups ? groups.length : 0} PO aktif`;
   if (!groups || groups.length === 0) {
-    c.innerHTML = '<div class="empty-state"><span class="empty-icon">📭</span><p>Belum ada PO aktif</p></div>';
+    c.innerHTML = '<div class="empty-state"><svg class="empty-svg"><use href="#i-target"/></svg><p>Belum ada PO aktif</p></div>';
     return;
   }
-  c.innerHTML = groups.map(g => `
+  c.innerHTML = groups.map(g => {
+    const statusClass = String(g.status || '').replace(/\s+/g, '-');
+    return `
     <div class="wood-po-card fade-in">
       <div class="wood-po-head">
-        <div>
-          <div class="wood-po-num">${escHtml(g.poNumber)} <span class="status-pill ${g.status}">${g.status}</span></div>
-          <div class="wood-po-cust">${escHtml(g.customerName)}</div>
+        <div style="min-width:0;">
+          <div class="wood-po-num">${escHtml(g.poNumber)} <span class="status-pill ${statusClass}">${escHtml(g.status || '-')}</span></div>
+          <span class="wood-po-cust">${escHtml(g.customerName)}</span>
         </div>
-        <div style="font-size:12px;font-weight:800;color:${g.done ? '#059669' : '#d97706'};">${g.done ? '✓ Cukup' : 'Sisa ' + g.totalRemaining + ' pcs'}</div>
+        <span class="wood-po-sisa${g.done ? ' done' : ''}">${g.done ? 'Cukup' : 'Kurang ' + fmtInt(g.totalRemaining) + ' pcs'}</span>
       </div>
+      <div class="wood-po-grid head"><span>Item</span><span>Butuh</span><span>Kirim</span><span>Gesek</span><span>Kurang</span></div>
       ${g.items.map(i => `
-        <div class="wood-po-row">
-          <span class="w-name">${escHtml(i.productName)}</span>
-          <span class="w-size">${i.thickness}×${i.width}×${i.length}cm</span>
-          <span class="wood-po-meters">
-            <span class="needed" title="Dibutuhkan">${i.quantity}</span>
-            <span class="shipped" title="Terkirim">${i.shippedQty}</span>
-            <span class="ready" title="Sudah digesek">${i.gesekQty}</span>
-            <span class="miss" title="Perlu digesek">${i.remainingNeed}</span>
-          </span>
+        <div class="wood-po-grid">
+          <div class="wood-po-name"><div class="w-name">${escHtml(i.productName)}</div><div class="w-size">${i.thickness}×${i.width}×${i.length} cm</div></div>
+          <span class="needed">${fmtInt(i.quantity)}</span>
+          <span class="shipped">${fmtInt(i.shippedQty)}</span>
+          <span class="ready">${fmtInt(i.gesekQty)}</span>
+          <span class="miss">${fmtInt(i.remainingNeed)}</span>
         </div>`).join('')}
       <div class="wood-progress-track"><div class="wood-progress-fill${g.done ? ' done' : ''}" style="width:${g.pctDone}%"></div></div>
-    </div>`).join('');
+      <div class="wood-po-foot"><span>Progres pemenuhan</span><span>${g.pctDone}%</span></div>
+    </div>`;
+  }).join('');
 }
 
 function renderWoodStock(stock) {
   const c = document.getElementById('woodStockList');
+  const cnt = document.getElementById('woodStockCount');
+  if (cnt) cnt.textContent = `${stock ? stock.length : 0} item`;
   if (!stock || stock.length === 0) {
-    c.innerHTML = '<div class="empty-state"><span class="empty-icon">🪵</span><p>Stok kayu habis</p></div>';
+    c.innerHTML = '<div class="empty-state"><svg class="empty-svg"><use href="#i-box"/></svg><p>Stok kayu habis</p></div>';
     return;
   }
-  c.innerHTML = `<div class="wood-intake-card"><div class="wood-intake-body" style="padding-top:14px;">
-    <table class="wood-stock-table">
-      <thead><tr><th>Stok</th><th>Sisa</th><th>Volume</th><th></th></tr></thead>
-      <tbody>${stock.map(s => {
-        const perPcs = s.quantity > 0 ? s.kubikasi / s.quantity : 0;
-        return `<tr>
-          <td><div class="w-name">${escHtml(s.productName)}</div>
-            <div class="w-size">${s.thickness}×${s.width}×${s.length}cm · ${escHtml(s.intakeNumber)}</div></td>
-          <td class="w-hi">${s.remaining} pcs</td>
-          <td style="white-space:nowrap;color:#64748b;font-size:11px;">${(perPcs * s.remaining).toFixed(4)} m³</td>
-          <td style="text-align:right;"><button class="del-card-btn upload" style="padding:4px 10px;font-size:11px;" onclick="openGesekModal('${s.id}')">⚒️ Gesek</button></td>
-        </tr>`;
-      }).join('')}</tbody>
-    </table>
-    </div></div>`;
+  c.innerHTML = `<div class="panel-body-flush"><table class="wood-stock-table">
+    <thead><tr><th>Stok</th><th>Sisa</th><th>Volume</th><th></th></tr></thead>
+    <tbody>${stock.map(s => {
+      const perPcs = s.quantity > 0 ? s.kubikasi / s.quantity : 0;
+      return `<tr>
+        <td><div class="w-name">${escHtml(s.productName)}</div>
+          <div class="w-size">${s.thickness}×${s.width}×${s.length} cm · ${escHtml(s.intakeNumber)}</div></td>
+        <td class="w-hi">${fmtInt(s.remaining)}</td>
+        <td class="w-muted">${fmt4(perPcs * s.remaining)} m³</td>
+        <td><button class="chip-btn primary" onclick="openGesekModal('${s.id}')"><svg class="ic"><use href="#i-tools"/></svg>Gesek</button></td>
+      </tr>`;
+    }).join('')}</tbody>
+    </table></div>`;
 }
 
 function renderWoodGesekLogs(logs) {
   const c = document.getElementById('woodGesekLogs');
+  const cnt = document.getElementById('woodGesekLogCount');
+  if (cnt) cnt.textContent = `${logs ? logs.length : 0} catatan`;
   if (!logs || logs.length === 0) {
-    c.innerHTML = '<div class="empty-state"><span class="empty-icon">📜</span><p>Belum ada log gesek</p></div>';
+    c.innerHTML = '<div class="empty-state"><svg class="empty-svg"><use href="#i-clock"/></svg><p>Belum ada log gesek</p></div>';
     return;
   }
   c.innerHTML = logs.map(l => `
     <div class="wood-gesek-log fade-in">
+      <span class="wood-gesek-log-icon"><svg class="ic"><use href="#i-tools"/></svg></span>
       <div class="wood-gesek-log-main">
-        <div class="wood-gesek-log-title">${l.quantity} pcs ${escHtml(l.sourceName)} ${l.resultThickness}×${l.resultWidth}×${l.resultLength}cm${l.poNumber ? ` <span style="color:#94a3b8;">→</span> PO ${escHtml(l.poNumber)}` : ''}</div>
-        <div class="wood-gesek-log-sub">${escHtml(l.intakeNumber)}${l.supplier ? ' · ' + escHtml(l.supplier) : ''}${l.intakeDate ? ' · ' + fmtDateShort(l.intakeDate) : ''} · ${fmtDateShort(l.createdAt)}${l.userName ? ' · ' + escHtml(l.userName) : ''}${!l.poNumber ? ' · <span style="color:#d97706;font-weight:700;">sisa ' + l.remainingQty + ' pcs</span>' : ''}</div>
+        <div class="wood-gesek-log-title">${fmtInt(l.quantity)} pcs ${escHtml(l.sourceName)} ${l.resultThickness}×${l.resultWidth}×${l.resultLength} cm${l.poNumber ? ` <span style="color:var(--slate-400);">→</span> PO ${escHtml(l.poNumber)}` : ''}</div>
+        <div class="wood-gesek-log-sub">${escHtml(l.intakeNumber)}${l.supplier ? ' · ' + escHtml(l.supplier) : ''}${l.intakeDate ? ' · ' + fmtDateShort(l.intakeDate) : ''} · ${fmtDateShort(l.createdAt)}${l.userName ? ' · ' + escHtml(l.userName) : ''}${!l.poNumber ? ` · <span class="wood-gesek-note">sisa ${fmtInt(l.remainingQty)} pcs</span>` : ''}</div>
       </div>
-      <div style="display:flex;align-items:center;gap:8px;">
-        <span class="wood-gesek-log-meta">${Number(l.kubikasiOut).toFixed(4)} m³</span>
-        ${!l.poNumber && l.remainingQty > 0 ? `<button class="del-card-btn delete" style="padding:3px 9px;font-size:11px;" onclick="deleteGesek('${l.id}')" title="Batalkan">↩︎</button>` : ''}
+      <div class="wood-gesek-log-aside">
+        <span class="wood-gesek-log-meta">${fmt4(l.kubikasiOut)} m³</span>
+        ${!l.poNumber && l.remainingQty > 0 ? `<button class="chip-btn danger" style="height:26px;padding:0 8px;" onclick="deleteGesek('${l.id}')" title="Batalkan gesek"><svg class="ic"><use href="#i-trash"/></svg></button>` : ''}
       </div>
     </div>`).join('');
 }
@@ -6251,27 +6452,26 @@ async function deleteGesek(id) {
 
 function renderWoodGesekStock(items) {
   const c = document.getElementById('woodGesekStock');
+  const cnt = document.getElementById('woodGesekStockCount');
+  if (cnt) cnt.textContent = `${items ? items.length : 0} batch`;
   if (!items || items.length === 0) {
-    c.innerHTML = '<div class="empty-state"><span class="empty-icon">⚙️</span><p>Belum ada stok gesek</p></div>';
+    c.innerHTML = '<div class="empty-state"><svg class="empty-svg"><use href="#i-tools"/></svg><p>Belum ada stok gesek</p></div>';
     return;
   }
-  c.innerHTML = `<div class="wood-intake-card"><div class="wood-intake-body" style="padding-top:14px;">
-    <table class="wood-stock-table">
-      <thead><tr><th>Sumber</th><th>Ukuran Hasil</th><th>Sisa</th><th>Volume</th><th></th></tr></thead>
-      <tbody>${items.map(g => {
-        const perPcs = g.quantity > 0 ? g.kubikasiOut / g.quantity : 0;
-        return `<tr>
-          <td><div class="w-name">${escHtml(g.intakeNumber)}${g.supplier ? ' · ' + escHtml(g.supplier) : ''}</div>
-            <div class="w-size">${escHtml(g.sourceName)} ${g.resultThickness}×${g.resultWidth}×${g.resultLength}cm · ${fmtDateShort(g.intakeDate)}</div></td>
-          <td style="white-space:nowrap;">${g.resultThickness}×${g.resultWidth}×${g.resultLength}cm</td>
-          <td class="w-hi">${g.remainingQty} pcs</td>
-          <td style="white-space:nowrap;color:#64748b;font-size:11px;">${(perPcs * g.remainingQty).toFixed(4)} m³</td>
-          <td style="text-align:right;">
-            <button class="del-card-btn upload" style="padding:4px 10px;font-size:11px;" onclick="quickAllocGesek('${g.id}')">🎯 Alokasi</button>
-          </td>
-        </tr>`;
-      }).join('')}</tbody></table>
-    </div></div>`;
+  c.innerHTML = `<div class="panel-body-flush"><table class="wood-stock-table">
+    <thead><tr><th>Sumber</th><th>Ukuran</th><th>Sisa</th><th>Volume</th><th></th></tr></thead>
+    <tbody>${items.map(g => {
+      const perPcs = g.quantity > 0 ? g.kubikasiOut / g.quantity : 0;
+      return `<tr>
+        <td><div class="w-name">${escHtml(g.intakeNumber)}</div>
+          <div class="w-size">${escHtml(g.sourceName)} · ${fmtDateShort(g.intakeDate)}</div></td>
+        <td class="w-muted">${g.resultThickness}×${g.resultWidth}×${g.resultLength} cm</td>
+        <td class="w-hi">${fmtInt(g.remainingQty)}</td>
+        <td class="w-muted">${fmt4(perPcs * g.remainingQty)} m³</td>
+        <td><button class="chip-btn primary" onclick="quickAllocGesek('${g.id}')"><svg class="ic"><use href="#i-send"/></svg>Alokasi</button></td>
+      </tr>`;
+    }).join('')}</tbody>
+    </table></div>`;
 }
 
 function quickAllocGesek(gesekId) {
