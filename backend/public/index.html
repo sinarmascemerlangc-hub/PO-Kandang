@@ -1322,6 +1322,7 @@
     /* Chip bukti (surat jalan/faktur) di kartu Kayu Masuk */
     .wood-proof-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 10px 14px; border-top: 1px solid var(--line); }
     .wood-proof-label { width: 100%; font-size: 9.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; color: var(--slate-400); }
+    .wood-proof-hint { font-size: 10.5px; color: var(--slate-400); font-weight: 600; margin-left: auto; }
     .wood-proof-chip { max-width: 100%; min-width: 0; }
     .wood-proof-chip .wp-name {
       display: inline-block; max-width: 190px; overflow: hidden;
@@ -6185,8 +6186,8 @@ function renderWoodIntakes(intakes) {
       ${(it.proofs && it.proofs.length > 0) ? `<div class="wood-proof-row">
         <div class="wood-proof-label">Bukti Surat Jalan / Faktur</div>
         ${it.proofs.map((p,i) => `
-          <button onclick="openProofGallery('${it.id}','intake',${i})" class="chip-btn wood-proof-chip" title="${p.fileName ? escHtml(p.fileName) : 'Lihat bukti'}"><svg class="ic"><use href="#i-file"/></svg><span class="wp-name">${p.fileName ? escHtml(p.fileName) : 'Lihat bukti'}</span></button>
-          <button class="wood-proof-del" onclick="deleteIntakeProof('${it.id}','${p.id}')" title="Hapus bukti ini">Hapus</button>`).join('')}
+          <button onclick="openProofGallery('${it.id}','intake',${i})" class="chip-btn wood-proof-chip" title="${p.fileName ? escHtml(p.fileName) : 'Lihat bukti'}"><svg class="ic"><use href="#i-file"/></svg><span class="wp-name">${p.fileName ? escHtml(p.fileName) : 'Lihat bukti'}</span></button>`).join('')}
+        <span class="wood-proof-hint">Klik bukti untuk melihat / menghapus</span>
       </div>` : ''}
       <div class="wood-intake-footer">
         <button class="chip-btn" onclick="openProofModal('${it.id}','intake')"><svg class="ic"><use href="#i-file"/></svg>Surat Jalan</button>
