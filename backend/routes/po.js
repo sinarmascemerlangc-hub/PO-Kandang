@@ -40,12 +40,12 @@ router.get('/', auth, async (req, res) => {
       conditions.push(`p.status NOT IN ('dibatalkan','selesai') AND NOT ${isCompleteExpr} AND (p.status = 'dikirim' OR ${shippedQtyExpr} > 0)`);
     } else if (status === 'diterima' || status === 'diproses') {
       searchParams.push(status);
-      conditions.push(`p.status = $${searchParams.length} AND NOT ${isCompleteExpr}`);
+      conditions.push(`p.status::text = $${searchParams.length} AND NOT ${isCompleteExpr}`);
     } else if (status === 'dibatalkan') {
       conditions.push(`p.status = 'dibatalkan'`);
     } else if (status) {
       searchParams.push(status);
-      conditions.push(`p.status = $${searchParams.length}`);
+      conditions.push(`p.status::text = $${searchParams.length}`);
     }
     if (search) { searchParams.push(`%${search}%`); conditions.push(`(p."poNumber" ILIKE $${searchParams.length} OR p."customerName" ILIKE $${searchParams.length})`); }
 
